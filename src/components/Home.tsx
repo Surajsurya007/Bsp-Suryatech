@@ -97,7 +97,7 @@ export default function Home({ onPageChange, products, onTriggerTrialDownload, t
     },
     {
       q: 'What is a "Lifetime License" and are there any yearly renew charges?',
-      a: 'A Lifetime License (available for only ₹999 on our retail billing plan) means you make a one-time purchase. You receive a persistent serial registration key with no annual activation fees, no subscription requirements, and free offline update downloads forever.'
+      a: 'A Lifetime License (available for only ₹1999 on our retail billing plan) means you make a one-time purchase. You receive a persistent serial registration key with no annual activation fees, no subscription requirements, and free offline update downloads forever.'
     },
     {
       q: 'What local printers are supported by the billing platform?',

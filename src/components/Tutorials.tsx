@@ -17,10 +17,13 @@ import {
   FileImage
 } from 'lucide-react';
 
-export default function Tutorials() {
-  const [activeVideoIndex, setActiveVideoIndex] = useState<number | null>(0);
+import { VideoTutorial } from '../types';
 
-  const videoTutorials = [
+export default function Tutorials({ videos }: { videos?: VideoTutorial[] }) {
+  const [activeVideoIndex, setActiveVideoIndex] = useState<number | null>(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const defaultVideoTutorials = [
     {
       title: 'Complete Software Overview & POS Retail Setup Guide (v4.2.1)',
       duration: '12:45 Mins',
@@ -43,6 +46,38 @@ export default function Tutorials() {
       description: 'How to easily compile columns in Excel sheets, configure tax rates, stock minimum levels, barcodes, and upload directly to BSP Suryatech local database with no syntax issues.'
     }
   ];
+
+  const videoTutorials = videos && videos.length > 0 ? videos : defaultVideoTutorials;
+
+  const getYoutubeEmbedUrl = (youtubeId: string) => {
+    if (!youtubeId) return '';
+    if (youtubeId.includes('youtube.com/watch')) {
+      const parts = youtubeId.split('?');
+      if (parts.length > 1) {
+        const urlParams = new URLSearchParams(parts[1]);
+        const v = urlParams.get('v');
+        if (v) return `https://www.youtube.com/embed/${v}`;
+      }
+    }
+    if (youtubeId.includes('youtu.be/')) {
+      const parts = youtubeId.split('youtu.be/');
+      const id = parts[parts.length - 1]?.split('?')[0];
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (youtubeId.includes('youtube.com/embed')) {
+      return youtubeId;
+    }
+    if (youtubeId === 'bsp_overview_embed') {
+      return 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+    }
+    if (youtubeId === 'bsp_printer_embed') {
+      return 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+    }
+    if (youtubeId === 'bsp_import_embed') {
+      return 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+    }
+    return `https://www.youtube.com/embed/${youtubeId}`;
+  };
 
   const installSteps = [
     {
@@ -86,26 +121,42 @@ export default function Tutorials() {
           
           {/* Left Large active frame mockup */}
           <div className="lg:col-span-7 space-y-6" id="video-mockup-main">
-            {activeVideoIndex !== null && (
+            {activeVideoIndex !== null && videoTutorials[activeVideoIndex] && (
               <div className="space-y-4">
                 <div className="relative aspect-video rounded-3xl bg-slate-950 overflow-hidden border border-slate-800 shadow-2xl shadow-slate-100 flex items-center justify-center group">
-                  {/* Mock image placeholder background */}
-                  <img 
-                    src={videoTutorials[activeVideoIndex].thumbnail} 
-                    alt={videoTutorials[activeVideoIndex].title} 
-                    className="absolute inset-0 w-full h-full object-cover opacity-65 group-hover:scale-102 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-blue-900/10" />
+                  {isPlaying ? (
+                    <iframe
+                      src={getYoutubeEmbedUrl(videoTutorials[activeVideoIndex].youtubeId) + "?autoplay=1"}
+                      title={videoTutorials[activeVideoIndex].title}
+                      className="absolute inset-0 w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  ) : (
+                    <>
+                      {/* Mock image placeholder background */}
+                      <img 
+                        src={videoTutorials[activeVideoIndex].thumbnail} 
+                        alt={videoTutorials[activeVideoIndex].title} 
+                        className="absolute inset-0 w-full h-full object-cover opacity-65 group-hover:scale-102 transition-transform duration-500"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-blue-900/10" />
 
-                  {/* Red/White Big Play button representing video status */}
-                  <div className="relative z-10 w-16 h-16 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg group-hover:bg-red-700 group-hover:scale-110 transition-all cursor-pointer">
-                    <Play className="w-6 h-6 fill-white ml-1" />
-                  </div>
+                      {/* Red/White Big Play button representing video status */}
+                      <div 
+                        onClick={() => setIsPlaying(true)}
+                        className="relative z-10 w-16 h-16 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg group-hover:bg-red-700 group-hover:scale-110 transition-all cursor-pointer"
+                      >
+                        <Play className="w-6 h-6 fill-white ml-1" />
+                      </div>
 
-                  {/* Video length tag */}
-                  <span className="absolute bottom-4 right-4 bg-slate-900/80 px-3 py-1 text-slate-200 text-xs font-mono rounded">
-                    {videoTutorials[activeVideoIndex].duration}
-                  </span>
+                      {/* Video length tag */}
+                      <span className="absolute bottom-4 right-4 bg-slate-900/80 px-3 py-1 text-slate-200 text-xs font-mono rounded">
+                        {videoTutorials[activeVideoIndex].duration}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -128,7 +179,10 @@ export default function Tutorials() {
               {videoTutorials.map((vid, vI) => (
                 <div
                   key={vI}
-                  onClick={() => setActiveVideoIndex(vI)}
+                  onClick={() => {
+                    setActiveVideoIndex(vI);
+                    setIsPlaying(false);
+                  }}
                   className={`p-4 border rounded-2xl cursor-pointer transition-all flex gap-4 text-left items-start ${
                     activeVideoIndex === vI 
                       ? 'border-blue-500 bg-blue-50/40 shadow-sm' 

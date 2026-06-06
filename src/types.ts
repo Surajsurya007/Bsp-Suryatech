@@ -9,6 +9,14 @@ export interface User {
   email: string;
   role: 'admin' | 'customer';
   createdAt: string;
+  language?: string;
+}
+
+export interface LanguageConfig {
+  code: string;
+  name: string;
+  flag: string;
+  enabled: boolean;
 }
 
 export interface CustomerProfile {
@@ -75,6 +83,7 @@ export interface Product {
   description: string;
   downloadUrl: string;
   createdAt: string;
+  connectedPlan?: string;
 }
 
 export interface Order {
@@ -170,6 +179,16 @@ export interface Review {
   rating: number;
   comment: string;
   createdAt: string;
+}
+
+export interface VideoTutorial {
+  id: string;
+  title: string;
+  duration: string;
+  youtubeId: string;
+  thumbnail: string;
+  description: string;
+  createdAt?: string;
 }
 
 export interface SystemStats {

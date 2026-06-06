@@ -6,13 +6,26 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification } from '../src/types';
+import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial } from '../src/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
 
 // JWT Secret
 export const JWT_SECRET = process.env.JWT_SECRET || 'bsp-suryatech-secure-hmac-secret-key-2026';
+
+export const defaultLanguageConfigs: LanguageConfig[] = [
+  { code: 'en', name: 'English', flag: '🇺🇸', enabled: true },
+  { code: 'hi', name: 'Hindi', flag: '🇮🇳', enabled: true },
+  { code: 'mr', name: 'Marathi', flag: '🇮🇳', enabled: true },
+  { code: 'gu', name: 'Gujarati', flag: '🇮🇳', enabled: true },
+  { code: 'ta', name: 'Tamil', flag: '🇮🇳', enabled: true },
+  { code: 'te', name: 'Telugu', flag: '🇮🇳', enabled: true },
+  { code: 'bn', name: 'Bengali', flag: '🇮🇳', enabled: true },
+  { code: 'kn', name: 'Kannada', flag: '🇮🇳', enabled: true },
+  { code: 'ml', name: 'Malayalam', flag: '🇮🇳', enabled: true },
+  { code: 'pa', name: 'Punjabi', flag: '🇮🇳', enabled: true }
+];
 
 // Cryto Helpers
 export function hashPassword(password: string): string {
@@ -72,10 +85,12 @@ interface DatabaseSchema {
   invoices: Invoice[];
   notifications: Notification[];
   downloadCounter: number;
+  languageConfigs: LanguageConfig[];
+  videos: VideoTutorial[];
 }
 
 // In-Memory Database Instance
-let db: DatabaseSchema = {
+export let db: DatabaseSchema = {
   users: [],
   passwordHashes: {},
   customerProfiles: [],
@@ -91,7 +106,9 @@ let db: DatabaseSchema = {
   payments: [],
   invoices: [],
   notifications: [],
-  downloadCounter: 1420
+  downloadCounter: 1420,
+  languageConfigs: [],
+  videos: []
 };
 
 // Seed Data
@@ -117,14 +134,15 @@ const defaultProducts: Product[] = [
     ],
     description: 'All-in-one GST billing and inventory desktop software designed for Kirana stores, pharmacies, electronics shops, supermarkets, and distributors across India. Lightweight, ultra-fast, and runs 100% offline.',
     downloadUrl: '/api/downloads/setup/prod-billing-pro',
-    createdAt: '2026-01-10T00:00:00Z'
+    createdAt: '2026-01-10T00:00:00Z',
+    connectedPlan: 'prod-billing-pro'
   },
   {
     id: 'prod-billing-enterprise',
     name: 'BSP Suryatech GST Enterprise Suite',
     version: 'v5.0.3',
     size: '22.4 MB',
-    price: 1999,
+    price: 2999,
     originalPrice: 4999,
     features: [
       'All features of Retail Billing Pro',
@@ -138,7 +156,8 @@ const defaultProducts: Product[] = [
     ],
     description: 'Enterprise grade GST compliance and multi-user billing software with multi-firm support, direct GSTR ledger formatting, designable invoices, and automated backup mechanisms.',
     downloadUrl: '/api/downloads/setup/prod-billing-enterprise',
-    createdAt: '2026-03-15T00:00:00Z'
+    createdAt: '2026-03-15T00:00:00Z',
+    connectedPlan: 'prod-billing-enterprise'
   }
 ];
 
@@ -250,6 +269,33 @@ const defaultReviews: Review[] = [
   }
 ];
 
+const defaultVideos: VideoTutorial[] = [
+  {
+    id: 'vid-1',
+    title: 'Complete Software Overview & POS Retail Setup Guide (v4.2.1)',
+    duration: '12:45 Mins',
+    youtubeId: 'bsp_overview_embed',
+    thumbnail: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
+    description: 'A comprehensive complete video tutorial going through initial registration, barcode creation, Adding custom tax items, setting up standard inventory levels, and executing cash bills.'
+  },
+  {
+    id: 'vid-2',
+    title: 'Configuring Thermal Receipt Printers & Paper Canvas Alignments',
+    duration: '08:30 Mins',
+    youtubeId: 'bsp_printer_embed',
+    thumbnail: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
+    description: 'Step-by-step instructions details covering TVS, Sewoo, Epson, Rongta driver settings, adjusting paper limits parameters, line margins offset spacing, and footer text customizer layouts.'
+  },
+  {
+    id: 'vid-3',
+    title: 'Bulk Stocks Catalogue Imports Using Excel Sheet Templates',
+    duration: '05:40 Mins',
+    youtubeId: 'bsp_import_embed',
+    thumbnail: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
+    description: 'How to easily compile columns in Excel sheets, configure tax rates, stock minimum levels, barcodes, and upload directly to BSP Suryatech local database with no syntax issues.'
+  }
+];
+
 // Initialize DB and Save
 export function initDB() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -268,11 +314,15 @@ export function initDB() {
       if (!db.blogs || db.blogs.length === 0) db.blogs = defaultBlogs;
       if (!db.downloads || db.downloads.length === 0) db.downloads = defaultDownloads;
       if (!db.reviews || db.reviews.length === 0) db.reviews = defaultReviews;
+      if (!db.videos || db.videos.length === 0) db.videos = [...defaultVideos];
       if (!db.customerProfiles) db.customerProfiles = [];
       if (!db.payments) db.payments = [];
       if (!db.invoices) db.invoices = [];
       if (!db.notifications) db.notifications = [];
       if (db.downloadCounter === undefined) db.downloadCounter = 1420;
+      if (!db.languageConfigs || db.languageConfigs.length === 0) {
+        db.languageConfigs = [...defaultLanguageConfigs];
+      }
     } catch (e) {
       console.error('Error loading DB, re-seeding...', e);
       seedDB();
@@ -299,7 +349,9 @@ function seedDB() {
     payments: [],
     invoices: [],
     notifications: [],
-    downloadCounter: 1420
+    downloadCounter: 1420,
+    languageConfigs: [...defaultLanguageConfigs],
+    videos: [...defaultVideos]
   };
 
   // Seed default admin
@@ -787,6 +839,68 @@ export const dbActions = {
       saveDB();
     }
     return notif;
+  },
+
+  // Languages Action
+  getLanguageConfigs: () => db.languageConfigs || [],
+  toggleLanguageConfig: (code: string, enabled: boolean) => {
+    if (!db.languageConfigs) db.languageConfigs = [];
+    const lang = db.languageConfigs.find(l => l.code === code);
+    if (lang) {
+      lang.enabled = enabled;
+      saveDB();
+    }
+    return lang;
+  },
+  addLanguageConfig: (lang: LanguageConfig) => {
+    if (!db.languageConfigs) db.languageConfigs = [];
+    const existingIdx = db.languageConfigs.findIndex(l => l.code === lang.code);
+    if (existingIdx > -1) {
+      db.languageConfigs[existingIdx] = lang;
+    } else {
+      db.languageConfigs.push(lang);
+    }
+    saveDB();
+    return lang;
+  },
+  updateUserLanguage: (userId: string, language: string) => {
+    const user = db.users.find(u => u.id === userId);
+    if (user) {
+      user.language = language;
+      saveDB();
+    }
+    return user;
+  },
+
+  // Videos Actions
+  getVideoTutorials: () => db.videos || [],
+  createVideoTutorial: (video: Omit<VideoTutorial, 'id' | 'createdAt'>) => {
+    const id = 'vid-' + Math.random().toString(36).substr(2, 9);
+    const newVid: VideoTutorial = {
+      ...video,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    if (!db.videos) db.videos = [];
+    db.videos.push(newVid);
+    saveDB();
+    return newVid;
+  },
+  updateVideoTutorial: (id: string, updates: Partial<VideoTutorial>) => {
+    if (!db.videos) db.videos = [];
+    const idx = db.videos.findIndex(v => v.id === id);
+    if (idx > -1) {
+      db.videos[idx] = { ...db.videos[idx], ...updates };
+      saveDB();
+      return db.videos[idx];
+    }
+    return null;
+  },
+  deleteVideoTutorial: (id: string) => {
+    if (!db.videos) db.videos = [];
+    db.videos = db.videos.filter(v => v.id !== id);
+    saveDB();
+    return true;
   }
 };
 

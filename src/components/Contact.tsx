@@ -144,11 +144,11 @@ export default function Contact({ onAddNotification }: ContactProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-650 font-mono tracking-wide uppercase block">Your Full Name *</label>
+                  <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Your Full Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Suraj Kumar"
+                    placeholder="e.g. Sanjay Dixit"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
@@ -156,7 +156,7 @@ export default function Contact({ onAddNotification }: ContactProps) {
                   />
                 </div>
                 <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-650 font-mono tracking-wide uppercase block">Business Email *</label>
+                  <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Business Email *</label>
                   <input
                     type="email"
                     required
@@ -171,7 +171,7 @@ export default function Contact({ onAddNotification }: ContactProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-650 font-mono tracking-wide uppercase block">Mobile Digit Number</label>
+                  <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Mobile Digit Number</label>
                   <input
                     type="tel"
                     placeholder="e.g. +91 98XXX XXXXX"
@@ -181,7 +181,7 @@ export default function Contact({ onAddNotification }: ContactProps) {
                   />
                 </div>
                 <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-650 font-mono tracking-wide uppercase block">Topic Category</label>
+                  <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Topic Category</label>
                   <select
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
@@ -196,7 +196,7 @@ export default function Contact({ onAddNotification }: ContactProps) {
               </div>
 
               <div className="text-left space-y-1">
-                <label className="text-xs font-bold text-slate-650 font-mono tracking-wide uppercase block">Message Description *</label>
+                <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Message Description *</label>
                 <textarea
                   required
                   rows={4}

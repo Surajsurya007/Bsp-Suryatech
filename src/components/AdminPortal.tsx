@@ -14,6 +14,7 @@ import {
   AlertCircle, 
   Plus, 
   Trash2, 
+  Pencil,
   Check, 
   X, 
   Sparkles, 
@@ -24,15 +25,19 @@ import {
   Send
 } from 'lucide-react';
 
+import { VideoTutorial } from '../types';
+
 interface AdminPortalProps {
   onAddNotification: (text: string, type: 'success' | 'info' | 'error') => void;
   onPageChange: (page: string) => void;
   onRefreshDownloads?: () => void;
+  videos?: VideoTutorial[];
+  onRefreshVideos?: () => void;
 }
 
-export default function AdminPortal({ onAddNotification, onPageChange, onRefreshDownloads }: AdminPortalProps) {
-  // Navigation tabs: stats, customers, products, licenses, downloads, tickets, coupons, blogs, testimonials
-  const [activeAdminTab, setActiveAdminTab] = useState<'stats' | 'customers' | 'products' | 'licenses' | 'downloads' | 'tickets' | 'coupons'>('stats');
+export default function AdminPortal({ onAddNotification, onPageChange, onRefreshDownloads, videos = [], onRefreshVideos }: AdminPortalProps) {
+  // Navigation tabs: stats, customers, products, licenses, downloads, tickets, coupons, languages, videos
+  const [activeAdminTab, setActiveAdminTab] = useState<'stats' | 'customers' | 'products' | 'licenses' | 'downloads' | 'tickets' | 'coupons' | 'languages' | 'videos'>('stats');
 
   // Unified Database Cache states
   const [stats, setStats] = useState<any>(null);
@@ -43,7 +48,14 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [downloads, setDownloads] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
+  const [langConfigs, setLangConfigs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Language management form states
+  const [newLangCode, setNewLangCode] = useState('');
+  const [newLangName, setNewLangName] = useState('');
+  const [newLangFlag, setNewLangFlag] = useState('');
+  const [addingLang, setAddingLang] = useState(false);
 
   // Modal active incident support chat
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -65,6 +77,11 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [addingDl, setAddingDl] = useState(false);
   const [exeFile, setExeFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+
+  // PDF manual upload states
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfUploadProgress, setPdfUploadProgress] = useState<string | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -103,18 +120,47 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [prodName, setProdName] = useState('');
   const [prodVersion, setProdVersion] = useState('');
   const [prodSize, setProdSize] = useState('');
-  const [prodPrice, setProdPrice] = useState(999);
+  const [prodPrice, setProdPrice] = useState(1999);
   const [prodOrigPrice, setProdOrigPrice] = useState(2499);
   const [prodDesc, setProdDesc] = useState('');
   const [prodFeatures, setProdFeatures] = useState('');
+  const [prodConnectedPlan, setProdConnectedPlan] = useState('');
   const [addingProd, setAddingProd] = useState(false);
+
+  // Product Edit states
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editVersion, setEditVersion] = useState('');
+  const [editSize, setEditSize] = useState('');
+  const [editPrice, setEditPrice] = useState(1999);
+  const [editOrigPrice, setEditOrigPrice] = useState(2499);
+  const [editDesc, setEditDesc] = useState('');
+  const [editFeatures, setEditFeatures] = useState('');
+  const [editConnectedPlan, setEditConnectedPlan] = useState('');
+  const [updatingProd, setUpdatingProd] = useState(false);
+
+  // Video Management States
+  const [vidTitle, setVidTitle] = useState('');
+  const [vidDuration, setVidDuration] = useState('');
+  const [vidYoutubeId, setVidYoutubeId] = useState('');
+  const [vidThumbnail, setVidThumbnail] = useState('');
+  const [vidDescription, setVidDescription] = useState('');
+  const [addingVid, setAddingVid] = useState(false);
+
+  const [editingVidId, setEditingVidId] = useState<string | null>(null);
+  const [editVidTitle, setEditVidTitle] = useState('');
+  const [editVidDuration, setEditVidDuration] = useState('');
+  const [editVidYoutubeId, setEditVidYoutubeId] = useState('');
+  const [editVidThumbnail, setEditVidThumbnail] = useState('');
+  const [editVidDescription, setEditVidDescription] = useState('');
+  const [updatingVid, setUpdatingVid] = useState(false);
 
   const fetchAdminData = async () => {
     setLoading(true);
     const token = localStorage.getItem('bsp_token');
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
-      const [statsRes, userRes, prodRes, licRes, dlRes, tkRes, cpRes, ordRes] = await Promise.all([
+      const [statsRes, userRes, prodRes, licRes, dlRes, tkRes, cpRes, ordRes, langRes] = await Promise.all([
         fetch('/api/admin/stats', { headers }),
         fetch('/api/admin/users', { headers }),
         fetch('/api/products'),
@@ -122,10 +168,11 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
         fetch('/api/downloads', { headers }),
         fetch('/api/admin/tickets', { headers }),
         fetch('/api/admin/coupons', { headers }),
-        fetch('/api/admin/orders', { headers })
+        fetch('/api/admin/orders', { headers }),
+        fetch('/api/languages')
       ]);
 
-      if (statsRes.ok && userRes.ok && prodRes.ok && licRes.ok && dlRes.ok && tkRes.ok && cpRes.ok && ordRes.ok) {
+      if (statsRes.ok && userRes.ok && prodRes.ok && licRes.ok && dlRes.ok && tkRes.ok && cpRes.ok && ordRes.ok && langRes.ok) {
         setStats(await statsRes.json());
         setCustomers(await userRes.json());
         setProducts(await prodRes.json());
@@ -138,6 +185,8 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
         setTickets(await tkRes.json());
         setCoupons(await cpRes.json());
         setOrders(await ordRes.json());
+        setLangConfigs(await langRes.json());
+        onRefreshVideos?.();
       } else {
         onAddNotification('Refused admin entry. Session expired.', 'error');
         onPageChange('portal');
@@ -152,6 +201,69 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   useEffect(() => {
     fetchAdminData();
   }, []);
+
+  // Language management actions
+  const handleToggleLanguage = async (code: string, currentEnabled: boolean) => {
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/languages/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code, enabled: !currentEnabled })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onAddNotification(`Language ${data.config.name} ${!currentEnabled ? 'enabled' : 'disabled'} successfully`, 'success');
+        setLangConfigs(prev => prev.map(l => l.code === code ? { ...l, enabled: !currentEnabled } : l));
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to toggle language', 'error');
+      }
+    } catch {
+      onAddNotification('Connection error toggling language configuration', 'error');
+    }
+  };
+
+  const handleCreateLanguage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLangCode || !newLangName) return;
+
+    setAddingLang(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/languages/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          code: newLangCode.toLowerCase(),
+          name: newLangName,
+          flag: newLangFlag || '🇮🇳',
+          enabled: true
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onAddNotification(`Successfully registered new language: ${data.language.name}`, 'success');
+        setLangConfigs(prev => [...prev.filter(l => l.code !== data.language.code), data.language]);
+        setNewLangCode('');
+        setNewLangName('');
+        setNewLangFlag('');
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to add language', 'error');
+      }
+    } catch {
+      onAddNotification('Network failure adding translation configuration options', 'error');
+    } finally {
+      setAddingLang(false);
+    }
+  };
 
   // Actions handlers
   // 1. Coupon handling
@@ -286,6 +398,52 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
     }
   };
 
+  const handlePdfFileChange = (file: File) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      onAddNotification('Please upload a PDF document (.pdf) only.', 'error');
+      return;
+    }
+    setPdfFile(file);
+  };
+
+  const handleUploadPdf = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pdfFile) {
+      onAddNotification('Please select a PDF manual file first.', 'error');
+      return;
+    }
+
+    setUploadingPdf(true);
+    setPdfUploadProgress('Encoding PDF document...');
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const base64Data = await fileToBase64(pdfFile);
+      setPdfUploadProgress('Uploading PDF user manual...');
+      const res = await fetch('/api/admin/downloads/upload-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ filename: 'usr-manual.pdf', base64Data })
+      });
+
+      if (res.ok) {
+        onAddNotification('User Installation PDF manual uploaded & activated!', 'success');
+        setPdfFile(null);
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'PDF manual upload failed', 'error');
+      }
+    } catch {
+      onAddNotification('Network error uploading PDF manual', 'error');
+    } finally {
+      setUploadingPdf(false);
+      setPdfUploadProgress(null);
+    }
+  };
+
   const handleDeleteRelease = async (id: string) => {
     if (!confirm('Purge this standard setup release?')) return;
     const token = localStorage.getItem('bsp_token');
@@ -397,7 +555,8 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
           price: Number(prodPrice),
           originalPrice: Number(prodOrigPrice),
           description: prodDesc,
-          features: prodFeatures.split('\n').filter(Boolean)
+          features: prodFeatures.split('\n').filter(Boolean),
+          connectedPlan: prodConnectedPlan || ''
         })
       });
 
@@ -408,6 +567,7 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
         setProdSize('');
         setProdDesc('');
         setProdFeatures('');
+        setProdConnectedPlan('');
         fetchAdminData();
       } else {
         onAddNotification('Unable to upload catalog item', 'error');
@@ -433,6 +593,178 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
       }
     } catch {
       onAddNotification('Error purging catalog item', 'error');
+    }
+  };
+
+  const handleStartEdit = (p: any) => {
+    setEditingProductId(p.id);
+    setEditName(p.name);
+    setEditVersion(p.version);
+    setEditSize(p.size);
+    setEditPrice(p.price);
+    setEditOrigPrice(p.originalPrice || 2499);
+    setEditDesc(p.description || '');
+    setEditFeatures(Array.isArray(p.features) ? p.features.join('\n') : '');
+    setEditConnectedPlan(p.connectedPlan || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProductId(null);
+  };
+
+  const handleUpdateProductSubmit = async (e: React.FormEvent, id: string) => {
+    e.preventDefault();
+    if (!editName || !editPrice || !editVersion || !editSize) {
+      onAddNotification('Product name, price, version, size are all required.', 'error');
+      return;
+    }
+
+    setUpdatingProd(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editName,
+          version: editVersion,
+          size: editSize,
+          price: Number(editPrice),
+          originalPrice: Number(editOrigPrice),
+          description: editDesc,
+          features: editFeatures.split('\n').filter(Boolean),
+          connectedPlan: editConnectedPlan || ''
+        })
+      });
+
+      if (res.ok) {
+        onAddNotification('Suryatech billing product updated successfully!', 'success');
+        setEditingProductId(null);
+        fetchAdminData();
+      } else {
+        onAddNotification('Unable to update product details', 'error');
+      }
+    } catch {
+      onAddNotification('Network error updating product', 'error');
+    } finally {
+      setUpdatingProd(false);
+    }
+  };
+
+  // Video Management actions
+  const handleAddVideo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vidTitle || !vidYoutubeId) {
+      onAddNotification('Title and YouTube URL/ID are required.', 'error');
+      return;
+    }
+
+    setAddingVid(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/videos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: vidTitle,
+          duration: vidDuration || '05:00 Mins',
+          youtubeId: vidYoutubeId,
+          thumbnail: vidThumbnail || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
+          description: vidDescription || ''
+        })
+      });
+
+      if (res.ok) {
+        onAddNotification('New Tutorial Video successfully uploaded/saved!', 'success');
+        setVidTitle('');
+        setVidDuration('');
+        setVidYoutubeId('');
+        setVidThumbnail('');
+        setVidDescription('');
+        onRefreshVideos?.();
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Unable to upload video', 'error');
+      }
+    } catch {
+      onAddNotification('Network error posting new video', 'error');
+    } finally {
+      setAddingVid(false);
+    }
+  };
+
+  const handleStartEditVideo = (v: any) => {
+    setEditingVidId(v.id);
+    setEditVidTitle(v.title);
+    setEditVidDuration(v.duration);
+    setEditVidYoutubeId(v.youtubeId);
+    setEditVidThumbnail(v.thumbnail || '');
+    setEditVidDescription(v.description || '');
+  };
+
+  const handleCancelEditVideo = () => {
+    setEditingVidId(null);
+  };
+
+  const handleUpdateVideoSubmit = async (e: React.FormEvent, id: string) => {
+    e.preventDefault();
+    if (!editVidTitle || !editVidYoutubeId) {
+      onAddNotification('Title and YouTube ID/URL are required.', 'error');
+      return;
+    }
+
+    setUpdatingVid(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch(`/api/admin/videos/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: editVidTitle,
+          duration: editVidDuration || '05:00 Mins',
+          youtubeId: editVidYoutubeId,
+          thumbnail: editVidThumbnail || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
+          description: editVidDescription || ''
+        })
+      });
+
+      if (res.ok) {
+        onAddNotification('Video details updated successfully!', 'success');
+        setEditingVidId(null);
+        onRefreshVideos?.();
+      } else {
+        onAddNotification('Unable to update video details', 'error');
+      }
+    } catch {
+      onAddNotification('Network error updating video', 'error');
+    } finally {
+      setUpdatingVid(false);
+    }
+  };
+
+  const handleDeleteVideo = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this tutorial video?')) return;
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch(`/api/admin/videos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        onAddNotification('Tutorial video deleted from registry.', 'info');
+        onRefreshVideos?.();
+      }
+    } catch {
+      onAddNotification('Error deleting video', 'error');
     }
   };
 
@@ -502,7 +834,7 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
 
       {/* TABS ROW ROUTINGS */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3" id="admin-routes-tabs">
-        {(['stats', 'customers', 'products', 'licenses', 'downloads', 'tickets', 'coupons'] as const).map((tab) => (
+        {(['stats', 'customers', 'products', 'licenses', 'downloads', 'tickets', 'coupons', 'languages', 'videos'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveAdminTab(tab)}
@@ -518,6 +850,8 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
             {tab === 'downloads' && 'Releases uploads'}
             {tab === 'tickets' && 'Support desk Incident'}
             {tab === 'coupons' && 'Promo Coupons'}
+            {tab === 'languages' && 'Language Manager'}
+            {tab === 'videos' && 'Tutorial Videos'}
           </button>
         ))}
       </div>
@@ -628,7 +962,7 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-650 font-mono block">Selling Price *</label>
                         <input
-                          type="number" required placeholder="₹999" value={prodPrice}
+                          type="number" required placeholder="₹1999" value={prodPrice}
                           onChange={(e) => setProdPrice(Number(e.target.value))}
                           className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-900"
                         />
@@ -661,6 +995,20 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
                       />
                     </div>
 
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Connect to Purchase Plan</label>
+                      <select
+                        value={prodConnectedPlan}
+                        onChange={(e) => setProdConnectedPlan(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3 py-2.5 rounded-xl text-xs text-slate-900 focus:bg-white"
+                        id="prod-connected-plan-select"
+                      >
+                        <option value="">None (Regular Software Catalog)</option>
+                        <option value="prod-billing-pro">Retail Billing Pro (Pro Plan Card)</option>
+                        <option value="prod-billing-enterprise">GST Enterprise Suite (Enterprise Plan Card)</option>
+                      </select>
+                    </div>
+
                     <button
                       type="submit" disabled={addingProd}
                       className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase rounded-xl transition-colors cursor-pointer text-center block"
@@ -675,30 +1023,164 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
                   <h4 className="font-extrabold text-slate-900 text-sm">Deployed Software Catalogs indices</h4>
                   <div className="space-y-4">
                     {products.map((p) => (
-                      <div key={p.id} className="bg-white border rounded-2xl p-5 flex justify-between gap-4" id={`crud-product-item-${p.id}`}>
-                        <div className="space-y-2">
-                          <h5 className="font-extrabold text-slate-950 text-base leading-none">{p.name}</h5>
-                          <span className="text-[10.5px] font-mono text-slate-450 block">ID: {p.id} • Version: {p.version} • Size: {p.size}</span>
-                          <span className="text-slate-500 font-medium block leading-relaxed">{p.description}</span>
-                          <div className="flex gap-1.5 flex-wrap pt-1">
-                            {p.features.slice(0, 3).map((f: string, i: number) => (
-                              <span key={i} className="px-2 py-0.5 bg-slate-100 border text-slate-500 text-[9.5px] font-mono rounded font-semibold">{f}</span>
-                            ))}
+                      <div key={p.id} className="bg-white border rounded-2xl p-5" id={`crud-product-item-${p.id}`}>
+                        {editingProductId === p.id ? (
+                          <form onSubmit={(e) => handleUpdateProductSubmit(e, p.id)} className="space-y-4">
+                            <div className="border-b border-slate-100 pb-2 flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-400 font-mono uppercase">EDIT SOFTWARE DEPLOYMENT ({p.id})</span>
+                              <span className="text-xs text-blue-600 font-bold uppercase font-mono">PUT Payload Ready</span>
+                            </div>
+                            
+                            <div className="space-y-3 text-left">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">Product Name *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editName}
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-600 block">Version *</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={editVersion}
+                                    onChange={(e) => setEditVersion(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-600 block">Size *</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={editSize}
+                                    onChange={(e) => setEditSize(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-600 block">Selling Price *</label>
+                                  <input
+                                    type="number"
+                                    required
+                                    value={editPrice}
+                                    onChange={(e) => setEditPrice(Number(e.target.value))}
+                                    className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-mono text-slate-800 focus:bg-white"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-600 block">Original Price *</label>
+                                  <input
+                                    type="number"
+                                    required
+                                    value={editOrigPrice}
+                                    onChange={(e) => setEditOrigPrice(Number(e.target.value))}
+                                    className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-mono text-slate-800 focus:bg-white"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">Description *</label>
+                                <textarea
+                                  rows={2}
+                                  value={editDesc}
+                                  onChange={(e) => setEditDesc(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs resize-none text-slate-800 focus:bg-white"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">Features Bullets (One per line)</label>
+                                <textarea
+                                  rows={2}
+                                  value={editFeatures}
+                                  onChange={(e) => setEditFeatures(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs resize-none text-slate-800 focus:bg-white"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">Connect to Purchase Plan</label>
+                                <select
+                                  value={editConnectedPlan}
+                                  onChange={(e) => setEditConnectedPlan(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                >
+                                  <option value="">None (Regular Software Catalog)</option>
+                                  <option value="prod-billing-pro">Retail Billing Pro (Pro Plan Card)</option>
+                                  <option value="prod-billing-enterprise">GST Enterprise Suite (Enterprise Plan Card)</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 justify-end pt-2">
+                              <button
+                                type="button"
+                                onClick={handleCancelEdit}
+                                className="px-3.5 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold text-xs rounded-xl cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={updatingProd}
+                                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl cursor-pointer"
+                              >
+                                {updatingProd ? 'Saving...' : 'Update Records'}
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="flex justify-between gap-4 w-full text-left">
+                            <div className="space-y-2">
+                              <h5 className="font-extrabold text-slate-950 text-base leading-none">{p.name}</h5>
+                              <span className="text-[10.5px] font-mono text-slate-450 block">ID: {p.id} • Version: {p.version} • Size: {p.size}</span>
+                              <span className="text-slate-500 font-medium block leading-relaxed">{p.description}</span>
+                              <div className="flex gap-1.5 flex-wrap pt-1">
+                                {p.features.slice(0, 3).map((f: string, i: number) => (
+                                  <span key={i} className="px-2 py-0.5 bg-slate-100 border text-slate-500 text-[9.5px] font-mono rounded font-semibold">{f}</span>
+                                ))}
+                                {p.connectedPlan && (
+                                  <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-600 text-[9.5px] font-mono rounded font-semibold">
+                                    Connected to: {p.connectedPlan === 'prod-billing-pro' ? 'Retail Billing Pro' : 'GST Enterprise Suite'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right flex flex-col justify-between items-end shrink-0">
+                              <div>
+                                <span className="font-mono font-extrabold text-[#2563EB] block text-base">₹{p.price}</span>
+                                <span className="text-[10px] text-slate-400 line-through">₹{p.originalPrice || 2499}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleStartEdit(p)}
+                                  className="p-2 border border-slate-200 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer"
+                                  title="Edit Product"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(p.id)}
+                                  className="p-2 border border-slate-200 text-slate-450 hover:text-red-650 hover:bg-red-50 rounded-lg cursor-pointer"
+                                  title="Purge Software"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-right flex flex-col justify-between items-end shrink-0">
-                          <div>
-                            <span className="font-mono font-extrabold text-[#2563EB] block text-base">₹{p.price}</span>
-                            <span className="text-[10px] text-slate-400 line-through">₹{p.originalPrice || 2499}</span>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteProduct(p.id)}
-                            className="p-2 border border-slate-200 text-slate-450 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer max-w-xs"
-                            title="Purge Software"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -754,117 +1236,194 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
             <div className="space-y-8 animate-fade-in" id="admin-panel-releases-desk">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* Left Releases upload form */}
-                <div className="lg:col-span-5 bg-white border p-5 rounded-2xl shadow-sm space-y-4 text-xs sm:text-sm">
-                  <h4 className="font-extrabold text-slate-900 text-sm border-b border-slate-100 pb-3">Deploy exe version release update</h4>
-                  
-                  <form onSubmit={handleAddRelease} className="space-y-3">
-                    {/* Drag and Drop / Choose File Section */}
-                    <div className="space-y-1.5 rounded-xl border border-dashed border-slate-300 p-4 bg-slate-50 hover:bg-slate-100 transition-colors relative" id="exe-drag-drop-zone">
-                      <label className="text-[10px] font-bold text-slate-650 font-mono block uppercase">EXE Binary File (.exe) *</label>
-                      <input
-                        type="file"
-                        accept=".exe"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleExeFileChange(e.target.files[0]);
-                          }
-                        }}
-                        className="hidden"
-                        id="exe-file-input-field"
-                      />
-                      {!exeFile ? (
-                        <div 
-                          className="flex flex-col items-center justify-center py-4 cursor-pointer"
-                          onClick={() => document.getElementById('exe-file-input-field')?.click()}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                              handleExeFileChange(e.dataTransfer.files[0]);
+                {/* Left side upload forms */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* EXE release form */}
+                  <div className="bg-white border p-5 rounded-2xl shadow-sm space-y-4 text-xs sm:text-sm">
+                    <h4 className="font-extrabold text-slate-900 text-sm border-b border-slate-100 pb-3">Deploy exe version release update</h4>
+                    
+                    <form onSubmit={handleAddRelease} className="space-y-3">
+                      {/* Drag and Drop / Choose File Section */}
+                      <div className="space-y-1.5 rounded-xl border border-dashed border-slate-300 p-4 bg-slate-50 hover:bg-slate-100 transition-colors relative" id="exe-drag-drop-zone">
+                        <label className="text-[10px] font-bold text-slate-650 font-mono block uppercase">EXE Binary File (.exe) *</label>
+                        <input
+                          type="file"
+                          accept=".exe"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleExeFileChange(e.target.files[0]);
                             }
                           }}
-                        >
-                          <Download className="w-8 h-8 text-blue-500 mb-2 animate-bounce cursor-pointer" style={{ transform: 'rotate(180deg)' }} />
-                          <p className="text-[11px] font-semibold text-slate-700 text-center">Drag and drop setup.exe here or <span className="text-blue-600 underline">Browse files</span></p>
-                          <p className="text-[9.5px] text-slate-450 text-center mt-1">Accepts Windows executables up to 45 MB</p>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between bg-white border border-slate-200.80 rounded-lg p-2 mt-1">
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                            <div className="truncate">
-                              <p className="text-xs font-bold text-slate-800 truncate leading-tight">{exeFile.name}</p>
-                              <p className="text-[9.5px] text-slate-400 font-mono">{(exeFile.size / (1024 * 1024)).toFixed(2)} MB</p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExeFile(null);
-                              setDlFilename('');
-                              setDlSize('');
+                          className="hidden"
+                          id="exe-file-input-field"
+                        />
+                        {!exeFile ? (
+                          <div 
+                            className="flex flex-col items-center justify-center py-4 cursor-pointer"
+                            onClick={() => document.getElementById('exe-file-input-field')?.click()}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                handleExeFileChange(e.dataTransfer.files[0]);
+                              }
                             }}
-                            className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors cursor-pointer"
                           >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+                            <Download className="w-8 h-8 text-blue-500 mb-2 animate-bounce cursor-pointer" style={{ transform: 'rotate(180deg)' }} />
+                            <p className="text-[11px] font-semibold text-slate-700 text-center">Drag and drop setup.exe here or <span className="text-blue-600 underline">Browse files</span></p>
+                            <p className="text-[9.5px] text-slate-450 text-center mt-1">Accepts Windows executables up to 45 MB</p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between bg-white border border-slate-200.80 rounded-lg p-2 mt-1">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                              <div className="truncate">
+                                <p className="text-xs font-bold text-slate-800 truncate leading-tight">{exeFile.name}</p>
+                                <p className="text-[9.5px] text-slate-400 font-mono">{(exeFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExeFile(null);
+                                setDlFilename('');
+                                setDlSize('');
+                              }}
+                              className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-650 font-mono block">Version code *</label>
+                        <input
+                          type="text" required placeholder="e.g. 4.2.2" value={dlVersion}
+                          onChange={(e) => setDlVersion(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-900"
+                          id="dl-version-input"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-650 font-mono block">Filename *</label>
+                        <input
+                          type="text" required placeholder="e.g. BSPSuryatech_BillingReader_v4.2.2_Setup.exe" value={dlFilename}
+                          onChange={(e) => setDlFilename(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-900"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-650 font-mono block">File Space size *</label>
+                        <input
+                          type="text" required placeholder="e.g. 14.8 MB" value={dlSize}
+                          onChange={(e) => setDlSize(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-900"
+                        />
+                      </div>
+
+                      <div className="space-y-1 font-sans">
+                        <label className="text-[10px] font-bold text-slate-650 font-mono block">Release Note Logs (One per line)</label>
+                        <textarea
+                          rows={3} placeholder="Fixed barcode wrap sizes.\nOptimized receipts memory loading by 40%." value={dlNotes}
+                          onChange={(e) => setDlNotes(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200.80 p-3 rounded-xl text-xs resize-none text-slate-900"
+                        />
+                      </div>
+
+                      {uploadProgress && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 flex items-center gap-2.5 text-[11px] text-blue-700 animate-pulse font-medium">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0 text-blue-600" />
+                          <span>{uploadProgress}</span>
                         </div>
                       )}
-                    </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Version code *</label>
-                      <input
-                        type="text" required placeholder="e.g. 4.2.2" value={dlVersion}
-                        onChange={(e) => setDlVersion(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-900"
-                        id="dl-version-input"
-                      />
-                    </div>
+                      <button
+                        type="submit" disabled={addingDl}
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold text-xs uppercase rounded-xl transition-colors cursor-pointer text-center block"
+                        id="dl-submit-btn"
+                      >
+                        {addingDl ? (uploadProgress || 'Uploading release...') : 'Deploy Update Setup'}
+                      </button>
+                    </form>
+                  </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Filename *</label>
-                      <input
-                        type="text" required placeholder="e.g. BSPSuryatech_BillingReader_v4.2.2_Setup.exe" value={dlFilename}
-                        onChange={(e) => setDlFilename(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-900"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-650 font-mono block">File Space size *</label>
-                      <input
-                        type="text" required placeholder="e.g. 14.8 MB" value={dlSize}
-                        onChange={(e) => setDlSize(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-900"
-                      />
-                    </div>
-
-                    <div className="space-y-1 font-sans">
-                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Release Note Logs (One per line)</label>
-                      <textarea
-                        rows={3} placeholder="Fixed barcode wrap sizes.\nOptimized receipts memory loading by 40%." value={dlNotes}
-                        onChange={(e) => setDlNotes(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200.80 p-3 rounded-xl text-xs resize-none text-slate-900"
-                      />
-                    </div>
-
-                    {uploadProgress && (
-                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 flex items-center gap-2.5 text-[11px] text-blue-700 animate-pulse font-medium">
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0 text-blue-600" />
-                        <span>{uploadProgress}</span>
+                  {/* PDF User Manual Upload Form */}
+                  <div className="bg-white border p-5 rounded-2xl shadow-sm space-y-4 text-xs sm:text-sm">
+                    <h4 className="font-extrabold text-slate-900 text-sm border-b border-slate-100 pb-3">Deploy custom installation PDF user manual</h4>
+                    
+                    <form onSubmit={handleUploadPdf} className="space-y-3 font-sans">
+                      {/* Drag and Drop / Choose File Section */}
+                      <div className="space-y-1.5 rounded-xl border border-dashed border-slate-300 p-4 bg-slate-50 hover:bg-slate-100 transition-colors relative" id="pdf-drag-drop-zone">
+                        <label className="text-[10px] font-bold text-slate-650 font-mono block uppercase">PDF Document Manual (.pdf) *</label>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handlePdfFileChange(e.target.files[0]);
+                            }
+                          }}
+                          className="hidden"
+                          id="pdf-file-input-field"
+                        />
+                        {!pdfFile ? (
+                          <div 
+                            className="flex flex-col items-center justify-center py-4 cursor-pointer"
+                            onClick={() => document.getElementById('pdf-file-input-field')?.click()}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                handlePdfFileChange(e.dataTransfer.files[0]);
+                              }
+                            }}
+                          >
+                            <FileText className="w-8 h-8 text-red-500 mb-2 animate-pulse cursor-pointer" />
+                            <p className="text-[11px] font-semibold text-slate-700 text-center font-sans">Drag and drop user manual PDF here or <span className="text-blue-600 underline">Browse files</span></p>
+                            <p className="text-[9.5px] text-slate-450 text-center mt-1 font-sans">Accepts PDF user manuals up to 15 MB</p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between bg-white border border-slate-200.80 rounded-lg p-2 mt-1">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                              <div className="truncate">
+                                <p className="text-xs font-bold text-slate-800 truncate leading-tight font-sans">{pdfFile.name}</p>
+                                <p className="text-[9.5px] text-slate-400 font-mono">{(pdfFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPdfFile(null);
+                              }}
+                              className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
 
-                    <button
-                      type="submit" disabled={addingDl}
-                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold text-xs uppercase rounded-xl transition-colors cursor-pointer text-center block"
-                      id="dl-submit-btn"
-                    >
-                      {addingDl ? (uploadProgress || 'Uploading release...') : 'Deploy Update Setup'}
-                    </button>
-                  </form>
+                      {pdfUploadProgress && (
+                        <div className="bg-red-50 border border-red-100 rounded-xl p-3.5 flex items-center gap-2.5 text-[11px] text-red-700 animate-pulse font-medium">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0 text-red-600" />
+                          <span>{pdfUploadProgress}</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit" disabled={uploadingPdf || !pdfFile}
+                        className="w-full py-3 bg-slate-900 hover:bg-black disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold text-xs uppercase rounded-xl transition-colors cursor-pointer text-center block"
+                        id="pdf-submit-btn"
+                      >
+                        {uploadingPdf ? (pdfUploadProgress || 'Uploading PDF manual...') : 'Deploy User Manual PDF'}
+                      </button>
+                    </form>
+                  </div>
                 </div>
 
                 {/* Right releases listings view */}
@@ -1111,6 +1670,283 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
                   </div>
                 </div>
 
+              </div>
+            </div>
+          )}
+
+          {/* View 8: LANGUAGE CONFIGURATIONS AND AI MANAGEMENT */}
+          {activeAdminTab === 'languages' && (
+            <div className="space-y-6 animate-fade-in" id="admin-panel-languages-config">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-lg">System-Wide Language Manager</h3>
+                <p className="text-slate-500 text-xs mt-1">Configure active translation layers, enable or disable locales, and introduce new languages dynamically using Gemini LLM backend.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Left Panel - Add language form */}
+                <div className="lg:col-span-5 bg-white border border-slate-200.80 rounded-2xl p-6 shadow-sm">
+                  <h4 className="font-extrabold text-slate-900 text-sm mb-4">Add Translation Language</h4>
+                  <form onSubmit={handleCreateLanguage} className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">ISO Locale Code (e.g. "pa", "or") *</label>
+                      <input
+                        type="text" required placeholder="locale code" value={newLangCode}
+                        onChange={(e) => setNewLangCode(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-900"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Language Name (e.g. Punjabi, Odia) *</label>
+                      <input
+                        type="text" required placeholder="language local name" value={newLangName}
+                        onChange={(e) => setNewLangName(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs text-slate-900 font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Emoji representative Flag (e.g. 🇮🇳) *</label>
+                      <input
+                        type="text" placeholder="emoji flag" value={newLangFlag}
+                        onChange={(e) => setNewLangFlag(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs text-slate-900 font-bold"
+                      />
+                    </div>
+
+                    <button
+                      type="submit" disabled={addingLang}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase rounded-xl transition-colors cursor-pointer text-center block"
+                      id="language-submit-btn"
+                    >
+                      {addingLang ? 'Registering...' : 'Provision Language'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Right Panel - Active Languages */}
+                <div className="lg:col-span-7 space-y-4 text-xs sm:text-sm">
+                  <h4 className="font-extrabold text-slate-900 text-sm">Configured Translation Layers</h4>
+                  <div className="bg-white border rounded-2xl overflow-hidden divide-y divide-slate-150 shadow-sm">
+                    {langConfigs.map((lang) => (
+                      <div key={lang.code} className="p-4 flex justify-between items-center gap-4 text-slate-600 font-mono" id={`language-crud-item-${lang.code}`}>
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl shrink-0">{lang.flag}</span>
+                          <div className="space-y-0.5">
+                            <span className="font-black text-slate-900 block text-sm tracking-wider uppercase">{lang.name}</span>
+                            <span className="text-[10px] text-slate-450 block font-medium">Locale code: {lang.code}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded ${
+                            lang.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-450'
+                          }`}>
+                            ● {lang.enabled ? 'Enabled' : 'Disabled'}
+                          </span>
+                          <button
+                            onClick={() => handleToggleLanguage(lang.code, lang.enabled)}
+                            className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border cursor-pointer ${
+                              lang.enabled 
+                                ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' 
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {lang.enabled ? 'Disable' : 'Enable'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* View 9: VIDEOS PLAYLIST MANAGER */}
+          {activeAdminTab === 'videos' && (
+            <div className="space-y-6 animate-fade-in" id="admin-panel-videos-crud">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-lg">System-Wide Video Tutorials Manager</h3>
+                <p className="text-slate-500 text-xs mt-1">Configure active videos, edit YouTube playback codes / full URLs, and update details shown on the help and tutorials pages.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Left Panel - Add video form */}
+                <div className="lg:col-span-5 bg-white border border-slate-200.80 rounded-2xl p-6 shadow-sm">
+                  <h4 className="font-extrabold text-slate-900 text-sm mb-4">Add Tutorial Video</h4>
+                  <form onSubmit={handleAddVideo} className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Video Title *</label>
+                      <input
+                        type="text" required placeholder="e.g. Setting up POS printer layout" value={vidTitle}
+                        onChange={(e) => setVidTitle(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs text-slate-900 font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">YouTube URL or ID *</label>
+                      <input
+                        type="text" required placeholder="e.g. https://www.youtube.com/watch?v=... or ID" value={vidYoutubeId}
+                        onChange={(e) => setVidYoutubeId(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-900"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-650 font-mono block">Duration (optional)</label>
+                        <input
+                          type="text" placeholder="e.g. 05:30 Mins" value={vidDuration}
+                          onChange={(e) => setVidDuration(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs text-slate-900 font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-650 font-mono block">Thumbnail URL (optional)</label>
+                        <input
+                          type="text" placeholder="Image URL prefix" value={vidThumbnail}
+                          onChange={(e) => setVidThumbnail(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs text-slate-900 font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Description / Details</label>
+                      <textarea
+                        placeholder="Detailed guidance summary shown beside video player..." value={vidDescription}
+                        onChange={(e) => setVidDescription(e.target.value)}
+                        rows={3}
+                        className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs text-slate-900"
+                      />
+                    </div>
+
+                    <button
+                      type="submit" disabled={addingVid}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase rounded-xl transition-colors cursor-pointer text-center block"
+                    >
+                      {addingVid ? 'Saving video...' : 'Deploy Tutorial Video'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Right Panel - Active Videos list */}
+                <div className="lg:col-span-7 space-y-4 text-xs sm:text-sm">
+                  <h4 className="font-extrabold text-slate-900 text-sm">Active Tutorials Playlists</h4>
+                  <div className="space-y-4">
+                    {videos.length === 0 ? (
+                      <div className="bg-white border rounded-2xl p-10 text-center text-slate-400">
+                        No custom videos registered in database yet. Default fallback videos will be displayed.
+                      </div>
+                    ) : (
+                      videos.map((vid) => (
+                        <div key={vid.id} id={`crud-video-item-${vid.id}`} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 text-left font-sans">
+                          {editingVidId === vid.id ? (
+                            <form onSubmit={(e) => handleUpdateVideoSubmit(e, vid.id)} className="space-y-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 block font-mono">Video Title</label>
+                                <input
+                                  type="text" required value={editVidTitle}
+                                  onChange={(e) => setEditVidTitle(e.target.value)}
+                                  className="w-full bg-slate-50 border px-3 py-2 rounded-lg text-xs font-bold text-slate-900 font-sans"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-400 block font-mono">YouTube URL/ID</label>
+                                  <input
+                                    type="text" required value={editVidYoutubeId}
+                                    onChange={(e) => setEditVidYoutubeId(e.target.value)}
+                                    className="w-full bg-slate-50 border px-3 py-2 rounded-lg text-xs font-mono"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-400 block font-mono">Play Duration</label>
+                                  <input
+                                    type="text" value={editVidDuration}
+                                    onChange={(e) => setEditVidDuration(e.target.value)}
+                                    className="w-full bg-slate-50 border px-3 py-2 rounded-lg text-xs font-bold font-sans"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 block font-mono">Thumbnail Image URL</label>
+                                <input
+                                  type="text" value={editVidThumbnail}
+                                  onChange={(e) => setEditVidThumbnail(e.target.value)}
+                                  className="w-full bg-slate-50 border px-3 py-2 rounded-lg text-xs font-sans"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 block font-mono">Description</label>
+                                <textarea
+                                  value={editVidDescription}
+                                  onChange={(e) => setEditVidDescription(e.target.value)}
+                                  rows={2}
+                                  className="w-full bg-slate-50 border px-3 py-2 rounded-lg text-xs font-sans"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-2 justify-end">
+                                <button
+                                  type="button" onClick={handleCancelEditVideo}
+                                  className="px-3 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer font-sans"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="submit" disabled={updatingVid}
+                                  className="px-4 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer font-sans"
+                                >
+                                  {updatingVid ? 'Saving...' : 'Apply Details'}
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <div className="flex flex-col sm:flex-row gap-4 items-start font-sans">
+                              <div className="w-full sm:w-1/3 aspect-video rounded-xl overflow-hidden bg-slate-900 relative shrink-0 border border-slate-150">
+                                <img
+                                  src={vid.thumbnail}
+                                  alt={vid.title}
+                                  className="w-full h-full object-cover opacity-80"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <span className="absolute bottom-2 right-2 bg-black/80 text-[10px] px-1.5 py-0.5 rounded text-white font-mono">{vid.duration}</span>
+                              </div>
+
+                              <div className="flex-1 space-y-1.5 font-sans">
+                                <h5 className="font-extrabold text-slate-800 text-sm leading-snug">{vid.title}</h5>
+                                <p className="text-[10px] font-mono text-slate-400 truncate">YouTube target playback: {vid.youtubeId}</p>
+                                <p className="text-slate-500 text-xs line-clamp-2 leading-relaxed">{vid.description}</p>
+                                
+                                <div className="flex items-center gap-2.5 pt-2">
+                                  <button
+                                    onClick={() => handleStartEditVideo(vid)}
+                                    className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-650 hover:text-slate-800 border-slate-250 text-[10px] font-bold uppercase tracking-wider rounded-lg border cursor-pointer font-sans"
+                                  >
+                                    Edit details
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteVideo(vid.id)}
+                                    className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border-red-200 text-[10px] font-bold uppercase tracking-wider rounded-lg border cursor-pointer font-sans"
+                                  >
+                                    Delete Video
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

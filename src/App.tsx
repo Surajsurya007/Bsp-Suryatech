@@ -29,6 +29,7 @@ import AboutUs from './components/AboutUs';
 import Contact from './components/Contact';
 import CustomerPortal from './components/CustomerPortal';
 import AdminPortal from './components/AdminPortal';
+import { TranslationProvider } from './components/TranslationContext';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -37,6 +38,7 @@ export default function App() {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [downloads, setDownloads] = useState<any[]>([]);
   const [totalDownloads, setTotalDownloads] = useState<number>(1420);
+  const [videos, setVideos] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Array<{ id: string; text: string; type: 'success' | 'info' | 'error' }>>([]);
 
   // Checkout modal states (Simulated Razorpay Checkout Gateway)
@@ -78,6 +80,14 @@ export default function App() {
     fetchProducts();
     fetchTestimonials();
     fetchDownloads();
+    fetchVideos();
+
+    const pollInterval = setInterval(() => {
+      fetchProducts();
+      fetchVideos();
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   // Fetch latest downloads automatically when navigating to the Download Center page
@@ -93,6 +103,15 @@ export default function App() {
       if (res.ok) setProducts(await res.json());
     } catch {
       console.warn('Unable to load master products indices');
+    }
+  };
+
+  const fetchVideos = async () => {
+    try {
+      const res = await fetch('/api/videos');
+      if (res.ok) setVideos(await res.json());
+    } catch {
+      console.warn('Unable to load master videos playlist');
     }
   };
 
@@ -284,14 +303,15 @@ export default function App() {
   };
 
   return (
-    <Layout 
-      currentPage={currentPage}
-      onPageChange={setCurrentPage} 
-      user={user}
-      onLogout={handleLogout}
-      notifications={notifications}
-      removeNotification={removeNotification}
-    >
+    <TranslationProvider user={user}>
+      <Layout 
+        currentPage={currentPage}
+        onPageChange={setCurrentPage} 
+        user={user}
+        onLogout={handleLogout}
+        notifications={notifications}
+        removeNotification={removeNotification}
+      >
       <AnimatePresence mode="wait">
         <motion.div
           key={currentPage}
@@ -333,7 +353,7 @@ export default function App() {
           )}
 
           {currentPage === 'tutorials' && (
-            <Tutorials />
+            <Tutorials videos={videos} />
           )}
 
           {currentPage === 'about' && (
@@ -359,6 +379,8 @@ export default function App() {
               onAddNotification={addNotification}
               onPageChange={setCurrentPage}
               onRefreshDownloads={fetchDownloads}
+              videos={videos}
+              onRefreshVideos={fetchVideos}
             />
           )}
         </motion.div>
@@ -464,5 +486,6 @@ export default function App() {
         </div>
       )}
     </Layout>
+    </TranslationProvider>
   );
 }

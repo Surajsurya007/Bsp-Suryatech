@@ -216,7 +216,7 @@ export default function Features({ onPageChange }: FeaturesProps) {
               onClick={() => onPageChange('pricing')}
               className="px-8 py-3.5 bg-slate-800 hover:bg-slate-700 font-extrabold border border-slate-700 rounded-xl transition-colors cursor-pointer text-sm"
             >
-              Buy Lifetime Key (₹999)
+              Buy Lifetime Key (₹1999)
             </button>
           </div>
         </div>

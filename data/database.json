@@ -1,0 +1,383 @@
+{
+  "users": [
+    {
+      "id": "u-admin",
+      "name": "BSP Suryatech Admin",
+      "email": "admin@bspsuryatech.in",
+      "role": "admin",
+      "createdAt": "2026-06-06T14:28:24.278Z"
+    },
+    {
+      "id": "u-customer",
+      "name": "Suraj Kumar",
+      "email": "test@gmail.com",
+      "role": "customer",
+      "createdAt": "2026-06-06T14:28:24.279Z"
+    }
+  ],
+  "passwordHashes": {
+    "u-admin": "9f4b779c3e888b43322459315b84c9a9:afd6eec15d0562e42609c5aec96c76ea39c46edcaf8a2a5df8d5201a2d0a19edfae2a6b11c3b7b3a7a79982a56028d48c69d21d54365777ded5f5c3e5ff8e0d0",
+    "u-customer": "b9ccc2338bf8b5bd3bcd5dbea1001339:ea390073d180cee9336d82e4dc34eefd3e2a12a0ed27318662dac716f7a2d0ec5311db41f80a5520b0492eb1993b313ae1aa442adda7af46e3a8d0e32f3eedf9"
+  },
+  "customerProfiles": [
+    {
+      "userId": "u-customer",
+      "clientName": "Suraj Kumar",
+      "businessName": "Surya Enterprises POS Solutions",
+      "contactNumber": "9988776655",
+      "emailAddress": "test@gmail.com",
+      "businessAddress": "Sector 62, Noida POS Terminal Block B",
+      "city": "Noida",
+      "state": "Uttar Pradesh",
+      "pincode": "201301",
+      "gstNumber": "09AAACS1234A1Z5",
+      "createdAt": "2026-06-01T14:28:24.281Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod-billing-pro",
+      "name": "BSP Suryatech Retail Billing Pro",
+      "version": "v4.2.1",
+      "size": "14.8 MB",
+      "price": 999,
+      "originalPrice": 2499,
+      "features": [
+        "Retail & Wholesale Billing",
+        "GST Invoice Generation & PDF Export",
+        "Barcode Creation & Fast Scanning",
+        "Inventory Stock Alerts & Tracking",
+        "Customer Ledger & Balances",
+        "Supplier Purchase Tracking",
+        "Thermal Printer Support (58mm/80mm)",
+        "Backup & Automatic Restore Settings",
+        "Profit & Loss Reporting",
+        "Offline Desktop-First Performance"
+      ],
+      "description": "All-in-one GST billing and inventory desktop software designed for Kirana stores, pharmacies, electronics shops, supermarkets, and distributors across India. Lightweight, ultra-fast, and runs 100% offline.",
+      "downloadUrl": "/api/downloads/setup/prod-billing-pro",
+      "createdAt": "2026-01-10T00:00:00Z",
+      "connectedPlan": "prod-billing-pro"
+    },
+    {
+      "id": "prod-billing-enterprise",
+      "name": "BSP Suryatech GST Enterprise Suite",
+      "version": "v5.0.3",
+      "size": "22.4 MB",
+      "price": 2999,
+      "originalPrice": 4999,
+      "features": [
+        "All features of Retail Billing Pro",
+        "Multi-firm & Multi-branch handling",
+        "Direct GST Portal JSON Export (GSTR-1, GSTR-3B)",
+        "Advanced User Permissions & Roles",
+        "Cloud Auto-Backup Integration",
+        "Custom Print Invoice Customizer Designer",
+        "Premium 24/7 Telephone Support",
+        "API integration with POS Scales"
+      ],
+      "description": "Enterprise grade GST compliance and multi-user billing software with multi-firm support, direct GSTR ledger formatting, designable invoices, and automated backup mechanisms.",
+      "downloadUrl": "/api/downloads/setup/prod-billing-enterprise",
+      "createdAt": "2026-03-15T00:00:00Z",
+      "connectedPlan": "prod-billing-enterprise"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ord-seed-001",
+      "userId": "u-customer",
+      "userEmail": "test@gmail.com",
+      "userName": "Suraj Kumar",
+      "productId": "prod-billing-pro",
+      "productName": "BSP Suryatech Retail Billing Pro",
+      "amount": 999,
+      "status": "success",
+      "paymentId": "pay_RZP_seed938475",
+      "createdAt": "2026-06-01T14:28:24.281Z"
+    }
+  ],
+  "licenses": [
+    {
+      "id": "lic-seed-991",
+      "userId": "u-customer",
+      "userEmail": "test@gmail.com",
+      "orderId": "ord-seed-001",
+      "productId": "prod-billing-pro",
+      "productName": "BSP Suryatech Retail Billing Pro",
+      "licenseKey": "BSPS-RETL-PRO-K93F-92JD-L03A-84Y7",
+      "status": "active",
+      "expiresAt": "2099-12-31T23:59:59Z",
+      "createdAt": "2026-06-01T14:28:24.281Z"
+    }
+  ],
+  "downloads": [
+    {
+      "id": "dl-1",
+      "version": "4.2.1",
+      "filename": "BSPSuryatech_BillingReader_v4.2.1_Setup.exe",
+      "fileSize": "14.8 MB",
+      "downloadUrl": "/api/downloads/setup/prod-billing-pro",
+      "releaseNotes": [
+        "Added high-speed barcode generation routines.",
+        "Improved thermal receipt text wrapping logic on 58mm POS screens.",
+        "Optimized customer sales summary ledger loading times by 40%.",
+        "Fixed state selector issues in purchase SGST/CGST configurations."
+      ],
+      "downloadCount": 840,
+      "createdAt": "2026-05-20T00:00:00Z"
+    },
+    {
+      "id": "dl-2",
+      "version": "5.0.3",
+      "filename": "BSPSuryatech_GST_Enterprise_v5.0.3_Setup.exe",
+      "fileSize": "22.4 MB",
+      "downloadUrl": "/api/downloads/setup/prod-billing-enterprise",
+      "releaseNotes": [
+        "Added multi-firm dynamic ledger grouping.",
+        "New secure Google Drive API auto-cloud backups scheduler.",
+        "Added dynamic invoice layout designer visual canvas.",
+        "Updated HSN reference lists for 2026 GST guidelines."
+      ],
+      "downloadCount": 580,
+      "createdAt": "2026-06-01T00:00:00Z"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "tk-seed-001",
+      "userId": "u-customer",
+      "userEmail": "test@gmail.com",
+      "userName": "Suraj Kumar",
+      "title": "Thermal Printer Invoice Width Configuration",
+      "description": "We bought a thermal physical printer brand. How to match receipt width from the software print settings? Bill currently wraps margins incorrectly.",
+      "category": "Technical Bug",
+      "status": "in_progress",
+      "createdAt": "2026-06-04T14:28:24.281Z",
+      "replies": [
+        {
+          "id": "reply-seed-1",
+          "authorName": "Suraj Kumar",
+          "authorRole": "customer",
+          "message": "I tried 58mm receipts, but layout prints empty right margins.",
+          "createdAt": "2026-06-04T14:28:24.281Z"
+        },
+        {
+          "id": "reply-seed-2",
+          "authorName": "Support Team (BSP Suryatech)",
+          "authorRole": "admin",
+          "message": "Hello Suraj, please load Printer Properties page in Suryatech dashboard. Select \"Paper Size\" dropdown and set it specifically to 58mm or 80mm as suited. Click Apply settings. Let us know if this solves the wrap alignment.",
+          "createdAt": "2026-06-05T14:28:24.281Z"
+        }
+      ]
+    }
+  ],
+  "coupons": [
+    {
+      "code": "SURYA20",
+      "discountPercent": 20,
+      "active": true,
+      "expiresBy": "2027-12-31"
+    },
+    {
+      "code": "INDIA50",
+      "discountPercent": 50,
+      "active": true,
+      "expiresBy": "2026-12-31"
+    },
+    {
+      "code": "STARTUP10",
+      "discountPercent": 10,
+      "active": true,
+      "expiresBy": "2026-08-30"
+    }
+  ],
+  "testimonials": [
+    {
+      "id": "t-1",
+      "name": "Rajesh Sharma",
+      "company": "Sharma Kirana Store",
+      "role": "Owner",
+      "text": "BSP Suryatech Billing Software completely transformed my retail store. Generating barcodes and printing thermal bills has never been faster. Our lines move 3x faster now! Extremely reliable offline.",
+      "rating": 5
+    },
+    {
+      "id": "t-2",
+      "name": "Anjali Gupta",
+      "company": "Gupta Medicals & Pharmacies",
+      "role": "Chief Pharmacist",
+      "text": "The drug inventory tracking and expiry date alerts are lifesaving. Plus, the automated GST reports make GSTR-1 filings a breeze. Total peace of mind for Indian business owners.",
+      "rating": 5
+    },
+    {
+      "id": "t-3",
+      "name": "Vikram Singh",
+      "company": "Singh Electronics & Hardware",
+      "role": "Managing Director",
+      "text": "Superb software, low learning curve, and runs flawlessly on old Windows 7 desktop terminals. The backup system works perfectly. The customer portal license activation takes 1 minute.",
+      "rating": 5
+    }
+  ],
+  "blogs": [
+    {
+      "id": "blog-1",
+      "title": "How to Automate GST Return Filings for Small Retail Business in India",
+      "excerpt": "Manual ledger preparation can be a nightmare. Learn how automated GST billing software generates instant error-free GSTR schemas and tables in minutes.",
+      "content": "Filing Goods and Services Tax (GST) returns manually is one of the most time-consuming and error-prone administrative tasks for small Indian merchants. In this detailed guide, we explain GSTR-1, GSTR-2B, and GSTR-3B components. By using certified automated billing software, every sales transactions, CGST, SGST, IGST calculations happen instantaneously at the billing terminal, storing item rates, discount schemes, and HSN codes seamlessly. At month-end, click standard portals button to export standardized file which can be directly uploaded to local GST offline tool. Saving over 90% auditor costs annually.",
+      "author": "Suraj Kumar (Developer, BSP Suryatech)",
+      "image": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800",
+      "date": "2026-05-18",
+      "readTime": "6 min read"
+    },
+    {
+      "id": "blog-2",
+      "title": "Why Offline Desktop Billing is Better than Cloud Billing for Retail Shop POS",
+      "excerpt": "ISP connection drops or slow cloud loading times are detrimental to grocery lanes. Find out why offline-first architectures dominate POS billing.",
+      "content": "Many merchants struggle with slow billing when their internet acts up. Cloud software stops cold when cloud latency increases. An offline-first billing app like BSP Suryatech Billing ensures your scanner, keyboard, cash drawers, and printers operate continuously. Database modifications are saved instantly to local high-speed file storage. Backups are synced to cloud only when internet connections return. Keep checkout lines lightning fast even during complete ISP provider drops.",
+      "author": "Praveen Shastry (Technical Lead)",
+      "image": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800",
+      "date": "2026-06-02",
+      "readTime": "5 min read"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev-1",
+      "productId": "prod-billing-pro",
+      "name": "Manish Kumar",
+      "rating": 5,
+      "comment": "Runs very fast. Excellent thermal printer integration out of the box!",
+      "createdAt": "2026-05-15T10:00:00Z"
+    },
+    {
+      "id": "rev-2",
+      "productId": "prod-billing-pro",
+      "name": "Ketan Patel",
+      "rating": 4,
+      "comment": "Best retail app for the price. The lifetime license is extremely affordable.",
+      "createdAt": "2026-05-22T14:30:00Z"
+    }
+  ],
+  "payments": [
+    {
+      "id": "pay-seed-001",
+      "invoiceNumber": "INV-2026-001",
+      "transactionId": "pay_RZP_seed938475",
+      "paymentMethod": "UP_Razorpay",
+      "amount": 999,
+      "paymentDate": "2026-06-01T14:28:24.281Z",
+      "status": "captured",
+      "orderId": "ord-seed-001",
+      "userId": "u-customer"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv-seed-001",
+      "invoiceNumber": "INV-2026-001",
+      "orderId": "ord-seed-001",
+      "userId": "u-customer",
+      "clientName": "Suraj Kumar",
+      "businessName": "Surya Enterprises POS Solutions",
+      "emailAddress": "test@gmail.com",
+      "contactNumber": "9988776655",
+      "amount": 999,
+      "gstAmount": 152,
+      "netAmount": 847,
+      "productName": "BSP Suryatech Retail Billing Pro",
+      "licenseKey": "BSPS-RETL-PRO-K93F-92JD-L03A-84Y7",
+      "createdAt": "2026-06-01T14:28:24.281Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-seed-1",
+      "userId": "u-customer",
+      "title": "Trial Access Verified",
+      "message": "Welcome! Your Suryatech account is active. You are cleared to download free setup.exe trials.",
+      "type": "security",
+      "read": true,
+      "createdAt": "2026-06-01T14:28:24.281Z"
+    },
+    {
+      "id": "notif-seed-2",
+      "userId": "u-customer",
+      "title": "License Activated",
+      "message": "BSP Retail Billing key BSPS-RETL-PRO-K93F-92JD-L03A-84Y7 is active on 1 workstation host.",
+      "type": "license_activated",
+      "read": false,
+      "createdAt": "2026-06-01T14:28:24.281Z"
+    },
+    {
+      "id": "notif-seed-3",
+      "userId": "u-customer",
+      "title": "New Update Version Available",
+      "message": "Admin uploaded version 4.3.0. Please upgrade your retail workstation client.",
+      "type": "new_version",
+      "read": false,
+      "createdAt": "2026-06-06T13:28:24.281Z"
+    }
+  ],
+  "downloadCounter": 1420,
+  "languageConfigs": [
+    {
+      "code": "en",
+      "name": "English",
+      "flag": "🇺🇸",
+      "enabled": true
+    },
+    {
+      "code": "hi",
+      "name": "Hindi",
+      "flag": "🇮🇳",
+      "enabled": true
+    },
+    {
+      "code": "mr",
+      "name": "Marathi",
+      "flag": "🇮🇳",
+      "enabled": true
+    },
+    {
+      "code": "gu",
+      "name": "Gujarati",
+      "flag": "🇮🇳",
+      "enabled": true
+    },
+    {
+      "code": "ta",
+      "name": "Tamil",
+      "flag": "🇮🇳",
+      "enabled": true
+    },
+    {
+      "code": "te",
+      "name": "Telugu",
+      "flag": "🇮🇳",
+      "enabled": true
+    },
+    {
+      "code": "bn",
+      "name": "Bengali",
+      "flag": "🇮🇳",
+      "enabled": true
+    },
+    {
+      "code": "kn",
+      "name": "Kannada",
+      "flag": "🇮🇳",
+      "enabled": true
+    },
+    {
+      "code": "ml",
+      "name": "Malayalam",
+      "flag": "🇮🇳",
+      "enabled": true
+    },
+    {
+      "code": "pa",
+      "name": "Punjabi",
+      "flag": "🇮🇳",
+      "enabled": true
+    }
+  ]
+}

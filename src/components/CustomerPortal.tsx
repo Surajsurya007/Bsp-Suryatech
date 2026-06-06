@@ -126,6 +126,83 @@ export default function CustomerPortal({
     }
   }, []);
 
+  // Listen for message events from GitHub OAuth Callback Popup
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const origin = event.origin;
+      // Accept local previews or cloud run sandbox previews
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+        return;
+      }
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        const { token, user: authedUser } = event.data;
+        if (token && authedUser) {
+          onLoginSuccess(token, authedUser);
+          onAddNotification(`Successfully authenticated! Welcome back, ${authedUser.name}!`, 'success');
+        } else {
+          onAddNotification('Account verification completed but failed matching workspace records.', 'error');
+        }
+      } else if (event.data?.type === 'OAUTH_AUTH_FAILURE') {
+        onAddNotification(event.data.error || 'Verification was canceled or failed.', 'error');
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onLoginSuccess, onAddNotification]);
+
+  // Handler for secure Google OAuth redirect
+  const handleGoogleLogin = async () => {
+    setAuthLoading(true);
+    try {
+      const res = await fetch('/api/auth/google/url');
+      if (!res.ok) {
+        throw new Error('Could not request authorization URL.');
+      }
+      const data = await res.json();
+      
+      // Handle scenario where GOOGLE_CLIENT_ID / SECRET are not configured yet
+      if (!data.clientIdConfigured) {
+        const testSimulation = window.confirm(
+          "ℹ️ Google OAuth credentials are not fully configured in your AI Studio settings secrets yet.\n\n" +
+          "Would you like to start a simulated Google single sign-on flow to verify the UI login logic and portal dashboard mapping?"
+        );
+        if (testSimulation) {
+          const width = 600;
+          const height = 700;
+          const left = window.screen.width / 2 - width / 2;
+          const top = window.screen.height / 2 - height / 2;
+          window.open(
+            `/auth/callback?code=sim_google_auth_code_123&state=google_simulated`,
+            'google_oauth_popup',
+            `width=${width},height=${height},left=${left},top=${top}`
+          );
+        } else {
+          onAddNotification("Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables in Settings secrets.", "info");
+        }
+        setAuthLoading(false);
+        return;
+      }
+
+      // Configure window coordinate details
+      const width = 600;
+      const height = 700;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+      const popup = window.open(
+        data.url,
+        'google_oauth_popup',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+      if (!popup) {
+        onAddNotification('Popup blocker active. Please allow popups to continue linking with Google.', 'error');
+      }
+    } catch (err: any) {
+      onAddNotification(err.message || 'Error connecting to Google auth launcher.', 'error');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   // Fetch Customer Portal records
   const fetchCustomerData = async () => {
     if (!user) return;
@@ -448,16 +525,7 @@ export default function CustomerPortal({
   if (!user) {
     return (
       <div className="py-12 max-w-4xl mx-auto px-4 md:px-6">
-        {/* Banner credentials info */}
-        <div className="bg-sky-50 border border-sky-150 p-4 rounded-2xl mb-8 flex gap-3 text-left shadow-sm">
-          <HelpCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-sky-800 leading-normal space-y-1">
-            <span className="font-extrabold block">🇮🇳 Suryatech Sandbox Installer Gateway:</span>
-            <p className="font-medium text-slate-600">
-              Create a secure professional account, verify with sandbox OTP, or select <strong className="text-blue-600">Sign In</strong> with prefilled credentials: <strong className="text-slate-800">test@gmail.com / surya123</strong> to experience direct serial client setup downloads!
-            </p>
-          </div>
-        </div>
+
 
         {/* Auth form packaging */}
         <div className="bg-white border border-slate-200.80 rounded-3xl p-6 sm:p-10 shadow-md">
@@ -485,38 +553,38 @@ export default function CustomerPortal({
 
           {!otpSent ? (
             authTab === 'login' ? (
-              <form onSubmit={handleLoginSubmit} className="space-y-4 max-w-md mx-auto">
-                <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-650 font-mono tracking-wider uppercase block">Customer Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="name@company.com"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
-                      id="login-input-email"
-                    />
-                  </div>
-                </div>
+               <form onSubmit={handleLoginSubmit} className="space-y-4 max-w-md mx-auto">
+                 <div className="text-left space-y-1">
+                   <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Customer Email Address</label>
+                   <div className="relative">
+                     <Mail className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                     <input
+                       type="email"
+                       required
+                       placeholder="name@company.com"
+                       value={loginEmail}
+                       onChange={(e) => setLoginEmail(e.target.value)}
+                       className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                       id="login-input-email"
+                     />
+                   </div>
+                 </div>
 
-                <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-650 font-mono tracking-wider uppercase block">Secure Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
-                    <input
-                      type="password"
-                      required
-                      placeholder="Enter account password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
-                      id="login-input-pass"
-                    />
-                  </div>
-                </div>
+                 <div className="text-left space-y-1">
+                   <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Secure Password</label>
+                   <div className="relative">
+                     <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                     <input
+                       type="password"
+                       required
+                       placeholder="Enter account password"
+                       value={loginPassword}
+                       onChange={(e) => setLoginPassword(e.target.value)}
+                       className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                       id="login-input-pass"
+                     />
+                   </div>
+                 </div>
 
                 <button
                   type="submit"
@@ -525,6 +593,39 @@ export default function CustomerPortal({
                   id="login-submit-button"
                 >
                   {authLoading ? 'Signing In Workspace...' : 'Secure Sign In'}
+                </button>
+
+                <div className="relative my-5 flex items-center justify-center">
+                  <span className="absolute w-full border-t border-slate-200"></span>
+                  <span className="relative bg-white px-3 text-[10px] font-mono font-black uppercase text-slate-400">or</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={authLoading}
+                  className="w-full py-3.5 px-4 border border-slate-200 hover:border-slate-800 bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs tracking-wider uppercase rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-sm"
+                  id="login-github-button"
+                >
+                  <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 12-4.52z"
+                    />
+                  </svg>
+                  Continue with Google Account
                 </button>
               </form>
             ) : (
@@ -537,7 +638,7 @@ export default function CustomerPortal({
                 {/* Grid blocks for professional information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-left">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">Client Full Name *</label>
+                    <label className="text-xs font-bold text-slate-600 block">Client Full Name *</label>
                     <div className="relative font-sans">
                       <User className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
                       <input
@@ -546,13 +647,13 @@ export default function CustomerPortal({
                         placeholder="e.g. Ramesh Patel"
                         value={regClientName}
                         onChange={(e) => setRegClientName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">Registered Business Name *</label>
+                    <label className="text-xs font-bold text-slate-600 block">Registered Business Name *</label>
                     <div className="relative">
                       <Building className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
                       <input
@@ -561,13 +662,13 @@ export default function CustomerPortal({
                         placeholder="e.g. Patel Stores Pvt Ltd"
                         value={regBusinessName}
                         onChange={(e) => setRegBusinessName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">Contact Number *</label>
+                    <label className="text-xs font-bold text-slate-600 block">Contact Number *</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
                       <input
@@ -576,13 +677,13 @@ export default function CustomerPortal({
                         placeholder="e.g. 9988776655"
                         value={regContactNumber}
                         onChange={(e) => setRegContactNumber(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">Email Address *</label>
+                    <label className="text-xs font-bold text-slate-600 block">Email Address *</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
                       <input
@@ -591,13 +692,13 @@ export default function CustomerPortal({
                         placeholder="ramesh@company.com"
                         value={regEmail}
                         onChange={(e) => setRegEmail(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-bold text-slate-650 block">Business Address *</label>
+                    <label className="text-xs font-bold text-slate-600 block">Business Address *</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
                       <input
@@ -606,60 +707,60 @@ export default function CustomerPortal({
                         placeholder="Floor, shop locator, landmark details"
                         value={regBusinessAddress}
                         onChange={(e) => setRegBusinessAddress(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">City *</label>
+                    <label className="text-xs font-bold text-slate-600 block">City *</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Pune"
                       value={regCity}
                       onChange={(e) => setRegCity(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">State *</label>
+                    <label className="text-xs font-bold text-slate-600 block">State *</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Maharashtra"
                       value={regState}
                       onChange={(e) => setRegState(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">Pincode *</label>
+                    <label className="text-xs font-bold text-slate-600 block">Pincode *</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. 411001"
                       value={regPincode}
                       onChange={(e) => setRegPincode(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">GST IN Number (Optional)</label>
+                    <label className="text-xs font-bold text-slate-600 block">GST IN Number (Optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. 27AAAAA1111A1Z1"
                       value={regGstNumber}
                       onChange={(e) => setRegGstNumber(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white font-mono"
+                      className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white font-mono"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">Secure Password *</label>
+                    <label className="text-xs font-bold text-slate-600 block">Secure Password *</label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
                       <input
@@ -668,13 +769,13 @@ export default function CustomerPortal({
                         placeholder="Type password"
                         value={regPassword}
                         onChange={(e) => setRegPassword(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 block">Confirm Password *</label>
+                    <label className="text-xs font-bold text-slate-600 block">Confirm Password *</label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
                       <input
@@ -683,7 +784,7 @@ export default function CustomerPortal({
                         placeholder="Confirm password"
                         value={regConfirmPassword}
                         onChange={(e) => setRegConfirmPassword(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
                   </div>
@@ -913,7 +1014,7 @@ export default function CustomerPortal({
                     {licenses.map((lic) => (
                       <div 
                         key={lic.id} 
-                        className="bg-white border border-slate-205 p-6 rounded-3xl shadow-sm flex flex-col justify-between hover:border-blue-300 transition-all"
+                        className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm flex flex-col justify-between hover:border-blue-300 transition-all"
                         id={`lickey-card-${lic.id}`}
                       >
                         <div className="space-y-4 text-left">
@@ -975,43 +1076,43 @@ export default function CustomerPortal({
                   <p className="text-xs text-slate-400 mt-1.5">Configure state details, GST identifiers, and invoice coordinates for compliance.</p>
                 </div>
 
-                <form onSubmit={handleUpdateProfileSubmit} className="bg-white border border-slate-205 p-6 sm:p-8 rounded-3xl shadow-sm space-y-6">
+                <form onSubmit={handleUpdateProfileSubmit} className="bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl shadow-sm space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 block">Customer Name *</label>
+                      <label className="text-xs font-bold text-slate-600 block">Customer Name *</label>
                       <input
                         type="text"
                         required
                         value={profileClientName}
                         onChange={(e) => setProfileClientName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 block">Business Name *</label>
+                      <label className="text-xs font-bold text-slate-600 block">Business Name *</label>
                       <input
                         type="text"
                         required
                         value={profileBusinessName}
                         onChange={(e) => setProfileBusinessName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 block">Contact Number *</label>
+                      <label className="text-xs font-bold text-slate-600 block">Contact Number *</label>
                       <input
                         type="text"
                         required
                         value={profileContactNumber}
                         onChange={(e) => setProfileContactNumber(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 block leading-none">Email Address (Invoicing targets)</label>
+                      <label className="text-xs font-bold text-slate-600 block leading-none">Email Address (Invoicing targets)</label>
                       <input
                         type="email"
                         disabled
@@ -1021,56 +1122,56 @@ export default function CustomerPortal({
                     </div>
 
                     <div className="space-y-1 md:col-span-2">
-                      <label className="text-xs font-bold text-slate-650 block">Business / Billing Address *</label>
+                      <label className="text-xs font-bold text-slate-600 block">Business / Billing Address *</label>
                       <input
                         type="text"
                         required
                         value={profileBusinessAddress}
                         onChange={(e) => setProfileBusinessAddress(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 block">City *</label>
+                      <label className="text-xs font-bold text-slate-600 block">City *</label>
                       <input
                         type="text"
                         required
                         value={profileCity}
                         onChange={(e) => setProfileCity(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 block">State *</label>
+                      <label className="text-xs font-bold text-slate-600 block">State *</label>
                       <input
                         type="text"
                         required
                         value={profileStateValue}
                         onChange={(e) => setProfileStateValue(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 block">Pincode *</label>
+                      <label className="text-xs font-bold text-slate-600 block">Pincode *</label>
                       <input
                         type="text"
                         required
                         value={profilePincode}
                         onChange={(e) => setProfilePincode(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 block">GST IN Number (Optional)</label>
+                      <label className="text-xs font-bold text-slate-600 block">GST IN Number (Optional)</label>
                       <input
                         type="text"
                         value={profileGstNumber}
                         onChange={(e) => setProfileGstNumber(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white font-mono"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white font-mono"
                         placeholder="GST identification code"
                       />
                     </div>
@@ -1422,23 +1523,23 @@ export default function CustomerPortal({
                 <form onSubmit={handleRaiseTicketSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 font-mono tracking-wider uppercase block">Incident Title *</label>
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Incident Title *</label>
                       <input
                         type="text"
                         required
                         placeholder="e.g. TVS RP3150 receipt line alignment"
                         value={ticketTitle}
                         onChange={(e) => setTicketTitle(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
                         id="new-ticket-title-input"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-650 font-mono tracking-wider uppercase block">Incident Category</label>
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Incident Category</label>
                       <select
                         value={ticketCategory}
                         onChange={(e) => setTicketCategory(e.target.value as any)}
-                        className="w-full bg-slate-50 border border-slate-205 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
                       >
                         <option value="License Issue">License Activation / Keys Transfer</option>
                         <option value="Billing & Invoice">Billing & Simulated Razorpay Payments</option>
@@ -1450,14 +1551,14 @@ export default function CustomerPortal({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-650 font-mono tracking-wider uppercase block">Problem Description *</label>
+                    <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Problem Description *</label>
                     <textarea
                       required
                       rows={5}
                       placeholder="Detail physical receipt printer models, windows OS editions, or error logs text strings here to assist installers during diagnosis..."
                       value={ticketDescription}
                       onChange={(e) => setTicketDescription(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-205 p-4 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors resize-none"
+                      className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors resize-none"
                       id="new-ticket-desc-input"
                     />
                   </div>
@@ -1466,7 +1567,7 @@ export default function CustomerPortal({
                     <button
                       type="button"
                       onClick={() => setActivePortalView('tickets')}
-                      className="px-5 py-3 border border-slate-200 text-slate-650 font-bold text-xs rounded-xl hover:bg-slate-50 cursor-pointer"
+                      className="px-5 py-3 border border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-50 cursor-pointer"
                     >
                       Cancel
                     </button>

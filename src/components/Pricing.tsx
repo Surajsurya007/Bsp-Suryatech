@@ -72,6 +72,10 @@ export default function Pricing({ onPageChange, products, user, onInitiateSimula
     return { price: finalAmount, discounted: true, original: originalPrice };
   };
 
+  // Find real backend matching products based on connectedPlan or fallback id
+  const dbProProduct = products?.find(p => p.connectedPlan === 'prod-billing-pro' || p.id === 'prod-billing-pro');
+  const dbEnterpriseProduct = products?.find(p => p.connectedPlan === 'prod-billing-enterprise' || p.id === 'prod-billing-enterprise');
+
   const plansList = [
     {
       id: 'plan-free-trial',
@@ -92,41 +96,45 @@ export default function Pricing({ onPageChange, products, user, onInitiateSimula
     },
     {
       id: 'prod-billing-pro',
-      name: 'Retail Billing Pro',
-      price: 999,
-      originalPrice: 2499,
+      name: dbProProduct?.name || 'Retail Billing Pro',
+      price: dbProProduct !== undefined ? dbProProduct.price : 1999,
+      originalPrice: dbProProduct !== undefined ? (dbProProduct.originalPrice || 2499) : 2499,
       period: 'One-time Payment (Lifetime)',
-      badge: 'Best Seller • 60% Off',
+      badge: dbProProduct?.version ? `Best Seller • ${dbProProduct.version}` : 'Best Seller • 60% Off',
       isPopular: true,
       ctaText: 'Buy Lifetime License Now',
-      action: () => handleBuyClick('prod-billing-pro'),
-      bullets: [
-        { active: true, txt: 'UNLIMITED invoices & thermal prints' },
-        { active: true, txt: 'Interactive thermal print layout customizer' },
-        { active: true, txt: 'Barcode scanning & dynamic labels creator' },
-        { active: true, txt: 'Complete supplier credit ledger ledger' },
-        { active: true, txt: 'Monthly profit & loss spreadsheets' },
-        { active: false, txt: 'Multi-firm support (Single branch only)' }
-      ]
+      action: () => handleBuyClick(dbProProduct?.id || 'prod-billing-pro'),
+      bullets: dbProProduct?.features && dbProProduct.features.length > 0 
+        ? dbProProduct.features.map((f: string) => ({ active: true, txt: f }))
+        : [
+            { active: true, txt: 'UNLIMITED invoices & thermal prints' },
+            { active: true, txt: 'Interactive thermal print layout customizer' },
+            { active: true, txt: 'Barcode scanning & dynamic labels creator' },
+            { active: true, txt: 'Complete supplier credit ledger ledger' },
+            { active: true, txt: 'Monthly profit & loss spreadsheets' },
+            { active: false, txt: 'Multi-firm support (Single branch only)' }
+          ]
     },
     {
       id: 'prod-billing-enterprise',
-      name: 'GST Enterprise Suite',
-      price: 1999,
-      originalPrice: 4999,
+      name: dbEnterpriseProduct?.name || 'GST Enterprise Suite',
+      price: dbEnterpriseProduct !== undefined ? dbEnterpriseProduct.price : 2999,
+      originalPrice: dbEnterpriseProduct !== undefined ? (dbEnterpriseProduct.originalPrice || 4999) : 4999,
       period: 'One-time Payment (Lifetime)',
-      badge: 'Multi-Firm • Complete Tech Support',
+      badge: dbEnterpriseProduct?.version ? `Multi-Firm • ${dbEnterpriseProduct.version}` : 'Multi-Firm • Complete Tech Support',
       ctaText: 'Buy Enterprise License Now',
-      action: () => handleBuyClick('prod-billing-enterprise'),
+      action: () => handleBuyClick(dbEnterpriseProduct?.id || 'prod-billing-enterprise'),
       isPopular: false,
-      bullets: [
-        { active: true, txt: 'All features of Retail Billing Pro' },
-        { active: true, txt: 'Unlimited Firms & Branch accounts' },
-        { active: true, txt: 'Direct GSTR-1 & GSTR-3B JSON exports' },
-        { active: true, txt: 'Google Drive auto cloud data backups' },
-        { active: true, txt: 'Custom receipt canvas layout designer' },
-        { active: true, txt: 'Priority phone call installation assistance' }
-      ]
+      bullets: dbEnterpriseProduct?.features && dbEnterpriseProduct.features.length > 0
+        ? dbEnterpriseProduct.features.map((f: string) => ({ active: true, txt: f }))
+        : [
+            { active: true, txt: 'All features of Retail Billing Pro' },
+            { active: true, txt: 'Unlimited Firms & Branch accounts' },
+            { active: true, txt: 'Direct GSTR-1 & GSTR-3B JSON exports' },
+            { active: true, txt: 'Google Drive auto cloud data backups' },
+            { active: true, txt: 'Custom receipt canvas layout designer' },
+            { active: true, txt: 'Priority phone call installation assistance' }
+          ]
     }
   ];
 
