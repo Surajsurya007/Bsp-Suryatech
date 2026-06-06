@@ -1,0 +1,6 @@
+{
+  "name": "BSP Suryatech",
+  "description": "Premium SaaS portal and customer billing dashboard for BSP Suryatech Windows Billing, Inventory, GST, and POS software.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
