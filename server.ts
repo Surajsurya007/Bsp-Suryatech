@@ -424,6 +424,49 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json({ token, user });
   });
 
+  // Auth: Firebase Google Authenticated Client Login
+  app.post('/api/auth/firebase', (req, res) => {
+    const { email, name } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    let user = dbActions.getUserByEmail(email);
+    let isNewUser = false;
+    if (!user) {
+      isNewUser = true;
+      const generatedPass = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+      user = dbActions.createUser({
+        name: name || 'Google User',
+        email: email,
+        role: 'customer'
+      }, generatedPass);
+
+      dbActions.saveCustomerProfile({
+        userId: user.id,
+        clientName: name || 'Google User',
+        businessName: 'Google Connected Business',
+        contactNumber: '',
+        emailAddress: email,
+        businessAddress: '',
+        city: '',
+        state: '',
+        pincode: '',
+        gstNumber: ''
+      });
+
+      dbActions.createNotification({
+        userId: user.id,
+        title: 'Welcome via Google Firebase!',
+        message: 'Your account has been successfully created and linked with your Google profile using Firebase Auth.',
+        type: 'security'
+      });
+    }
+
+    const token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
+    res.json({ token, user, isNewUser });
+  });
+
   // --- OAUTH ENDPOINTS (GOOGLE & GITHUB) ---
   
   // 1a. Construct and return secure GitHub Authorize URL

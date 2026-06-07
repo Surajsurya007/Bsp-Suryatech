@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { auth, googleProvider, signInWithPopup } from '../firebase';
 import { 
   Lock, 
   User, 
@@ -150,54 +151,52 @@ export default function CustomerPortal({
     return () => window.removeEventListener('message', handleMessage);
   }, [onLoginSuccess, onAddNotification]);
 
-  // Handler for secure Google OAuth redirect
+  // Handler for secure Google Auth via client-side Firebase Auth SDK
   const handleGoogleLogin = async () => {
     setAuthLoading(true);
     try {
-      const res = await fetch('/api/auth/google/url');
-      if (!res.ok) {
-        throw new Error('Could not request authorization URL.');
-      }
-      const data = await res.json();
+      // 1. Trigger Firebase Client SDK popup Google Sign In
+      const result = await signInWithPopup(auth, googleProvider);
+      const fbUser = result.user;
       
-      // Handle scenario where GOOGLE_CLIENT_ID / SECRET are not configured yet
-      if (!data.clientIdConfigured) {
-        const testSimulation = window.confirm(
-          "ℹ️ Google OAuth credentials are not fully configured in your AI Studio settings secrets yet.\n\n" +
-          "Would you like to start a simulated Google single sign-on flow to verify the UI login logic and portal dashboard mapping?"
-        );
-        if (testSimulation) {
-          const width = 600;
-          const height = 700;
-          const left = window.screen.width / 2 - width / 2;
-          const top = window.screen.height / 2 - height / 2;
-          window.open(
-            `/auth/callback?code=sim_google_auth_code_123&state=google_simulated`,
-            'google_oauth_popup',
-            `width=${width},height=${height},left=${left},top=${top}`
-          );
-        } else {
-          onAddNotification("Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables in Settings secrets.", "info");
-        }
-        setAuthLoading(false);
-        return;
+      if (!fbUser?.email) {
+        throw new Error('No email returned from Google Provider.');
       }
 
-      // Configure window coordinate details
-      const width = 600;
-      const height = 700;
-      const left = window.screen.width / 2 - width / 2;
-      const top = window.screen.height / 2 - height / 2;
-      const popup = window.open(
-        data.url,
-        'google_oauth_popup',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-      if (!popup) {
-        onAddNotification('Popup blocker active. Please allow popups to continue linking with Google.', 'error');
+      // 2. Exchange Firebase Auth profile with our Backend API Server to establish local session
+      const serverRes = await fetch('/api/auth/firebase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: fbUser.email,
+          name: fbUser.displayName || fbUser.email.split('@')[0]
+        })
+      });
+
+      if (!serverRes.ok) {
+        const errorData = await serverRes.json();
+        throw new Error(errorData.error || 'Server rejected Firebase Auth linkage.');
       }
+
+      const { token, user: appUser, isNewUser } = await serverRes.json();
+
+      // 3. Complete authentication workflow on client
+      onLoginSuccess(token, appUser);
+      
+      // 4. Redirect on demand to the "My Account Profile" personal detail page view
+      setActivePortalView('profile');
+
+      onAddNotification(
+        isNewUser
+          ? `Welcome! Successfully registered and linked Google account: ${fbUser.email}`
+          : `Welcome back to Suryatech Portal!`,
+        'success'
+      );
     } catch (err: any) {
-      onAddNotification(err.message || 'Error connecting to Google auth launcher.', 'error');
+      console.error("Firebase Signin Exception:", err);
+      onAddNotification(err.message || 'Firebase Sign In was canceled or failed.', 'error');
     } finally {
       setAuthLoading(false);
     }
