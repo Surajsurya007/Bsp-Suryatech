@@ -322,8 +322,8 @@ const defaultVideos: VideoTutorial[] = [
 ];
 
 export const defaultRazorpayConfig: RazorpayConfig = {
-  keyId: process.env.RAZORPAY_KEY_ID || 'rzp_live_Syg8R05rBrlgtl',
-  keySecret: process.env.RAZORPAY_KEY_SECRET || 'YR1vaS4Kuwz1mPmVH5lGAQUx',
+  keyId: process.env.RAZORPAY_KEY_ID || '',
+  keySecret: process.env.RAZORPAY_KEY_SECRET || '',
   mode: 'live',
   currency: 'INR',
   enabled: true,
@@ -985,7 +985,14 @@ export const dbActions = {
       db.razorpayConfig = { ...defaultRazorpayConfig };
       saveDB();
     }
-    return db.razorpayConfig;
+    const config = { ...db.razorpayConfig };
+    if (process.env.RAZORPAY_KEY_ID) {
+      config.keyId = process.env.RAZORPAY_KEY_ID;
+    }
+    if (process.env.RAZORPAY_KEY_SECRET) {
+      config.keySecret = process.env.RAZORPAY_KEY_SECRET;
+    }
+    return config;
   },
   updateRazorpayConfig: (updates: Partial<RazorpayConfig>) => {
     if (!db.razorpayConfig) {

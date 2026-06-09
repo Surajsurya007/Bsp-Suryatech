@@ -13,11 +13,35 @@
       "email": "test@gmail.com",
       "role": "customer",
       "createdAt": "2026-06-06T14:28:24.279Z"
+    },
+    {
+      "id": "u-admin",
+      "name": "BSP Suryatech Admin",
+      "email": "Surajsurya.koo7@gmail.com",
+      "role": "admin",
+      "createdAt": "2026-06-09T06:28:04.526Z"
+    },
+    {
+      "name": "Suraj surya",
+      "email": "surajsurya200@gmail.com",
+      "role": "customer",
+      "id": "u-uj137orkt",
+      "createdAt": "2026-06-09T07:50:17.329Z",
+      "language": "pa"
+    },
+    {
+      "name": "Google Dev User",
+      "email": "google-test@gmail.com",
+      "role": "customer",
+      "id": "u-f04fqbizv",
+      "createdAt": "2026-06-09T08:26:00.186Z"
     }
   ],
   "passwordHashes": {
-    "u-admin": "9f4b779c3e888b43322459315b84c9a9:afd6eec15d0562e42609c5aec96c76ea39c46edcaf8a2a5df8d5201a2d0a19edfae2a6b11c3b7b3a7a79982a56028d48c69d21d54365777ded5f5c3e5ff8e0d0",
-    "u-customer": "b9ccc2338bf8b5bd3bcd5dbea1001339:ea390073d180cee9336d82e4dc34eefd3e2a12a0ed27318662dac716f7a2d0ec5311db41f80a5520b0492eb1993b313ae1aa442adda7af46e3a8d0e32f3eedf9"
+    "u-admin": "dbe8bab38e87e892a495bcb69d90e29e:76cc180bea894e603ff473c1f3864cbc657bc3f45b5aa12fba8a1458d768e26e4b1355f09a7402bda0637d92795a72aaeaa2b3432d153c802587545c9f283ca2",
+    "u-customer": "b9ccc2338bf8b5bd3bcd5dbea1001339:ea390073d180cee9336d82e4dc34eefd3e2a12a0ed27318662dac716f7a2d0ec5311db41f80a5520b0492eb1993b313ae1aa442adda7af46e3a8d0e32f3eedf9",
+    "u-uj137orkt": "166fa432211355487677d46a637de1c1:d850c445d5fffb3469bffcdc5a7ab58a2dcf80815075d0674a560aa85773ebfa59d1693a94e41ba9aedd30d59777d8bbf9fe56c86ff9fdfb8b74d3ea1f135b6b",
+    "u-f04fqbizv": "26b62f5e59666df8af89d9024e91dabe:6d4f83d3a83b04cef63c96639f4a726c61b943c9e5c72674db889bdd7184135440afbea1e25fdd8e8b97f71cfb61f49ab2841f48d4e24c8b548e021a4200cc1e"
   },
   "customerProfiles": [
     {
@@ -32,6 +56,32 @@
       "pincode": "201301",
       "gstNumber": "09AAACS1234A1Z5",
       "createdAt": "2026-06-01T14:28:24.281Z"
+    },
+    {
+      "userId": "u-uj137orkt",
+      "clientName": "Suraj surya",
+      "businessName": "Bsp Mart",
+      "contactNumber": "7000025646",
+      "emailAddress": "surajsurya200@gmail.com",
+      "businessAddress": "Shivanand Nagar",
+      "city": "Raipur",
+      "state": "CG",
+      "pincode": "492001",
+      "gstNumber": "",
+      "createdAt": "2026-06-09T07:50:17.331Z"
+    },
+    {
+      "userId": "u-f04fqbizv",
+      "clientName": "Google Dev User",
+      "businessName": "Google Dev Portfolio POS",
+      "contactNumber": "9111111111",
+      "emailAddress": "google-test@gmail.com",
+      "businessAddress": "Sector 62, Noida, UP",
+      "city": "Noida",
+      "state": "Uttar Pradesh",
+      "pincode": "201301",
+      "gstNumber": "09AAACS1234A1Z5",
+      "createdAt": "2026-06-09T08:26:00.187Z"
     }
   ],
   "products": [
@@ -94,6 +144,17 @@
       "status": "success",
       "paymentId": "pay_RZP_seed938475",
       "createdAt": "2026-06-01T14:28:24.281Z"
+    },
+    {
+      "userId": "u-uj137orkt",
+      "userEmail": "surajsurya200@gmail.com",
+      "userName": "Suraj surya",
+      "productId": "prod-billing-pro",
+      "productName": "BSP Suryatech Retail Billing Pro",
+      "amount": 999,
+      "status": "pending",
+      "id": "ord-P5D4IPKHK",
+      "createdAt": "2026-06-09T10:21:55.443Z"
     }
   ],
   "licenses": [
@@ -315,6 +376,24 @@
       "type": "new_version",
       "read": false,
       "createdAt": "2026-06-06T13:28:24.281Z"
+    },
+    {
+      "userId": "u-uj137orkt",
+      "title": "Welcome to BSP Suryatech!",
+      "message": "Your account is verified and active. You are cleared to download free setup.exe trials immediately.",
+      "type": "security",
+      "id": "notif-hz3zyiw01",
+      "read": false,
+      "createdAt": "2026-06-09T07:50:17.331Z"
+    },
+    {
+      "userId": "u-f04fqbizv",
+      "title": "Welcome via Google!",
+      "message": "Your account has been successfully created and linked with your simulated Google profile.",
+      "type": "security",
+      "id": "notif-awvt7x3na",
+      "read": false,
+      "createdAt": "2026-06-09T08:26:00.188Z"
     }
   ],
   "downloadCounter": 1420,
@@ -379,5 +458,40 @@
       "flag": "🇮🇳",
       "enabled": true
     }
-  ]
+  ],
+  "videos": [
+    {
+      "id": "vid-1",
+      "title": "Complete Software Overview & POS Retail Setup Guide (v4.2.1)",
+      "duration": "12:45 Mins",
+      "youtubeId": "bsp_overview_embed",
+      "thumbnail": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800",
+      "description": "A comprehensive complete video tutorial going through initial registration, barcode creation, Adding custom tax items, setting up standard inventory levels, and executing cash bills."
+    },
+    {
+      "id": "vid-2",
+      "title": "Configuring Thermal Receipt Printers & Paper Canvas Alignments",
+      "duration": "08:30 Mins",
+      "youtubeId": "bsp_printer_embed",
+      "thumbnail": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800",
+      "description": "Step-by-step instructions details covering TVS, Sewoo, Epson, Rongta driver settings, adjusting paper limits parameters, line margins offset spacing, and footer text customizer layouts."
+    },
+    {
+      "id": "vid-3",
+      "title": "Bulk Stocks Catalogue Imports Using Excel Sheet Templates",
+      "duration": "05:40 Mins",
+      "youtubeId": "bsp_import_embed",
+      "thumbnail": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800",
+      "description": "How to easily compile columns in Excel sheets, configure tax rates, stock minimum levels, barcodes, and upload directly to BSP Suryatech local database with no syntax issues."
+    }
+  ],
+  "razorpayConfig": {
+    "keyId": "",
+    "keySecret": "",
+    "mode": "live",
+    "currency": "INR",
+    "enabled": true,
+    "webhookSecret": ""
+  },
+  "helpline": "+91 95535 28282"
 }

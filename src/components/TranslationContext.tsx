@@ -304,7 +304,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
           texts.forEach(text => failedTranslations.current.add(text));
         }
       } catch (err) {
-        console.error('Unable to finalize dynamic background translation', err);
+        console.warn('Unable to finalize dynamic background translation (network or server busy):', err);
         texts.forEach(text => failedTranslations.current.add(text));
       } finally {
         texts.forEach(text => pendingTranslations.current.delete(text));

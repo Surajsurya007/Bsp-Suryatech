@@ -111,11 +111,13 @@ Text: ${trimmed}`,
       translationCache[targetLanguage][trimmed] = translated;
       return translated;
     } catch (error: any) {
-      console.error('Gemini translation error:', error);
       const errMsg = error?.message || String(error);
-      if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || error?.status === 429) {
-        console.warn('Encountered Resource/Quota exhaustion in single translation. Activating 90s safety backoff/cooldown.');
-        geminiQuotaCooldownUntil = Date.now() + 90 * 1000;
+      const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || error?.status === 429;
+      if (isQuota) {
+        console.warn('Gemini translation rate limit / quota exceeded (429). Activating 30-minute safety cooldown.');
+        geminiQuotaCooldownUntil = Date.now() + 30 * 60 * 1000;
+      } else {
+        console.error('Gemini translation error:', error);
       }
       return text;
     }
@@ -209,11 +211,13 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
         results[originalIdx] = transText;
       }
     } catch (err: any) {
-      console.error('Batch translation failure:', err);
       const errMsg = err?.message || String(err);
-      if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || err?.status === 429) {
-        console.warn('Encountered Resource/Quota exhaustion in batch translation. Activating 105s safety backoff/cooldown.');
-        geminiQuotaCooldownUntil = Date.now() + 105 * 1000;
+      const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || err?.status === 429;
+      if (isQuota) {
+        console.warn('Gemini batch translation rate limit / quota exceeded (429). Activating 30-minute safety cooldown.');
+        geminiQuotaCooldownUntil = Date.now() + 30 * 60 * 1000;
+      } else {
+        console.error('Batch translation failure:', err);
       }
       for (let i = 0; i < indexesToTranslate.length; i++) {
         const idx = indexesToTranslate[i];
@@ -1313,14 +1317,20 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         return res.status(400).json({ error: 'Provide text string or texts array to translate' });
       }
     } catch (err: any) {
-      console.error('Translation endpoint error:', err);
+      const errMsg = err?.message || String(err);
+      const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || err?.status === 429;
+      if (isQuota) {
+        console.warn('Translation endpoint rate limit or quota exceeded (429). Returning un-translated tokens gracefully.');
+      } else {
+        console.error('Translation endpoint error:', err);
+      }
       // Fail gracefully: send original input back
       if (texts && Array.isArray(texts)) {
         return res.json({ translations: texts });
       } else if (text) {
         return res.json({ translation: text });
       }
-      return res.status(500).json({ error: err.message || 'Translation failed' });
+      return res.status(500).json({ error: errMsg || 'Translation failed' });
     }
   });
 
@@ -1760,16 +1770,45 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json(config);
   });
 
-  // Admin: Get Razorpay gateway settings
+  // Admin: Get Razorpay gateway settings with credential masking
   app.get('/api/admin/razorpay-config', requireAdmin, (req, res) => {
-    res.json(dbActions.getRazorpayConfig());
+    const config = dbActions.getRazorpayConfig();
+    res.json({
+      ...config,
+      keySecret: config.keySecret ? '********' : '',
+      webhookSecret: config.webhookSecret ? '********' : ''
+    });
   });
 
-  // Admin: Update Razorpay gateway settings
+  // Admin: Update Razorpay gateway settings with mask protection
   app.put('/api/admin/razorpay-config', requireAdmin, (req, res) => {
     const { keyId, keySecret, mode, currency, enabled, webhookSecret } = req.body;
-    const config = dbActions.updateRazorpayConfig({ keyId, keySecret, mode, currency, enabled, webhookSecret });
-    res.json(config);
+    const existingConfig = dbActions.getRazorpayConfig();
+    
+    let finalSecret = keySecret;
+    if (!keySecret || keySecret === '********' || /^[•\*]+$/.test(keySecret)) {
+      finalSecret = existingConfig.keySecret;
+    }
+    
+    let finalWebhookSecret = webhookSecret;
+    if (webhookSecret === '********' || (webhookSecret && /^[•\*]+$/.test(webhookSecret))) {
+      finalWebhookSecret = existingConfig.webhookSecret;
+    }
+
+    const config = dbActions.updateRazorpayConfig({ 
+      keyId, 
+      keySecret: finalSecret, 
+      mode, 
+      currency, 
+      enabled, 
+      webhookSecret: finalWebhookSecret 
+    });
+
+    res.json({
+      ...config,
+      keySecret: config.keySecret ? '********' : '',
+      webhookSecret: config.webhookSecret ? '********' : ''
+    });
   });
 
   // Admin: Get Supabase configuration settings
