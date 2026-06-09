@@ -71,6 +71,7 @@ async function startServer() {
   }
 
   const translationCache: Record<string, Record<string, string>> = {};
+  let geminiQuotaCooldownUntil = 0;
 
   async function translateText(text: string, targetLanguage: string): Promise<string> {
     if (!text || text.trim() === '') return text;
@@ -84,6 +85,11 @@ async function startServer() {
     }
     
     if (targetLanguage.toLowerCase() === 'english' || targetLanguage.toLowerCase() === 'en') {
+      return text;
+    }
+
+    if (Date.now() < geminiQuotaCooldownUntil) {
+      console.warn('Gemini translation is in quota safety cooldown. Returning fallback.');
       return text;
     }
 
@@ -104,8 +110,13 @@ Text: ${trimmed}`,
       const translated = response.text?.trim() || trimmed;
       translationCache[targetLanguage][trimmed] = translated;
       return translated;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gemini translation error:', error);
+      const errMsg = error?.message || String(error);
+      if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || error?.status === 429) {
+        console.warn('Encountered Resource/Quota exhaustion in single translation. Activating 90s safety backoff/cooldown.');
+        geminiQuotaCooldownUntil = Date.now() + 90 * 1000;
+      }
       return text;
     }
   }
@@ -139,6 +150,15 @@ Text: ${trimmed}`,
     }
 
     if (textsToTranslate.length === 0) {
+      return results;
+    }
+
+    if (Date.now() < geminiQuotaCooldownUntil) {
+      console.warn('Gemini batch translation is in quota safety cooldown. Returning fallbacks.');
+      for (let i = 0; i < indexesToTranslate.length; i++) {
+        const idx = indexesToTranslate[i];
+        results[idx] = textsToTranslate[i];
+      }
       return results;
     }
 
@@ -188,8 +208,13 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
         translationCache[targetLanguage][origText] = transText;
         results[originalIdx] = transText;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Batch translation failure:', err);
+      const errMsg = err?.message || String(err);
+      if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || err?.status === 429) {
+        console.warn('Encountered Resource/Quota exhaustion in batch translation. Activating 105s safety backoff/cooldown.');
+        geminiQuotaCooldownUntil = Date.now() + 105 * 1000;
+      }
       for (let i = 0; i < indexesToTranslate.length; i++) {
         const idx = indexesToTranslate[i];
         results[idx] = textsToTranslate[i];
