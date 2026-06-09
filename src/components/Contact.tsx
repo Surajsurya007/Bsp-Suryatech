@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Phone, 
   Mail, 
@@ -30,6 +30,18 @@ export default function Contact({ onAddNotification }: ContactProps) {
     message: ''
   });
   const [loading, setLoading] = useState(false);
+  const [helpline, setHelpline] = useState<string>('+91 95535 28282');
+
+  useEffect(() => {
+    fetch('/api/helpline')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.helpline) {
+          setHelpline(data.helpline);
+        }
+      })
+      .catch(err => console.error('Failed to load helpline', err));
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +69,7 @@ export default function Contact({ onAddNotification }: ContactProps) {
     {
       icon: <Phone className="w-5 h-5 text-blue-600" />,
       title: 'Sales Hotline Desk',
-      detail: '+91 95535 28282',
+      detail: helpline,
       label: 'Mon - Sat: 9:30 AM to 6:30 PM'
     },
     {
@@ -69,7 +81,7 @@ export default function Contact({ onAddNotification }: ContactProps) {
     {
       icon: <MapPin className="w-5 h-5 text-rose-600" />,
       title: 'Corporate Office HQ',
-      detail: 'Sector 62, Noida, Uttar Pradesh',
+      detail: 'Sector 3, Shivanand Nagar, Raipur Chhattisgarh',
       label: 'Suryatech Tower, Electronic City - 201301'
     }
   ];

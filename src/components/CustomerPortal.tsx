@@ -4,9 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { auth, googleProvider, signInWithPopup } from '../firebase';
+import { supabase } from '../supabaseClient';
 import { 
-  Lock, 
   User, 
   Mail, 
   ShieldCheck, 
@@ -36,7 +35,9 @@ import {
   RefreshCw,
   Sparkles,
   AlertTriangle,
-  X
+  X,
+  Lock,
+  Chrome
 } from 'lucide-react';
 
 interface CustomerPortalProps {
@@ -45,6 +46,30 @@ interface CustomerPortalProps {
   onAddNotification: (text: string, type: 'success' | 'info' | 'error') => void;
   onPageChange: (page: string) => void;
   onTriggerTrialDownload: (prodId: string, isFull?: boolean) => void;
+  initialView?: 'dashboard' | 'tickets' | 'new-ticket' | 'profile' | 'payments' | 'invoices' | 'notifications';
+}
+
+// Safe JSON response helper to avoid unexpected token '<' crashes on static hosts or misconfigured reverse proxies
+async function safeParseJson(response: Response, defaultError = 'Request failed') {
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch (e) {
+      console.error("JSON parse error, falling back to text:", e);
+    }
+  }
+  try {
+    const text = await response.text();
+    if (text.trim().startsWith('<')) {
+      return { 
+        error: 'Your live web server (Hostinger) did not forward this API request to the Node.js server. Please ensure the Node.js application is started in hPanel and configured properly.' 
+      };
+    }
+    return { error: text || defaultError };
+  } catch {
+    return { error: defaultError };
+  }
 }
 
 export default function CustomerPortal({ 
@@ -52,18 +77,33 @@ export default function CustomerPortal({
   onLoginSuccess, 
   onAddNotification, 
   onPageChange,
-  onTriggerTrialDownload
+  onTriggerTrialDownload,
+  initialView = 'dashboard'
 }: CustomerPortalProps) {
   // Tabs: auth, dashboard, tickets, new-ticket, profile, purchase-history, payment-history, invoices, notifications
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
-  const [activePortalView, setActivePortalView] = useState<'dashboard' | 'tickets' | 'new-ticket' | 'profile' | 'payments' | 'invoices' | 'notifications'>('dashboard');
+  const [activePortalView, setActivePortalView] = useState<'dashboard' | 'tickets' | 'new-ticket' | 'profile' | 'payments' | 'invoices' | 'notifications'>(initialView);
+
+  // Sync activePortalView with initialView prop changes
+  useEffect(() => {
+    setActivePortalView(initialView);
+  }, [initialView]);
 
   // Login form states
   const [loginEmail, setLoginEmail] = useState('test@gmail.com');
   const [loginPassword, setLoginPassword] = useState('surya123');
   const [authLoading, setAuthLoading] = useState(false);
-  const [showFirebaseAuthError, setShowFirebaseAuthError] = useState(false);
-  const [firebaseErrorMsg, setFirebaseErrorMsg] = useState('');
+  const [supabaseErrorMsg, setSupabaseErrorMsg] = useState('');
+
+  // Forgot Password flow states
+  const [showForgotFlow, setShowForgotFlow] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStep, setForgotStep] = useState<1 | 2>(1); // 1 = Enter Email, 2 = Enter OTP and New Password
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [generatedForgotOtp, setGeneratedForgotOtp] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   // Expanded 11 Professional Registration form states
   const [regClientName, setRegClientName] = useState('');
@@ -155,109 +195,6 @@ export default function CustomerPortal({
     return () => window.removeEventListener('message', handleMessage);
   }, [onLoginSuccess, onAddNotification]);
 
-  // Handler for secure Google Auth via client-side Firebase Auth SDK
-  const handleGoogleLogin = async () => {
-    setAuthLoading(true);
-    try {
-      // 1. Trigger Firebase Client SDK popup Google Sign In
-      const result = await signInWithPopup(auth, googleProvider);
-      const fbUser = result.user;
-      
-      if (!fbUser?.email) {
-        throw new Error('No email returned from Google Provider.');
-      }
-
-      // 2. Exchange Firebase Auth profile with our Backend API Server to establish local session
-      const serverRes = await fetch('/api/auth/firebase', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: fbUser.email,
-          name: fbUser.displayName || fbUser.email.split('@')[0]
-        })
-      });
-
-      if (!serverRes.ok) {
-        const errorData = await serverRes.json();
-        throw new Error(errorData.error || 'Server rejected Firebase Auth linkage.');
-      }
-
-      const { token, user: appUser, isNewUser } = await serverRes.json();
-
-      // 3. Complete authentication workflow on client
-      onLoginSuccess(token, appUser);
-      
-      // 4. Redirect on demand to the "My Account Profile" personal detail page view
-      setActivePortalView('profile');
-
-      onAddNotification(
-        isNewUser
-          ? `Welcome! Successfully registered and linked Google account: ${fbUser.email}`
-          : `Welcome back to Suryatech Portal!`,
-        'success'
-      );
-    } catch (err: any) {
-      console.error("Firebase Signin Exception:", err);
-      const msg = err.message || '';
-      const code = err.code || '';
-      
-      if (code === 'auth/unauthorized-domain' || msg.toLowerCase().includes('unauthorized-domain') || msg.toLowerCase().includes('unauthorized domain')) {
-        setFirebaseErrorMsg(`The domain "${window.location.hostname}" is not added to your Firebase project's Authorized Domains list.`);
-        setShowFirebaseAuthError(true);
-      } else if (code === 'auth/popup-blocked' || msg.toLowerCase().includes('popup-blocked')) {
-        setFirebaseErrorMsg(`Google Sign-In popup was blocked by your browser. Please allow popups for this site, or use the interactive simulation bypass below.`);
-        setShowFirebaseAuthError(true);
-      } else {
-        setFirebaseErrorMsg(msg || 'Firebase Auth is not connected, or the popup was closed.');
-        setShowFirebaseAuthError(true);
-      }
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleSimulatedGoogleLogin = async () => {
-    setAuthLoading(true);
-    try {
-      // Simulate login for target user matches koo7 account
-      const dummyEmail = 'surajsurya.koo7@gmail.com'; 
-      const dummyName = 'Suraj Kumar';
-
-      const serverRes = await fetch('/api/auth/firebase', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: dummyEmail,
-          name: dummyName
-        })
-      });
-
-      if (!serverRes.ok) {
-        const errorData = await serverRes.json();
-        throw new Error(errorData.error || 'Server rejected simulated credential.');
-      }
-
-      const { token, user: appUser, isNewUser } = await serverRes.json();
-
-      onLoginSuccess(token, appUser);
-      setActivePortalView('profile'); // Immediately redirect to "Personal Detail Page" as requested
-
-      onAddNotification(
-        `[SSO Bypass] Successfully signed in and loaded user details profile: ${dummyEmail}`,
-        'success'
-      );
-      setShowFirebaseAuthError(false);
-    } catch (err: any) {
-      onAddNotification(err.message || 'Simulation bypass failed.', 'error');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
   // Fetch Customer Portal records
   const fetchCustomerData = async () => {
     if (!user) return;
@@ -320,6 +257,94 @@ export default function CustomerPortal({
     }
   }, [user]);
 
+  // Forgot Password actions
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      onAddNotification('Please enter your email address.', 'error');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setGeneratedForgotOtp(data.otp);
+        setForgotStep(2);
+        onAddNotification('Password reset OTP generated. Verify key code below.', 'success');
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Password reset request failed.', 'error');
+      }
+    } catch {
+      onAddNotification('Server communication failure during recovery.', 'error');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotOtp || !forgotNewPassword || !forgotConfirmPassword) {
+      onAddNotification('All fields are required.', 'error');
+      return;
+    }
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      onAddNotification('New passwords do not match.', 'error');
+      return;
+    }
+
+    if (forgotNewPassword.length < 6) {
+      onAddNotification('Password must be at least 6 characters long.', 'error');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: forgotEmail,
+          otp: forgotOtp,
+          expectedOtp: generatedForgotOtp,
+          newPassword: forgotNewPassword
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        onAddNotification(data.message, 'success');
+        // Back to login tab with the new details
+        setLoginEmail(forgotEmail);
+        setLoginPassword('');
+        // Reset states
+        setShowForgotFlow(false);
+        setForgotStep(1);
+        setForgotEmail('');
+        setForgotOtp('');
+        setForgotNewPassword('');
+        setForgotConfirmPassword('');
+        setGeneratedForgotOtp('');
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Password reset failed.', 'error');
+      }
+    } catch {
+      onAddNotification('Server communication failure during password reset.', 'error');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // Auth Submit handlers
   // Auth Submit handlers
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -329,22 +354,102 @@ export default function CustomerPortal({
     }
 
     setAuthLoading(true);
+    setSupabaseErrorMsg('');
     try {
+      // 1) Authenticate user via Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword
+      });
+
+      if (error) {
+        setSupabaseErrorMsg(error.message);
+        onAddNotification(error.message, 'error');
+        setAuthLoading(false);
+        return;
+      }
+
+      // 2) Synchronize and launch local backend customer session credentials
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })
       });
+
       if (res.ok) {
-        const data = await res.json();
-        onLoginSuccess(data.token, data.user);
-        onAddNotification(`Welcome back, ${data.user.name}!`, 'success');
+        const serverData = await res.json();
+        onLoginSuccess(serverData.token, serverData.user);
+        onAddNotification(`Welcome back, ${serverData.user.name || serverData.user.email}!`, 'success');
+        // 3) Redirect user to default main Home page ("/")
+        onPageChange('home');
+        window.history.pushState({}, '', '/');
       } else {
-        const err = await res.json();
-        onAddNotification(err.error || 'Authentication failed', 'error');
+        let errorMsg = 'Session synchronization failed';
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch {
+          try {
+            const text = await res.text();
+            if (text && text.length < 150) {
+              errorMsg = text;
+            }
+          } catch {}
+        }
+        setSupabaseErrorMsg(errorMsg);
+        onAddNotification(errorMsg, 'error');
       }
-    } catch {
-      onAddNotification('Server communication failure', 'error');
+    } catch (err: any) {
+      const msg = err.message || 'Server communication failure';
+      setSupabaseErrorMsg(msg);
+      onAddNotification(msg, 'error');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setAuthLoading(true);
+    setSupabaseErrorMsg('');
+    try {
+      // Initiate Google Sign-In with Supabase OAuth
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?provider=supabase`,
+          skipBrowserRedirect: true
+        }
+      });
+
+      if (error) {
+        setSupabaseErrorMsg(error.message);
+        onAddNotification(error.message, 'error');
+        setAuthLoading(false);
+        return;
+      }
+
+      if (data?.url) {
+        // Open OAuth Popup authorization panel
+        const width = 600;
+        const height = 650;
+        const left = window.screen.width / 2 - width / 2;
+        const top = window.screen.height / 2 - height / 2;
+        
+        const popup = window.open(
+          data.url,
+          'BSP Google Authentication',
+          `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
+        );
+        
+        if (!popup) {
+          onAddNotification('Popup blocker active. Please allow popups to utilize Google SSO features.', 'error');
+        }
+      } else {
+        onAddNotification('Failed requesting Google SSO URL from Supabase system', 'error');
+      }
+    } catch (err: any) {
+      setSupabaseErrorMsg(err.message || 'SSO initialization issue');
+      onAddNotification('Connection issues initializing Google single sign-on redirect.', 'error');
     } finally {
       setAuthLoading(false);
     }
@@ -369,7 +474,27 @@ export default function CustomerPortal({
     }
 
     setAuthLoading(true);
+    setSupabaseErrorMsg('');
     try {
+      // 1) Initialize user register onboarding logic on Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: regEmail,
+        password: regPassword,
+        options: {
+          data: {
+            name: regClientName
+          }
+        }
+      });
+
+      if (error) {
+        setSupabaseErrorMsg(error.message);
+        onAddNotification(error.message, 'error');
+        setAuthLoading(false);
+        return;
+      }
+
+      // 2) Dispatch to local database customer configuration sequence
       const res = await fetch('/api/auth/register-customer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -389,17 +514,61 @@ export default function CustomerPortal({
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setOtpServerCode(data.otp);
-        setOtpEmailTarget(data.email);
-        setOtpSent(true);
-        onAddNotification('Suryatech Authentication OTP sent! Please verify code key.', 'success');
+        const registerData = await safeParseJson(res, 'Registration status returned success');
+        // Automatically verify simulated code to complete account sync immediately
+        try {
+          const verifyRes = await fetch('/api/auth/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: registerData.email, otp: registerData.otp })
+          });
+
+          if (verifyRes.ok) {
+            // Keep user on the login screen, do not auto login
+            setLoginEmail(regEmail);
+            setLoginPassword('');
+            
+            // Clear registration fields
+            setRegClientName('');
+            setRegBusinessName('');
+            setRegContactNumber('');
+            setRegEmail('');
+            setRegBusinessAddress('');
+            setRegCity('');
+            setRegState('');
+            setRegPincode('');
+            setRegGstNumber('');
+            setRegPassword('');
+            setRegConfirmPassword('');
+            
+            setOtpSent(false);
+            setOtpValue('');
+            
+            // Redirect or switch to Sign In tab
+            setAuthTab('login');
+            onAddNotification('Registration successful! Please sign in with your credentials.', 'success');
+          } else {
+            // Fallback: show manual OTP confirmation if verification fails
+            setOtpServerCode(registerData.otp);
+            setOtpEmailTarget(registerData.email);
+            setOtpSent(true);
+            onAddNotification('Please confirm your security code to complete verification.', 'info');
+          }
+        } catch {
+          setOtpServerCode(registerData.otp);
+          setOtpEmailTarget(registerData.email);
+          setOtpSent(true);
+          onAddNotification('Please confirm your security code to complete verification.', 'info');
+        }
       } else {
-        const err = await res.json();
-        onAddNotification(err.error || 'Registration failed', 'error');
+        const err = await safeParseJson(res, 'Server registration failed');
+        setSupabaseErrorMsg(err.error || 'Server registration failed');
+        onAddNotification(err.error || 'Server registration failed', 'error');
       }
-    } catch {
-      onAddNotification('Server communication failure', 'error');
+    } catch (err: any) {
+      const msg = err.message || 'Server communication failure';
+      setSupabaseErrorMsg(msg);
+      onAddNotification(msg, 'error');
     } finally {
       setAuthLoading(false);
     }
@@ -427,6 +596,7 @@ export default function CustomerPortal({
         setOtpSent(false);
         setOtpValue('');
         onAddNotification('OTP verified successfully! Account created & logged in.', 'success');
+        onPageChange('home');
       } else {
         const err = await res.json();
         onAddNotification(err.error || 'Invalid OTP code', 'error');
@@ -608,113 +778,227 @@ export default function CustomerPortal({
 
           {!otpSent ? (
             authTab === 'login' ? (
-               <form onSubmit={handleLoginSubmit} className="space-y-4 max-w-md mx-auto">
-                 <div className="text-left space-y-1">
-                   <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Customer Email Address</label>
-                   <div className="relative">
-                     <Mail className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
-                     <input
-                       type="email"
-                       required
-                       placeholder="name@company.com"
-                       value={loginEmail}
-                       onChange={(e) => setLoginEmail(e.target.value)}
-                       className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
-                       id="login-input-email"
-                     />
-                   </div>
-                 </div>
+              showForgotFlow ? (
+                /* --- FORGOT PASSWORD MODULE --- */
+                <div className="max-w-md mx-auto space-y-6">
+                  <div className="text-center space-y-1.5">
+                    <h3 className="text-lg font-black text-slate-900 font-sans tracking-tight">Reset Your Password</h3>
+                    <p className="text-xs text-slate-500 leading-normal">
+                      {forgotStep === 1 
+                        ? "Enter your registered business email address to obtain a securely generated password reset OTP."
+                        : `Enter verification details sent to ${forgotEmail}`
+                      }
+                    </p>
+                  </div>
 
-                 <div className="text-left space-y-1">
-                   <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Secure Password</label>
-                   <div className="relative">
-                     <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
-                     <input
-                       type="password"
-                       required
-                       placeholder="Enter account password"
-                       value={loginPassword}
-                       onChange={(e) => setLoginPassword(e.target.value)}
-                       className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
-                       id="login-input-pass"
-                     />
-                   </div>
-                 </div>
-
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm tracking-wider uppercase rounded-xl transition-colors cursor-pointer block mt-6 shadow"
-                  id="login-submit-button"
-                >
-                  {authLoading ? 'Signing In Workspace...' : 'Secure Sign In'}
-                </button>
-
-                <div className="relative my-5 flex items-center justify-center">
-                  <span className="absolute w-full border-t border-slate-200"></span>
-                  <span className="relative bg-white px-3 text-[10px] font-mono font-black uppercase text-slate-400">or</span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={authLoading}
-                  className="w-full py-3.5 px-4 border border-slate-200 hover:border-slate-800 bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs tracking-wider uppercase rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-sm"
-                  id="login-github-button"
-                >
-                  <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 12-4.52z"
-                    />
-                  </svg>
-                  Continue with Google Account
-                </button>
-
-                {/* Secure Dynamic Firebase Auth Diagnostics & SSO Test Bypass */}
-                <div className="mt-6 bg-slate-50 border border-slate-200/80 rounded-2xl p-4.5 text-left">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                    <div className="space-y-2 w-full">
-                      <span className="text-xs font-black text-slate-800 font-sans block leading-none">Google Integration Helper</span>
-                      <p className="text-[11px] text-slate-500 leading-normal">
-                        If Google sign-in fails with <code className="bg-slate-200 text-slate-850 px-1 py-0.5 rounded font-mono text-[10px]">auth/unauthorized-domain</code>, please add this host in your <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-semibold font-mono text-[10px]">Firebase Console &gt; Authentication &gt; Settings &gt; Authorized Domains</a>:
-                      </p>
-                      
-                      <div className="bg-white border text-center select-all px-3 py-2 rounded-xl font-mono text-[10.5px] text-slate-800 flex items-center justify-between border-slate-250 shadow-inner">
-                        <span className="font-extrabold text-blue-650">{window.location.hostname}</span>
-                        <div className="text-[9px] font-sans text-slate-400 font-black cursor-pointer uppercase select-none">Copy</div>
+                  {forgotStep === 1 ? (
+                    <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+                      <div className="text-left space-y-1">
+                        <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Customer Email Address</label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                          <input
+                            type="email"
+                            required
+                            placeholder="name@company.com"
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            id="forgot-email-input"
+                          />
+                        </div>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-200/60">
-                        <span className="text-[10px] font-bold text-slate-500 block uppercase mb-1">🔑 Sandbox Bypass Options:</span>
+                      <button
+                        type="submit"
+                        disabled={forgotLoading}
+                        className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow mt-4 block"
+                      >
+                        {forgotLoading ? 'Processing Verification...' : 'Send Reset OTP'}
+                      </button>
+
+                      <div className="text-center pt-2">
                         <button
                           type="button"
-                          onClick={handleSimulatedGoogleLogin}
-                          disabled={authLoading}
-                          className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10.5px] uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm font-sans"
+                          onClick={() => {
+                            setShowForgotFlow(false);
+                            setForgotStep(1);
+                          }}
+                          className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer transition-colors"
                         >
-                          <Check className="w-3.5 h-3.5" />
-                          Simulate Secure Google Sign In (Suraj Kumar)
+                          Cancel & Return to Sign In
                         </button>
                       </div>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                      {/* Interactive Sandbox Helper */}
+                      {generatedForgotOtp && (
+                        <div className="bg-emerald-50 border border-emerald-150 p-4 rounded-xl text-left space-y-1.5">
+                          <span className="text-[10px] text-emerald-800 font-extrabold uppercase font-mono tracking-wider block">🔑 Sandbox Reset Helper</span>
+                          <p className="text-[11px] text-emerald-700 leading-normal">
+                            An OTP has been simulated for your account. Please use this verification code:
+                          </p>
+                          <div className="bg-white border rounded-lg px-3 py-1.5 font-mono text-center font-black text-xs text-emerald-800 select-all border-emerald-200">
+                            {generatedForgotOtp}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-left space-y-1">
+                        <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Verification OTP Code</label>
+                        <div className="relative">
+                          <Hash className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Enter 6-digit OTP code"
+                            value={forgotOtp}
+                            onChange={(e) => setForgotOtp(e.target.value)}
+                            maxLength={6}
+                            className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-mono font-bold text-center tracking-widest"
+                            id="forgot-otp-input"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-left space-y-1">
+                        <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">New Secure Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                          <input
+                            type="password"
+                            required
+                            placeholder="Enter new account password"
+                            value={forgotNewPassword}
+                            onChange={(e) => setForgotNewPassword(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            id="forgot-new-password-input"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-left space-y-1">
+                        <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Confirm New Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                          <input
+                            type="password"
+                            required
+                            placeholder="Confirm new password"
+                            value={forgotConfirmPassword}
+                            onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            id="forgot-confirm-password-input"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={forgotLoading}
+                        className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow mt-4 block"
+                      >
+                        {forgotLoading ? 'Rewriting Password...' : 'Reset Password & Sign In'}
+                      </button>
+
+                      <div className="text-center pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setForgotStep(1)}
+                          className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer transition-colors"
+                        >
+                          Request Another Code
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleLoginSubmit} className="space-y-4 max-w-md mx-auto">
+                  <div className="text-left space-y-1">
+                    <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Customer Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="name@company.com"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        id="login-input-email"
+                      />
                     </div>
                   </div>
-                </div>
-              </form>
-            ) : (
+
+                  <div className="text-left space-y-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Secure Password</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowForgotFlow(true);
+                          setForgotStep(1);
+                          setForgotEmail(loginEmail);
+                        }}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer transition-colors focus:outline-none"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                      <input
+                        type="password"
+                        required
+                        placeholder="Enter account password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        id="login-input-pass"
+                      />
+                    </div>
+                  </div>
+
+                  {supabaseErrorMsg && (
+                    <div className="text-rose-600 text-xs text-center font-bold font-sans bg-rose-50 py-2.5 px-3 rounded-xl border border-rose-100 max-w-md mx-auto my-2">
+                       {supabaseErrorMsg}
+                    </div>
+                  )}
+
+                 <button
+                   type="submit"
+                   disabled={authLoading}
+                   className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm tracking-wider uppercase rounded-xl transition-colors cursor-pointer block mt-6 shadow"
+                   id="login-submit-button"
+                 >
+                   {authLoading ? 'Signing In Workspace...' : 'Secure Sign In'}
+                 </button>
+
+                 <div className="relative flex py-2 items-center">
+                   <div className="flex-grow border-t border-slate-200"></div>
+                   <span className="flex-shrink mx-4 text-[10.5px] font-bold font-mono text-slate-400 uppercase tracking-widest">OR</span>
+                   <div className="flex-grow border-t border-slate-200"></div>
+                 </div>
+
+                 <button
+                   type="button"
+                   onClick={handleGoogleLogin}
+                   disabled={authLoading}
+                   className="w-full py-3.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.985]"
+                   id="google-signin-button"
+                 >
+                   <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
+                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335" />
+                   </svg>
+                   <span>Continue with Google</span>
+                 </button>
+               </form>
+              ) ) : (
               <form onSubmit={handleRegisterSubmit} className="space-y-6">
                 <div className="text-center pb-2">
                   <h3 className="text-lg font-black text-slate-800 font-sans tracking-tight">Onboarding Registration Form</h3>
@@ -875,6 +1159,12 @@ export default function CustomerPortal({
                     </div>
                   </div>
                 </div>
+
+                {supabaseErrorMsg && (
+                  <div className="text-rose-600 text-xs text-center font-bold font-sans bg-rose-50 py-2.5 px-3 rounded-xl border border-rose-100 mt-4">
+                    {supabaseErrorMsg}
+                  </div>
+                )}
 
                 <div className="pt-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
                   <button
@@ -1771,65 +2061,6 @@ export default function CustomerPortal({
 
             </div>
 
-          </div>
-        </div>
-      )}
-
-      {/* Firebase Auth Error & Safe Environment Simulation Dialog */}
-      {showFirebaseAuthError && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-55 flex items-center justify-center p-4">
-          <div className="bg-white border text-left border-slate-200 shadow-2xl rounded-3xl w-full max-w-md p-6 relative">
-            <button 
-              onClick={() => setShowFirebaseAuthError(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-650 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-3 text-rose-600 mb-4 bg-rose-50 p-3.5 rounded-2xl">
-              <AlertTriangle className="w-6 h-6 shrink-0" />
-              <div>
-                <h4 className="font-sans font-extrabold text-sm text-slate-900">Firebase Domain Alignment Alert</h4>
-                <p className="text-[10px] font-mono uppercase tracking-wider text-rose-500">Security Sandbox Restrictions</p>
-              </div>
-            </div>
-            <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
-              <p>
-                The Firebase Google provider failed to launch. This happens because:
-              </p>
-              <ul className="list-disc pl-5 font-semibold space-y-1 text-slate-700">
-                <li>
-                  Your current preview hostname is not in your Firebase Authorized Domains whitelist.
-                </li>
-                <li>
-                  A popup blocker in your browser prohibited the single sign-on launcher window.
-                </li>
-              </ul>
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 font-mono text-[10px] break-all leading-normal text-slate-700">
-                <span className="font-bold text-slate-500 block uppercase mb-1">Your temporary host:</span>
-                {window.location.hostname}
-              </div>
-              <p className="text-slate-500 text-[10.5px]">
-                To continue testing without having to edit your Firebase console settings immediately, click below to run a secure SSO simulation bypass matching your client email.
-              </p>
-            </div>
-            
-            <div className="mt-6 flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={handleSimulatedGoogleLogin}
-                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow"
-              >
-                <Check className="w-4 h-4" />
-                Bypass & Simulate Google Login (Suraj Kumar)
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowFirebaseAuthError(false)}
-                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer text-center"
-              >
-                Dismiss Error Details
-              </button>
-            </div>
           </div>
         </div>
       )}

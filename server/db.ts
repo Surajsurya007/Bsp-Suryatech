@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial } from '../src/types';
+import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, RazorpayConfig } from '../src/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
@@ -87,6 +87,22 @@ interface DatabaseSchema {
   downloadCounter: number;
   languageConfigs: LanguageConfig[];
   videos: VideoTutorial[];
+  razorpayConfig?: RazorpayConfig;
+  helpline?: string;
+  geminiApiKey?: string;
+  supabaseConfig?: {
+    url: string;
+    anonKey: string;
+    enabled: boolean;
+  };
+  hostingerConfig?: {
+    host: string;
+    user: string;
+    pass: string;
+    database: string;
+    port: number;
+    enabled: boolean;
+  };
 }
 
 // In-Memory Database Instance
@@ -108,7 +124,16 @@ export let db: DatabaseSchema = {
   notifications: [],
   downloadCounter: 1420,
   languageConfigs: [],
-  videos: []
+  videos: [],
+  helpline: '+91 95535 28282',
+  hostingerConfig: {
+    host: '',
+    user: '',
+    pass: '',
+    database: '',
+    port: 3306,
+    enabled: false
+  }
 };
 
 // Seed Data
@@ -296,6 +321,15 @@ const defaultVideos: VideoTutorial[] = [
   }
 ];
 
+export const defaultRazorpayConfig: RazorpayConfig = {
+  keyId: process.env.RAZORPAY_KEY_ID || 'rzp_live_Syg8R05rBrlgtl',
+  keySecret: process.env.RAZORPAY_KEY_SECRET || 'YR1vaS4Kuwz1mPmVH5lGAQUx',
+  mode: 'live',
+  currency: 'INR',
+  enabled: true,
+  webhookSecret: ''
+};
+
 // Initialize DB and Save
 export function initDB() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -323,6 +357,30 @@ export function initDB() {
       if (!db.languageConfigs || db.languageConfigs.length === 0) {
         db.languageConfigs = [...defaultLanguageConfigs];
       }
+      if (!db.razorpayConfig) {
+        db.razorpayConfig = { ...defaultRazorpayConfig };
+      }
+      if (!db.helpline) {
+        db.helpline = '+91 95535 28282';
+      }
+
+      // Force-ensure admin exists with proper credentials
+      const targetAdminEmail = 'Surajsurya.koo7@gmail.com';
+      let adminObj = db.users.find(u => u.email && u.email.toLowerCase() === targetAdminEmail.toLowerCase());
+      if (!adminObj) {
+        adminObj = {
+          id: 'u-admin',
+          name: 'BSP Suryatech Admin',
+          email: targetAdminEmail,
+          role: 'admin',
+          createdAt: new Date().toISOString()
+        };
+        db.users.push(adminObj);
+      } else {
+        adminObj.role = 'admin';
+      }
+      db.passwordHashes[adminObj.id] = hashPassword('Admin@2016#2020');
+      saveDB();
     } catch (e) {
       console.error('Error loading DB, re-seeding...', e);
       seedDB();
@@ -351,7 +409,9 @@ function seedDB() {
     notifications: [],
     downloadCounter: 1420,
     languageConfigs: [...defaultLanguageConfigs],
-    videos: [...defaultVideos]
+    videos: [...defaultVideos],
+    razorpayConfig: { ...defaultRazorpayConfig },
+    helpline: '+91 95535 28282'
   };
 
   // Seed default admin
@@ -359,12 +419,12 @@ function seedDB() {
   const adminUser: User = {
     id: adminId,
     name: 'BSP Suryatech Admin',
-    email: 'admin@bspsuryatech.in',
+    email: 'Surajsurya.koo7@gmail.com',
     role: 'admin',
     createdAt: new Date().toISOString()
   };
   db.users.push(adminUser);
-  db.passwordHashes[adminId] = hashPassword('SuryatechAdmin2026!');
+  db.passwordHashes[adminId] = hashPassword('Admin@2016#2020');
 
   // Seed default customer
   const customerId = 'u-customer';
@@ -518,14 +578,31 @@ export function saveDB() {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
+
+  // Trigger non-blocking sync to Hostinger MySQL in background if enabled
+  import('./hostinger.js')
+    .then(({ isHostingerEnabled, migrateLocalDataToHostinger }) => {
+      if (isHostingerEnabled()) {
+        migrateLocalDataToHostinger()
+          .catch((err) => console.error('Hostinger auto-sync error:', err));
+      }
+    })
+    .catch((err) => {
+      // Ignore background load failures during initialization
+    });
 }
 
 // Data Access Helpers
 export const dbActions = {
   getUsers: () => db.users,
   getUserById: (id: string) => db.users.find(u => u.id === id),
-  getUserByEmail: (email: string) => db.users.find(u => u.email.toLowerCase() === email.toLowerCase()),
+  getUserByEmail: (email: string) => db.users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase()),
   getUserPasswordHash: (id: string) => db.passwordHashes[id],
+  updateUserPassword: (id: string, newPass: string) => {
+    db.passwordHashes[id] = hashPassword(newPass);
+    saveDB();
+    return true;
+  },
   
   createUser: (user: Omit<User, 'id' | 'createdAt'>, pass: string) => {
     const id = 'u-' + Math.random().toString(36).substr(2, 9);
@@ -901,6 +978,67 @@ export const dbActions = {
     db.videos = db.videos.filter(v => v.id !== id);
     saveDB();
     return true;
+  },
+
+  getRazorpayConfig: () => {
+    if (!db.razorpayConfig) {
+      db.razorpayConfig = { ...defaultRazorpayConfig };
+      saveDB();
+    }
+    return db.razorpayConfig;
+  },
+  updateRazorpayConfig: (updates: Partial<RazorpayConfig>) => {
+    if (!db.razorpayConfig) {
+      db.razorpayConfig = { ...defaultRazorpayConfig };
+    }
+    db.razorpayConfig = { ...db.razorpayConfig, ...updates };
+    saveDB();
+    return db.razorpayConfig;
+  },
+  getHelpline: () => {
+    return db.helpline || '+91 95535 28282';
+  },
+  updateHelpline: (number: string) => {
+    db.helpline = number;
+    saveDB();
+    return db.helpline;
+  },
+  getGeminiConfig: () => {
+    return {
+      apiKey: db.geminiApiKey || ''
+    };
+  },
+  updateGeminiConfig: (apiKey: string) => {
+    db.geminiApiKey = apiKey;
+    saveDB();
+    return { apiKey };
+  },
+  getSupabaseConfig: () => {
+    return db.supabaseConfig || { url: '', anonKey: '', enabled: false };
+  },
+  updateSupabaseConfig: (updates: { url: string; anonKey: string; enabled: boolean }) => {
+    db.supabaseConfig = {
+      url: updates.url || '',
+      anonKey: updates.anonKey || '',
+      enabled: !!updates.enabled
+    };
+    saveDB();
+    return db.supabaseConfig;
+  },
+  getHostingerConfig: () => {
+    return (db as any).hostingerConfig || { host: '', user: '', pass: '', database: '', port: 3306, enabled: false };
+  },
+  updateHostingerConfig: (updates: { host: string; user: string; pass: string; database: string; port: number; enabled: boolean }) => {
+    (db as any).hostingerConfig = {
+      host: updates.host || '',
+      user: updates.user || '',
+      pass: updates.pass || '',
+      database: updates.database || '',
+      port: Number(updates.port) || 3306,
+      enabled: !!updates.enabled
+    };
+    saveDB();
+    return (db as any).hostingerConfig;
   }
 };
 

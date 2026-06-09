@@ -199,3 +199,13 @@ export interface SystemStats {
   totalDownloads: number;
   openTickets: number;
 }
+
+export interface RazorpayConfig {
+  keyId: string;
+  keySecret: string;
+  mode: 'test' | 'live';
+  currency: string;
+  enabled: boolean;
+  webhookSecret: string;
+}
+

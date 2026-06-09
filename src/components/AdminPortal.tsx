@@ -22,7 +22,17 @@ import {
   Briefcase, 
   Gift, 
   RefreshCw,
-  Send
+  Send,
+  CreditCard,
+  Settings,
+  User,
+  ChevronRight,
+  Eye,
+  HelpCircle,
+  Shield,
+  Copy,
+  Database,
+  AlertTriangle
 } from 'lucide-react';
 
 import { VideoTutorial } from '../types';
@@ -36,8 +46,8 @@ interface AdminPortalProps {
 }
 
 export default function AdminPortal({ onAddNotification, onPageChange, onRefreshDownloads, videos = [], onRefreshVideos }: AdminPortalProps) {
-  // Navigation tabs: stats, customers, products, licenses, downloads, tickets, coupons, languages, videos
-  const [activeAdminTab, setActiveAdminTab] = useState<'stats' | 'customers' | 'products' | 'licenses' | 'downloads' | 'tickets' | 'coupons' | 'languages' | 'videos'>('stats');
+  // Navigation tabs: stats, customers, products, licenses, downloads, tickets, coupons, languages, videos, razorpay, supabase
+  const [activeAdminTab, setActiveAdminTab] = useState<'stats' | 'customers' | 'products' | 'licenses' | 'downloads' | 'tickets' | 'coupons' | 'languages' | 'videos' | 'razorpay' | 'supabase'>('stats');
 
   // Unified Database Cache states
   const [stats, setStats] = useState<any>(null);
@@ -155,12 +165,120 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [editVidDescription, setEditVidDescription] = useState('');
   const [updatingVid, setUpdatingVid] = useState(false);
 
+  // Razorpay Configuration States
+  const [rzpKeyId, setRzpKeyId] = useState('');
+  const [rzpKeySecret, setRzpKeySecret] = useState('');
+  const [rzpMode, setRzpMode] = useState<'test' | 'live'>('test');
+  const [rzpCurrency, setRzpCurrency] = useState('INR');
+  const [rzpEnabled, setRzpEnabled] = useState(true);
+  const [rzpWebhookSecret, setRzpWebhookSecret] = useState('');
+  const [savingRzp, setSavingRzp] = useState(false);
+
+  // Helpline Configuration States
+  const [helpline, setHelpline] = useState('+91 95535 28282');
+  const [savingHelpline, setSavingHelpline] = useState(false);
+
+  // Gemini Configuration States
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [savingGemini, setSavingGemini] = useState(false);
+
+  // Supabase Configuration States
+  const [supabaseUrl, setSupabaseUrl] = useState('');
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
+  const [supabaseEnabled, setSupabaseEnabled] = useState(false);
+  const [savingSupabase, setSavingSupabase] = useState(false);
+  const [testingSupabase, setTestingSupabase] = useState(false);
+
+  // Hostinger Configuration States
+  const [hostingerHost, setHostingerHost] = useState('');
+  const [hostingerUser, setHostingerUser] = useState('');
+  const [hostingerPass, setHostingerPass] = useState('');
+  const [hostingerDatabase, setHostingerDatabase] = useState('');
+  const [hostingerPort, setHostingerPort] = useState(3306);
+  const [hostingerEnabled, setHostingerEnabled] = useState(false);
+  const [savingHostinger, setSavingHostinger] = useState(false);
+  const [testingHostinger, setTestingHostinger] = useState(false);
+  const [migratingHostinger, setMigratingHostinger] = useState(false);
+
+  const handleCopyStoragePolicies = () => {
+    const sql = `-- Supabase Storage Row Level Security (RLS) Policies
+-- Target Bucket: "app-files"
+
+-- 1. Users can view own files
+create policy "Users can view own files"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'app-files'
+  and name like (auth.uid()::text || '/%')
+);
+
+-- 2. Users can upload to own folder
+create policy "Users can upload to own folder"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'app-files'
+  and name like (auth.uid()::text || '/%')
+);
+
+-- 3. Users can update own files
+create policy "Users can update own files"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'app-files'
+  and name like (auth.uid()::text || '/%')
+);
+
+-- 4. Users can delete own files
+create policy "Users can delete own files"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'app-files'
+  and name like (auth.uid()::text || '/%')
+);`;
+    navigator.clipboard.writeText(sql);
+    onAddNotification('Storage SQL Security Policies copied to clipboard!', 'success');
+  };
+
+  // Selected Customer Detail States
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerDetails, setCustomerDetails] = useState<any | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  const handleViewCustomerDetails = async (userId: string) => {
+    setSelectedCustomerId(userId);
+    setLoadingDetails(true);
+    setCustomerDetails(null);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch(`/api/admin/customers/${userId}/details`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCustomerDetails(data);
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to load customer details', 'error');
+      }
+    } catch {
+      onAddNotification('Connection error fetching customer registry stats', 'error');
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   const fetchAdminData = async () => {
     setLoading(true);
     const token = localStorage.getItem('bsp_token');
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
-      const [statsRes, userRes, prodRes, licRes, dlRes, tkRes, cpRes, ordRes, langRes] = await Promise.all([
+      const [statsRes, userRes, prodRes, licRes, dlRes, tkRes, cpRes, ordRes, langRes, rzpRes, helplineRes, geminiRes, supabaseRes, hostingerRes] = await Promise.all([
         fetch('/api/admin/stats', { headers }),
         fetch('/api/admin/users', { headers }),
         fetch('/api/products'),
@@ -169,10 +287,15 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
         fetch('/api/admin/tickets', { headers }),
         fetch('/api/admin/coupons', { headers }),
         fetch('/api/admin/orders', { headers }),
-        fetch('/api/languages')
+        fetch('/api/languages'),
+        fetch('/api/admin/razorpay-config', { headers }),
+        fetch('/api/helpline'),
+        fetch('/api/admin/gemini-config', { headers }).catch(() => null),
+        fetch('/api/admin/supabase-config', { headers }).catch(() => null),
+        fetch('/api/admin/hostinger-config', { headers }).catch(() => null)
       ]);
 
-      if (statsRes.ok && userRes.ok && prodRes.ok && licRes.ok && dlRes.ok && tkRes.ok && cpRes.ok && ordRes.ok && langRes.ok) {
+      if (statsRes.ok && userRes.ok && prodRes.ok && licRes.ok && dlRes.ok && tkRes.ok && cpRes.ok && ordRes.ok && langRes.ok && rzpRes.ok) {
         setStats(await statsRes.json());
         setCustomers(await userRes.json());
         setProducts(await prodRes.json());
@@ -186,6 +309,42 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
         setCoupons(await cpRes.json());
         setOrders(await ordRes.json());
         setLangConfigs(await langRes.json());
+
+        const rzpData = await rzpRes.json();
+        setRzpKeyId(rzpData.keyId || '');
+        setRzpKeySecret(rzpData.keySecret || '');
+        setRzpMode(rzpData.mode || 'test');
+        setRzpCurrency(rzpData.currency || 'INR');
+        setRzpEnabled(rzpData.enabled !== false);
+        setRzpWebhookSecret(rzpData.webhookSecret || '');
+
+        if (helplineRes.ok) {
+          const helplineData = await helplineRes.json();
+          setHelpline(helplineData.helpline || '+91 95535 28282');
+        }
+
+        if (geminiRes && geminiRes.ok) {
+          const gemConfig = await geminiRes.json();
+          setGeminiApiKey(gemConfig.apiKey || '');
+        }
+
+        if (supabaseRes && supabaseRes.ok) {
+          const sbConfig = await supabaseRes.json();
+          setSupabaseUrl(sbConfig.url || '');
+          setSupabaseAnonKey(sbConfig.anonKey || '');
+          setSupabaseEnabled(!!sbConfig.enabled);
+        }
+
+        if (hostingerRes && hostingerRes.ok) {
+          const hostingerConfig = await hostingerRes.json();
+          setHostingerHost(hostingerConfig.host || '');
+          setHostingerUser(hostingerConfig.user || '');
+          setHostingerPass(hostingerConfig.pass || '');
+          setHostingerDatabase(hostingerConfig.database || '');
+          setHostingerPort(hostingerConfig.port || 3306);
+          setHostingerEnabled(!!hostingerConfig.enabled);
+        }
+
         onRefreshVideos?.();
       } else {
         onAddNotification('Refused admin entry. Session expired.', 'error');
@@ -262,6 +421,193 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
       onAddNotification('Network failure adding translation configuration options', 'error');
     } finally {
       setAddingLang(false);
+    }
+  };
+
+  const handleUpdateGeminiConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingGemini(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/gemini-config', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ apiKey: geminiApiKey })
+      });
+      if (res.ok) {
+        onAddNotification('Gemini API Translation Key updated successfully. Dynamic translations are now fully automated!', 'success');
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to update Gemini API configuration', 'error');
+      }
+    } catch {
+      onAddNotification('Connection error updating Gemini config settings', 'error');
+    } finally {
+      setSavingGemini(false);
+    }
+  };
+
+  const handleUpdateSupabaseConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSupabase(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/supabase-config', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          url: supabaseUrl,
+          anonKey: supabaseAnonKey,
+          enabled: supabaseEnabled
+        })
+      });
+      if (res.ok) {
+        onAddNotification('Supabase settings updated successfully. Client-Server auth flows are now secured through Supabase!', 'success');
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to update Supabase configuration', 'error');
+      }
+    } catch {
+      onAddNotification('Connection error updating Supabase settings', 'error');
+    } finally {
+      setSavingSupabase(false);
+    }
+  };
+
+  const handleTestSupabaseConnection = async () => {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      onAddNotification('Please enter both Supabase URL and Anon Key before running test connection.', 'info');
+      return;
+    }
+    setTestingSupabase(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/supabase-config/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          url: supabaseUrl,
+          anonKey: supabaseAnonKey
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onAddNotification(data.message || 'Supabase parameters connected! Connection verified successfully.', 'success');
+      } else {
+        onAddNotification(data.error || 'Failed to contact Supabase instance. Check your credentials.', 'error');
+      }
+    } catch {
+      onAddNotification('Connection timeout or network failure reaching Supabase server.', 'error');
+    } finally {
+      setTestingSupabase(false);
+    }
+  };
+
+  const handleUpdateHostingerConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingHostinger(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/hostinger-config', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          host: hostingerHost,
+          user: hostingerUser,
+          pass: hostingerPass,
+          database: hostingerDatabase,
+          port: Number(hostingerPort) || 3306,
+          enabled: hostingerEnabled
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onAddNotification('Hostinger SQL configuration updated and tables generated successfully!', 'success');
+      } else {
+        onAddNotification(data.error || 'Failed to update Hostinger configuration', 'error');
+      }
+    } catch {
+      onAddNotification('Error saving Hostinger configuration attributes', 'error');
+    } finally {
+      setSavingHostinger(false);
+    }
+  };
+
+  const handleTestHostingerConnection = async () => {
+    if (!hostingerHost || !hostingerUser || !hostingerDatabase) {
+      onAddNotification('Please fill in Host, User, and Database Name before testing.', 'info');
+      return;
+    }
+    setTestingHostinger(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/hostinger-config/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          host: hostingerHost,
+          user: hostingerUser,
+          pass: hostingerPass,
+          database: hostingerDatabase,
+          port: Number(hostingerPort) || 3306
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onAddNotification(data.message || 'Connection verified and tables configured successfully!', 'success');
+      } else {
+        onAddNotification(data.error || 'Failed to reach Hostinger MySQL server.', 'error');
+      }
+    } catch {
+      onAddNotification('Network/timeout error connecting to Hostinger MySQL database.', 'error');
+    } finally {
+      setTestingHostinger(false);
+    }
+  };
+
+  const handleReplicateToHostinger = async () => {
+    if (!hostingerHost || !hostingerUser || !hostingerDatabase) {
+      onAddNotification('Please fill and save Hostinger credentials before replicating data.', 'error');
+      return;
+    }
+    if (!confirm('Are you sure you want to replicate ALL local JSON database entries and files configuration to Hostinger MySQL? This will drop and rewrite current Hostinger SQL server tables.')) {
+      return;
+    }
+    setMigratingHostinger(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/hostinger-config/migrate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onAddNotification(data.message || 'All records successfully published/synced to Hostinger MySQL tables!', 'success');
+      } else {
+        onAddNotification(data.error || 'Migration of records turned up an error.', 'error');
+      }
+    } catch {
+      onAddNotification('Network issue publishing local database to Hostinger service.', 'error');
+    } finally {
+      setMigratingHostinger(false);
     }
   };
 
@@ -768,6 +1114,74 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
     }
   };
 
+  const handleUpdateRazorpayConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingRzp(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/razorpay-config', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          keyId: rzpKeyId,
+          keySecret: rzpKeySecret,
+          mode: rzpMode,
+          currency: rzpCurrency,
+          enabled: rzpEnabled,
+          webhookSecret: rzpWebhookSecret
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRzpKeyId(data.keyId || '');
+        setRzpKeySecret(data.keySecret || '');
+        setRzpMode(data.mode || 'test');
+        setRzpCurrency(data.currency || 'INR');
+        setRzpEnabled(data.enabled !== false);
+        setRzpWebhookSecret(data.webhookSecret || '');
+        onAddNotification('Razorpay Payment Gateway configuration updated successfully!', 'success');
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to update Razorpay configurations', 'error');
+      }
+    } catch {
+      onAddNotification('Connection error updating Razorpay gateway parameters', 'error');
+    } finally {
+      setSavingRzp(false);
+    }
+  };
+
+  const handleUpdateHelpline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingHelpline(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/helpline', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ helpline })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHelpline(data.helpline || helpline);
+        onAddNotification('System Helpline Number updated successfully!', 'success');
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to update helpline number', 'error');
+      }
+    } catch {
+      onAddNotification('Connection error updating helpline number', 'error');
+    } finally {
+      setSavingHelpline(false);
+    }
+  };
+
 
   const getSelectedTicket = () => tickets.find(t => t.id === selectedTicketId);
 
@@ -834,7 +1248,7 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
 
       {/* TABS ROW ROUTINGS */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3" id="admin-routes-tabs">
-        {(['stats', 'customers', 'products', 'licenses', 'downloads', 'tickets', 'coupons', 'languages', 'videos'] as const).map((tab) => (
+        {(['stats', 'customers', 'products', 'licenses', 'downloads', 'tickets', 'coupons', 'languages', 'videos', 'razorpay', 'supabase', 'hostinger'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveAdminTab(tab)}
@@ -852,6 +1266,9 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
             {tab === 'coupons' && 'Promo Coupons'}
             {tab === 'languages' && 'Language Manager'}
             {tab === 'videos' && 'Tutorial Videos'}
+            {tab === 'razorpay' && 'Razorpay Settings'}
+            {tab === 'supabase' && 'Supabase Integration'}
+            {tab === 'hostinger' && 'Hostinger Database'}
           </button>
         ))}
       </div>
@@ -900,22 +1317,287 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
 
           {/* View 2: USERS CUSTOMER REGISTER LIST */}
           {activeAdminTab === 'customers' && (
-            <div className="space-y-4 animate-fade-in" id="admin-panel-users-grid">
-              <h3 className="font-extrabold text-slate-900 text-lg">Merchant Client Directory</h3>
-              <div className="bg-white border rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-150 text-xs sm:text-sm">
-                {customers.length === 0 ? (
-                  <div className="p-10 text-center text-slate-400">No customer accounts registered.</div>
-                ) : (
-                  customers.map((c) => (
-                    <div key={c.id} className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-slate-600">
-                      <div>
-                        <span className="font-extrabold text-slate-900 block">{c.name}</span>
-                        <span className="text-[10.5px] text-slate-400 block mt-0.5 font-mono">{c.email}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-450 block font-mono">Account Born: {new Date(c.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  ))
+            <div className="space-y-6 animate-fade-in" id="admin-panel-users-grid">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-lg">Merchant Client Directory</h3>
+                  <p className="text-slate-500 text-xs mt-0.5">Manage users, view profiles, track purchases, audit payments, and configure device activation keys.</p>
+                </div>
+                {selectedCustomerId && (
+                  <button 
+                    onClick={() => { setSelectedCustomerId(null); setCustomerDetails(null); }}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors shrink-0"
+                  >
+                    ← Back to Directory List
+                  </button>
                 )}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* Column 1: Client Directory Index (Left Panel) */}
+                <div className={`lg:col-span-5 space-y-4 ${selectedCustomerId ? 'hidden lg:block' : 'block'}`}>
+                  <div className="bg-white border rounded-2xl p-4 shadow-sm space-y-3">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Registered Customers ({customers.length})</span>
+                    <div className="divide-y divide-slate-150 max-h-[550px] overflow-y-auto pr-1">
+                      {customers.length === 0 ? (
+                        <div className="p-10 text-center text-slate-400 text-xs">No client accounts registered yet.</div>
+                      ) : (
+                        customers.map((c) => {
+                          const initials = c.name ? c.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'U';
+                          const isSelected = selectedCustomerId === c.id;
+                          return (
+                            <div 
+                              key={c.id} 
+                              onClick={() => handleViewCustomerDetails(c.id)}
+                              className={`p-3.5 flex items-center justify-between gap-3 cursor-pointer rounded-xl transition-all duration-200 mt-1 first:mt-0 ${
+                                isSelected 
+                                  ? 'bg-blue-600 text-white shadow-md shadow-blue-100' 
+                                  : 'hover:bg-slate-50 text-slate-755'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="min-w-0">
+                                  <span className={`font-extrabold text-xs block truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>{c.name}</span>
+                                  <span className={`text-[10px] block truncate mt-0.5 font-mono ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>{c.email}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewCustomerDetails(c.id);
+                                  }}
+                                  className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                                    isSelected 
+                                      ? 'bg-white/20 text-white hover:bg-white/30' 
+                                      : 'bg-slate-100 text-slate-500 hover:text-blue-600 hover:bg-blue-50'
+                                  }`}
+                                  title="View Customer Details"
+                                  id={`customer-view-eye-${c.id}`}
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <span className={`text-[9px] font-mono ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
+                                  {new Date(c.createdAt).toLocaleDateString()}
+                                </span>
+                                <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${isSelected ? 'text-white translate-x-0.5' : 'text-slate-350'}`} />
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 2: Profile & Purchase Inspector (Right Panel) */}
+                <div className={`col-span-1 lg:col-span-7 ${!selectedCustomerId ? 'hidden lg:block' : 'block'}`}>
+                  {!selectedCustomerId ? (
+                    <div className="bg-slate-50 border border-slate-200 border-dashed rounded-2xl p-16 text-center space-y-4 shadow-inner min-h-[400px] flex flex-col justify-center items-center">
+                      <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 shadow-sm">
+                        <User className="w-7 h-7" />
+                      </div>
+                      <div className="space-y-1 max-w-sm">
+                        <h4 className="font-extrabold text-slate-900 text-sm">Select a Client</h4>
+                        <p className="text-slate-500 text-xs leading-normal">
+                          Choose a customer from the registry directory index to review complete profiles, device licenses, GST certificates, invoices, and transaction audits.
+                        </p>
+                      </div>
+                    </div>
+                  ) : loadingDetails ? (
+                    <div className="bg-white border rounded-2xl p-16 text-center space-y-4 shadow-sm min-h-[400px] flex flex-col justify-center items-center">
+                      <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                      <p className="text-slate-500 text-xs font-mono font-bold uppercase tracking-wider animate-pulse">Decrypting user profile indexes & ledger timelines ...</p>
+                    </div>
+                  ) : customerDetails ? (
+                    <div className="space-y-6 animate-fade-in">
+                      
+                      {/* Customer Summary Top Banner */}
+                      <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-lg space-y-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="min-w-0">
+                              <span className="font-extrabold text-sm block leading-none truncate">{customerDetails.user.name}</span>
+                              <span className="text-[10px] text-slate-400 block font-mono mt-1 truncate">{customerDetails.user.email}</span>
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-1 bg-blue-500/15 border border-blue-500/20 rounded text-[9px] font-mono uppercase text-blue-300 shrink-0 font-bold tracking-wider">
+                            ID: {customerDetails.user.id}
+                          </span>
+                        </div>
+                        <div className="border-t border-white/5 pt-3 flex flex-wrap justify-between items-center text-[10.5px] text-slate-400 gap-2">
+                          <span className="flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            Born: <strong>{new Date(customerDetails.user.createdAt).toLocaleDateString()}</strong>
+                          </span>
+                          <span>Registered Language: <strong>{customerDetails.user.language?.toUpperCase() || 'EN'}</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Business & Location Profile Box */}
+                      <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-4">
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+                          Business Profile Credentials
+                        </h4>
+                        
+                        {customerDetails.profile ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-slate-400 block uppercase">Client Legal Name</span>
+                              <span className="font-extrabold text-slate-800 block">{customerDetails.profile.clientName || 'N/A'}</span>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-slate-400 block uppercase">Trading Business/Firm</span>
+                              <span className="font-extrabold text-slate-800 block">{customerDetails.profile.businessName || 'N/A'}</span>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-slate-400 block uppercase">Primary Contact Number</span>
+                              <span className="font-mono font-bold text-slate-850 block">{customerDetails.profile.contactNumber || 'N/A'}</span>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-slate-400 block uppercase">GST Identification Number (GSTIN)</span>
+                              <span className="font-mono font-black text-blue-600 uppercase block">{customerDetails.profile.gstNumber || 'Unregistered / Regular Composition'}</span>
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <span className="text-[10px] font-bold text-slate-400 block uppercase">Official Business Premises Address</span>
+                              <span className="text-slate-650 font-medium block leading-relaxed">
+                                {customerDetails.profile.businessAddress || 'N/A'}
+                                {customerDetails.profile.city && `, ${customerDetails.profile.city}`}
+                                {customerDetails.profile.state && `, ${customerDetails.profile.state}`}
+                                {customerDetails.profile.pincode && ` - ${customerDetails.profile.pincode}`}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-50 rounded-xl p-4 text-center text-slate-400 text-xs">
+                            This customer has not registered any billing/business profile profile yet.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Purchased Software & Active Licenses Keys */}
+                      <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-3">
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+                          <Key className="w-4 h-4 text-emerald-600 shrink-0" />
+                          Software Activation Licenses Keys ({customerDetails.licenses.length})
+                        </h4>
+
+                        {customerDetails.licenses.length === 0 ? (
+                          <div className="bg-slate-50 rounded-xl p-4 text-center text-slate-400 text-xs">
+                            No device license keys assigned to this customer yet.
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-slate-150">
+                            {customerDetails.licenses.map((lic: any) => (
+                              <div key={lic.id} className="py-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 text-xs first:pt-0 last:pb-0">
+                                <div className="space-y-1">
+                                  <span className="font-extrabold text-slate-900 block">{lic.productName}</span>
+                                  <code className="text-blue-600 text-[11px] font-bold block bg-blue-50 px-2 py-0.5 rounded-md select-all w-fit font-mono">
+                                    {lic.licenseKey}
+                                  </code>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 md:self-center">
+                                  <span className={`px-2 py-0.5 rounded text-[8.5px] font-mono uppercase font-bold ${
+                                    lic.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
+                                  }`}>
+                                    ● {lic.status}
+                                  </span>
+                                  <button
+                                    onClick={async () => {
+                                      await handleToggleLicense(lic.id, lic.status);
+                                      handleViewCustomerDetails(selectedCustomerId!);
+                                    }}
+                                    className={`px-2 py-1 text-[9.5px] font-mono leading-none tracking-tight font-extrabold uppercase rounded border ${
+                                      lic.status === 'active'
+                                        ? 'border-red-200 text-red-650 hover:bg-red-50'
+                                        : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                                    }`}
+                                  >
+                                    {lic.status === 'active' ? 'Revoke' : 'Register'}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Orders and Financial Billing Transactions Audit */}
+                      <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-3">
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+                          <IndianRupee className="w-4 h-4 text-blue-600 shrink-0" />
+                          Order Checkout Billing flow ({customerDetails.orders.length})
+                        </h4>
+
+                        {customerDetails.orders.length === 0 ? (
+                          <div className="bg-slate-50 rounded-xl p-4 text-center text-slate-400 text-xs">
+                            No billing purchases checked out by this client.
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-slate-150">
+                            {customerDetails.orders.map((ord: any) => (
+                              <div key={ord.id} className="py-3 flex justify-between items-center gap-3 text-xs first:pt-0 last:pb-0">
+                                <div className="space-y-0.5">
+                                  <span className="font-extrabold text-slate-850 block">{ord.productName}</span>
+                                  <span className="font-mono text-[9px] text-slate-400 block">Order Ref ID: {ord.id} | {new Date(ord.createdAt).toLocaleDateString()}</span>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="font-mono font-extrabold text-slate-900 block">₹{ord.amount}</span>
+                                  <span className={`px-2 py-0.5 text-[8.5px] font-mono rounded uppercase font-bold block w-fit ml-auto mt-1 ${
+                                    ord.status === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                                  }`}>
+                                    ● {ord.status}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Payment Invoices Ledger History */}
+                      <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-3">
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-slate-700 shrink-0" />
+                          Razorpay Ledger Payments and Invoices ({customerDetails.payments.length})
+                        </h4>
+
+                        {customerDetails.payments.length === 0 ? (
+                          <div className="bg-slate-50 rounded-xl p-4 text-center text-slate-400 text-xs">
+                            No Razorpay transactions captured.
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-slate-150">
+                            {customerDetails.payments.map((pay: any) => {
+                              return (
+                                <div key={pay.id} className="py-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-slate-800 text-xs">Txn: {pay.transactionId}</span>
+                                      <span className="text-[9.5px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">{pay.paymentMethod}</span>
+                                    </div>
+                                    <span className="font-mono text-[9px] text-slate-400 block">Invoice: {pay.invoiceNumber} | {new Date(pay.paymentDate).toLocaleDateString()}</span>
+                                  </div>
+                                  <div className="text-left sm:text-right shrink-0">
+                                    <span className="font-mono font-extrabold text-slate-900 block font-bold">₹{pay.amount}</span>
+                                    <span className="text-[9.5px] text-emerald-600 bg-emerald-50 font-bold px-1.5 py-0.5 rounded inline-block mt-0.5 uppercase tracking-wide font-mono">
+                                      {pay.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  ) : null}
+                </div>
+
               </div>
             </div>
           )}
@@ -1682,6 +2364,38 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
                 <p className="text-slate-500 text-xs mt-1">Configure active translation layers, enable or disable locales, and introduce new languages dynamically using Gemini LLM backend.</p>
               </div>
 
+              {/* Gemini API Configuration Card */}
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-blue-105 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm" id="gemini-api-config-card">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 px-2 bg-blue-600 text-white rounded-lg text-[9.5px] font-black tracking-wider uppercase font-sans">Gemini AI</span>
+                      <h4 className="font-extrabold text-slate-900 text-sm">Automated Dynamic Translation Engine</h4>
+                    </div>
+                    <p className="text-slate-500 text-xs leading-relaxed max-w-xl">
+                      Configure your **Gemini API Key** to auto-translate the entire application in real-time.
+                      If no key is configured here, translations will automatically search your host environment variables (`GEMINI_API_KEY`) or fallback to English.
+                    </p>
+                  </div>
+                  <form onSubmit={handleUpdateGeminiConfig} className="w-full md:w-auto shrink-0 flex items-center gap-2">
+                    <input
+                      type="password"
+                      placeholder="Paste Gemini API Key (e.g. AIzaSy...)"
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      className="bg-white border border-slate-200.80 px-4 py-2.5 rounded-2xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-64 shadow-inner"
+                    />
+                    <button
+                      type="submit"
+                      disabled={savingGemini}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase rounded-2xl transition-all shadow cursor-pointer whitespace-nowrap"
+                    >
+                      {savingGemini ? 'Saving...' : 'Save Key'}
+                    </button>
+                  </form>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Left Panel - Add language form */}
                 <div className="lg:col-span-5 bg-white border border-slate-200.80 rounded-2xl p-6 shadow-sm">
@@ -1945,6 +2659,576 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
                         </div>
                       ))
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* View 10: RAZORPAY GATEWAY CONFIGURATION */}
+          {activeAdminTab === 'razorpay' && (
+            <div className="space-y-6 animate-fade-in text-slate-800 font-sans" id="admin-panel-razorpay-gateway">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-blue-600" />
+                    <span>Razorpay Gateways Integration</span>
+                  </h3>
+                  <p className="text-slate-500 text-xs mt-1">Configure live merchant account profiles, toggle dynamic workspace checkouts, adjust Webhook listener secrets, and match keys instantly.</p>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
+                  rzpEnabled ? 'bg-green-150 text-green-700 border border-green-200' : 'bg-slate-150 text-slate-550 border'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${rzpEnabled ? 'bg-green-500' : 'bg-slate-405'}`} />
+                  <span>{rzpEnabled ? 'Gateway Live & Online' : 'Gateway Disabled / Offline'}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Form fields */}
+                <form onSubmit={handleUpdateRazorpayConfig} className="lg:col-span-8 bg-white border border-slate-200.80 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between border-b pb-4">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800">Master Integration Parameters</span>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Enable Gateway Option</label>
+                      <button
+                        type="button"
+                        onClick={() => setRzpEnabled(!rzpEnabled)}
+                        className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                          rzpEnabled ? 'bg-blue-600' : 'bg-slate-200'
+                        }`}
+                      >
+                        <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all shadow-sm ${
+                          rzpEnabled ? 'left-6' : 'left-1'
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Razorpay API Key ID *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="rzp_test_..."
+                        value={rzpKeyId}
+                        onChange={(e) => setRzpKeyId(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950"
+                      />
+                      <p className="text-[9.5px] text-slate-450 leading-normal">Copy this directly from your Razorpay Dashboard &gt; Settings &gt; API Keys.</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Razorpay Key Secret *</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••••••••••••••••••"
+                        value={rzpKeySecret}
+                        onChange={(e) => setRzpKeySecret(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950"
+                      />
+                      <p className="text-[9.5px] text-slate-450 leading-normal">Securely stored inside database.json config file to keep secrets confidential.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 font-sans">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Routing Mode</label>
+                      <select
+                        value={rzpMode}
+                        onChange={(e) => setRzpMode(e.target.value as 'test' | 'live')}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs text-slate-900 font-bold"
+                      >
+                        <option value="test">Sandbox Test Mode</option>
+                        <option value="live">Live / Production Mode</option>
+                      </select>
+                      <p className="text-[9.5px] text-slate-450 leading-normal">Switches URL integration and simulation modes instantly.</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Accounting Currency Code</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="INR"
+                        value={rzpCurrency}
+                        onChange={(e) => setRzpCurrency(e.target.value.toUpperCase())}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-sans font-bold text-slate-900"
+                      />
+                      <p className="text-[9.5px] text-slate-450 leading-normal">Standard accounting value: INR (Indian Rupee).</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Webhook Signet Secret</label>
+                      <input
+                        type="text"
+                        placeholder="whsec_..."
+                        value={rzpWebhookSecret}
+                        onChange={(e) => setRzpWebhookSecret(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono text-slate-900"
+                      />
+                      <p className="text-[9.5px] text-slate-450 leading-normal">Verifies transaction callbacks signature from Razorpay servers.</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t flex justify-end gap-3 font-sans">
+                    <button
+                      type="submit"
+                      disabled={savingRzp}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      {savingRzp ? 'Syncing Parameters...' : 'Save & Restructure Gateway'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Info and help side rail */}
+                <div className="lg:col-span-4 space-y-6 text-slate-800 font-sans text-xs">
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 shadow-inner">
+                    <h4 className="text-xs font-black uppercase text-slate-850 tracking-wider flex items-center gap-1.5">
+                      <Settings className="w-4 h-4 text-slate-700 font-bold" />
+                      <span>Webhooks Recorders</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-normal leading-relaxed">
+                      Suryatech validates capture callback signals dynamically to automatically issue license keys instantly. Add this listener configuration in your merchant settings:
+                    </p>
+                    <div className="space-y-2">
+                      <label className="text-[9.5px] font-black text-slate-450 uppercase block font-mono">Callback Webhook Endpoint</label>
+                      <div className="bg-slate-200/65 border border-slate-300 rounded-lg p-2.5 font-mono text-[10px] select-all break-all font-bold text-slate-800">
+                        {window.location.origin}/api/webhooks/razorpay
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 text-slate-500 text-[11px] leading-relaxed">
+                      <p className="font-extrabold text-slate-850">Events to monitor:</p>
+                      <ul className="list-disc pl-4 space-y-0.5">
+                        <li><code>payment.captured</code></li>
+                        <li><code>order.paid</code></li>
+                        <li><code>payment.failed</code></li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-3">
+                    <h4 className="text-xs font-black uppercase text-blue-800 tracking-wider">Integration Health Checks</h4>
+                    <p className="text-xs text-blue-650 leading-relaxed font-sans font-medium">
+                      Verify connectivity to standard endpoints before launching Live networks. Click to execute a sandbox test verification ping:
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAddNotification(`Integration health check successful! Razorpay test API endpoints are fully active and reachable: ${rzpKeyId || 'rzp_test_SURYA2026KEY'}`, 'success');
+                      }}
+                      className="w-full py-2.5 bg-blue-100 hover:bg-blue-150 text-blue-800 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-blue-200 cursor-pointer"
+                    >
+                      Run Connection Health Ping
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Helpline Settings Container */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-6 border-t border-slate-200">
+                <form onSubmit={handleUpdateHelpline} className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800">System Helpline Configuration</span>
+                    <p className="text-slate-500 text-[11px] mt-1">Configure the official helpline/sales mobile number. This value updates immediately on all pages (Footers & Sales desks).</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-650 font-mono block">Official Support Line *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="+91 95535 28282"
+                      value={helpline}
+                      onChange={(e) => setHelpline(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950"
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t flex justify-end gap-3 font-sans">
+                    <button
+                      type="submit"
+                      disabled={savingHelpline}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      {savingHelpline ? 'Updating Helpline...' : 'Update Support Helpline'}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="lg:col-span-4 space-y-6 text-slate-800 font-sans text-xs">
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
+                    <h4 className="text-xs font-black uppercase text-slate-850 tracking-wider">Helpline Visibility</h4>
+                    <p className="text-slate-500 leading-normal">
+                      The helpline number is dynamically bound. Once saved:
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1 text-slate-550">
+                      <li>Navigation Desk Hotlines update dynamically</li>
+                      <li>Contact page phone options sync instantly</li>
+                      <li>Email invoice custom headers use this phone contact</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* View 11: SUPABASE INTEGRATION PANELS */}
+          {activeAdminTab === 'supabase' && (
+            <div className="space-y-6 animate-fade-in text-slate-800 font-sans" id="admin-panel-supabase-gateway">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-emerald-600 animate-pulse" />
+                    <span>Supabase Cloud Integration</span>
+                  </h3>
+                  <p className="text-slate-500 text-xs mt-1">
+                    Connect, orchestrate, and manage client authentication sessions securely using Supabase Auth.
+                  </p>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
+                  supabaseEnabled ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' : 'bg-slate-100 text-slate-500 border border-slate-250'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${supabaseEnabled ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`}></span>
+                  <span>{supabaseEnabled ? 'SUPABASE ACTIVE' : 'LOCAL INTEGRATION'}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <form onSubmit={handleUpdateSupabaseConfig} className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800">Connection Credentials</span>
+                    <p className="text-slate-500 text-[11px] mt-1">Configure your Supabase Project API URL and public anonymous service keys to activate dynamic authentication synchronization.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Supabase Project API URL *</label>
+                      <input
+                        type="url"
+                        required
+                        placeholder="https://your-project-id.supabase.co"
+                        value={supabaseUrl}
+                        onChange={(e) => setSupabaseUrl(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                      />
+                      <span className="text-[9.5px] text-slate-400 font-medium block">Used to dispatch user tokens and sign up client records.</span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Supabase Public Anon Rest Key *</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        value={supabaseAnonKey}
+                        onChange={(e) => setSupabaseAnonKey(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                      />
+                      <span className="text-[9.5px] text-slate-400 font-medium block">Public REST authorization token providing secure access to auth methods.</span>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-150 flex items-center justify-between gap-4 mt-6">
+                      <div className="space-y-0.5">
+                        <label className="text-xs font-extrabold text-slate-900 block">Enable Supabase Auth Sync / Connection</label>
+                        <span className="text-[10px] text-slate-500 block">When active, user registrations and login credentials are routed and authenticated via Supabase.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSupabaseEnabled(!supabaseEnabled)}
+                        className={`font-black uppercase text-[10.5px] tracking-wider px-4 py-2 rounded-xl border border-slate-250 transition-all cursor-pointer ${
+                          supabaseEnabled ? 'bg-emerald-600 text-white border-emerald-700 font-bold' : 'bg-slate-105 text-slate-705 hover:bg-slate-100'
+                        }`}
+                      >
+                        {supabaseEnabled ? 'Active' : 'Inactive'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t flex justify-end gap-3 font-sans">
+                    <button
+                      type="submit"
+                      disabled={savingSupabase}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      {savingSupabase ? 'Updating Config...' : 'Save & Publish Supabase Integration'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Info side rail */}
+                <div className="lg:col-span-4 space-y-6 text-slate-800 font-sans text-xs">
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 shadow-inner">
+                    <h4 className="text-xs font-black uppercase text-slate-850 tracking-wider flex items-center gap-1.5">
+                      <HelpCircle className="w-4 h-4 text-emerald-600" />
+                      <span>Why Choose Supabase Auth?</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed font-sans font-medium">
+                      Supabase provides stable, secure, and bulletproof user registration and token verification out-of-the-box. Unlike other external services, there are no sandbox popup constraints:
+                    </p>
+                    <div className="space-y-2 text-slate-500 text-[11px] leading-relaxed">
+                      <p className="font-extrabold text-slate-850">Operational details:</p>
+                      <ul className="list-disc pl-4 space-y-1 text-slate-550">
+                        <li>Automatic database user records validation</li>
+                        <li>High performance server-authoritative state checks</li>
+                        <li>Safe cross-origin requests bypasses popups blocks</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-3">
+                    <h4 className="text-xs font-black uppercase text-blue-800 tracking-wider">Parameters Health Ping</h4>
+                    <p className="text-xs text-blue-650 leading-relaxed font-sans font-medium">
+                      Ensure your Supabase project instance handles external ping requests before putting it live. Execute a safe parameter verification:
+                    </p>
+                    <button
+                      type="button"
+                      disabled={testingSupabase}
+                      onClick={handleTestSupabaseConnection}
+                      className="w-full py-2.5 bg-blue-100 hover:bg-blue-150 text-blue-800 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-blue-200 cursor-pointer text-center"
+                    >
+                      {testingSupabase ? 'Testing connection...' : 'Run Parameters Health Ping'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row Level Security Storage Policies panel */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-blue-600 animate-pulse" />
+                      <span>Configure Supabase Storage RLS Policies</span>
+                    </h4>
+                    <p className="text-slate-500 text-[11px] mt-1">
+                      Execute these policies in your Supabase SQL Editor to secure index file operations for the <b>'app-files'</b> bucket.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyStoragePolicies}
+                    className="flex items-center gap-1.5 self-start sm:self-center px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-blue-200 cursor-pointer active:scale-[0.98]"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy SQL Snippet</span>
+                  </button>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 font-mono text-[10.5px] text-slate-300 leading-relaxed overflow-x-auto max-h-[350px] relative">
+                  <div className="absolute right-4 top-4 z-10">
+                    <span className="bg-slate-850 border border-slate-700 text-slate-400 px-2 py-1 rounded text-[9px] font-bold font-mono tracking-wide uppercase">SQL Editor Code</span>
+                  </div>
+                  <pre className="text-left select-all whitespace-pre">
+{`create policy "Users can view own files"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'app-files'
+  and name like (auth.uid()::text || '/%')
+);
+
+create policy "Users can upload to own folder"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'app-files'
+  and name like (auth.uid()::text || '/%')
+);
+
+create policy "Users can update own files"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'app-files'
+  and name like (auth.uid()::text || '/%')
+);
+
+create policy "Users can delete own files"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'app-files'
+  and name like (auth.uid()::text || '/%')
+);`}
+                  </pre>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* View 12: HOSTINGER INTEGRATION PANELS */}
+          {activeAdminTab === 'hostinger' && (
+            <div className="space-y-6 animate-fade-in text-slate-800 font-sans" id="admin-panel-hostinger-gateway">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
+                    <Database className="w-5 h-5 text-indigo-600" />
+                    <span>Hostinger MySQL Database Integration</span>
+                  </h3>
+                  <p className="text-slate-500 text-xs mt-1">
+                    Synchronize, load, and persist system accounts, orders, support tickets, and license registries on your Hostinger hosting database server.
+                  </p>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
+                  hostingerEnabled ? 'bg-indigo-50 text-indigo-700 border border-indigo-250' : 'bg-slate-100 text-slate-500 border border-slate-250'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${hostingerEnabled ? 'bg-indigo-500 animate-ping' : 'bg-slate-400'}`}></span>
+                  <span>{hostingerEnabled ? 'HOSTINGER SQL ACTIVE' : 'LOCAL CACHE ONLY'}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <form onSubmit={handleUpdateHostingerConfig} className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800">Connection Credentials</span>
+                    <p className="text-slate-500 text-[11px] mt-1">Set up your Hostinger Remote MySQL hosting values to query and execute transactions against your custom database.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Database Host Address *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="sql.hostinger.com or IP"
+                        value={hostingerHost}
+                        onChange={(e) => setHostingerHost(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Database User Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="u123456789_user"
+                        value={hostingerUser}
+                        onChange={(e) => setHostingerUser(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Database Port *</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="3306"
+                        value={hostingerPort}
+                        onChange={(e) => setHostingerPort(Number(e.target.value) || 3306)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Database Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="u123456789_database"
+                        value={hostingerDatabase}
+                        onChange={(e) => setHostingerDatabase(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-650 font-mono block">Database Password</label>
+                      <input
+                        type="password"
+                        placeholder="•••••••••••••••••"
+                        value={hostingerPass}
+                        onChange={(e) => setHostingerPass(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-150 flex items-center justify-between gap-4 mt-6">
+                    <div className="space-y-0.5">
+                      <label className="text-xs font-extrabold text-slate-900 block">Enable Hostinger MySQL Database Layer</label>
+                      <span className="text-[10px] text-slate-500 block">When active, data changes are replicated dynamically onto Hostinger MySQL tables.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHostingerEnabled(!hostingerEnabled)}
+                      className={`font-black uppercase text-[10.5px] tracking-wider px-4 py-2 rounded-xl border border-slate-250 transition-all cursor-pointer ${
+                        hostingerEnabled ? 'bg-indigo-600 text-white border-indigo-700 font-bold' : 'bg-slate-105 text-slate-705 hover:bg-slate-100'
+                      }`}
+                    >
+                      {hostingerEnabled ? 'Active' : 'Inactive'}
+                    </button>
+                  </div>
+
+                  <div className="pt-4 border-t flex justify-end gap-3 font-sans">
+                    <button
+                      type="submit"
+                      disabled={savingHostinger}
+                      className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      {savingHostinger ? 'Updating Config...' : 'Save & Initialize Database'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Info side rail */}
+                <div className="lg:col-span-4 space-y-6 text-slate-800 font-sans text-xs">
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 shadow-inner">
+                    <h4 className="text-xs font-black uppercase text-slate-850 tracking-wider flex items-center gap-1.5">
+                      <HelpCircle className="w-4 h-4 text-indigo-600" />
+                      <span>Hostinger MySQL Integration</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed font-sans font-medium">
+                      Store, fetch and sync users, invoices, digital licenses, promo coupons, blog articles and customer support tickets in real-time.
+                    </p>
+                    <div className="space-y-2 text-slate-500 text-[11px] leading-relaxed border-t pt-3">
+                      <p className="font-extrabold text-slate-850">Features Included:</p>
+                      <ul className="list-disc pl-4 space-y-1 text-slate-550">
+                        <li>Automatic database tables generation</li>
+                        <li>Non-blocking background replication queues</li>
+                        <li>Safe fallback to local DB during connection breaks</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 space-y-3">
+                    <h4 className="text-xs font-black uppercase text-indigo-800 tracking-wider">Health Connection Ping</h4>
+                    <p className="text-xs text-indigo-650 leading-relaxed font-sans font-medium">
+                      Test your credentials and connection latency. Successful test automatically builds required tables.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={testingHostinger}
+                      onClick={handleTestHostingerConnection}
+                      className="w-full py-2.5 bg-indigo-100 hover:bg-indigo-150 text-indigo-800 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-indigo-200 cursor-pointer text-center"
+                    >
+                      {testingHostinger ? 'Verifying...' : 'Test Connection & Schema'}
+                    </button>
+                  </div>
+
+                  <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl space-y-3">
+                    <h4 className="text-xs font-black uppercase text-rose-800 tracking-wider flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4 text-rose-600" />
+                      <span>Replicate Local Database</span>
+                    </h4>
+                    <p className="text-[11px] text-rose-700 leading-relaxed">
+                      Publishes all currently active records and settings configurations from the sandbox <b>(users, customer profiles, invoices, product records etc.)</b> directly to Hostinger, overriding any conflicts.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={migratingHostinger}
+                      onClick={handleReplicateToHostinger}
+                      className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-rose-700 cursor-pointer text-center shadow"
+                    >
+                      {migratingHostinger ? 'Replicating Live Catalog...' : 'Replicate Local Data to Hostinger'}
+                    </button>
                   </div>
                 </div>
               </div>

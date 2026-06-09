@@ -16,7 +16,11 @@ import {
   Info, 
   IndianRupee,
   Smartphone,
-  ExternalLink
+  ExternalLink,
+  QrCode,
+  Building2,
+  Wallet,
+  Check
 } from 'lucide-react';
 
 import Layout from './components/Layout';
@@ -34,6 +38,7 @@ import { TranslationProvider } from './components/TranslationContext';
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [user, setUser] = useState<any>(null);
+  const [portalInitialView, setPortalInitialView] = useState<'dashboard' | 'tickets' | 'new-ticket' | 'profile' | 'payments' | 'invoices' | 'notifications'>('dashboard');
   const [products, setProducts] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [downloads, setDownloads] = useState<any[]>([]);
@@ -51,9 +56,15 @@ export default function App() {
   } | null>(null);
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutMop, setCheckoutMop] = useState<'card' | 'upi' | 'netbanking' | 'wallet'>('card');
+  const [checkoutUpiMethod, setCheckoutUpiMethod] = useState<'vpa' | 'qr'>('qr');
   const [checkoutCardNo, setCheckoutCardNo] = useState('4111 1111 1111 1111');
   const [checkoutCardExpiry, setCheckoutCardExpiry] = useState('12/28');
   const [checkoutCardCvv, setCheckoutCardCvv] = useState('123');
+  const [checkoutUpiId, setCheckoutUpiId] = useState('surya@okaxis');
+  const [checkoutBank, setCheckoutBank] = useState('SBI');
+  const [checkoutWallet, setCheckoutWallet] = useState('paytm');
+  const [merchantUpiId, setMerchantUpiId] = useState('surajsurya.koo7@okaxis');
 
   // Load active session from local storage on mount
   useEffect(() => {
@@ -178,10 +189,17 @@ export default function App() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
+  const handleNavigatePage = (page: string) => {
+    if (page === 'portal') {
+      setPortalInitialView('dashboard');
+    }
+    setCurrentPage(page);
+  };
+
   const handleLoginSuccess = (token: string, userData: any) => {
     localStorage.setItem('bsp_token', token);
     setUser(userData);
-    setCurrentPage('portal');
+    handleNavigatePage('portal');
   };
 
   const handleLogout = () => {
@@ -226,17 +244,47 @@ export default function App() {
     }, 2000);
   };
 
-  // Razorpay simulated order initialization
+  // Razorpay order initialization and Profile Completion guard
   const handleInitiateSimulatedCheckout = async (productId: string, couponCode?: string) => {
     const token = localStorage.getItem('bsp_token');
     if (!token) {
-      addNotification('Authorization error, please sign in portal.', 'error');
-      setCurrentPage('portal');
+      addNotification('Please log in or register to purchase a license plan.', 'info');
+      setPortalInitialView('dashboard');
+      handleNavigatePage('portal');
       return;
     }
 
-    addNotification('Connecting Razorpay Sandbox Secure Gateway...', 'info');
+    addNotification('Verifying your billing profile details...', 'info');
     try {
+      // 1. Fetch customer profile info to verify completion status
+      const profileRes = await fetch('/api/customer/profile', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!profileRes.ok) {
+        throw new Error('Could not access profile records');
+      }
+
+      const profile = await profileRes.json();
+      
+      // Determine if profile fields are completed
+      const isProfileCompleted = 
+        profile.clientName && 
+        profile.businessName && 
+        profile.contactNumber && 
+        profile.businessAddress && 
+        profile.city && 
+        profile.state && 
+        profile.pincode;
+
+      if (!isProfileCompleted) {
+        addNotification('Please complete your billing profile details before proceeding to purchase.', 'error');
+        setPortalInitialView('profile');
+        handleNavigatePage('portal');
+        return;
+      }
+
+      // 2. Profile is completed! Directly initialize official order and launch official live Razorpay Gateway pop-up!
+      addNotification('Billing profile verified successfully. Loading secure checkout...', 'info');
       const res = await fetch('/api/orders/create', {
         method: 'POST',
         headers: {
@@ -250,12 +298,15 @@ export default function App() {
         const orderInitData = await res.json();
         setCheckoutData(orderInitData);
         setCheckoutActive(true);
+        
+        // Directly trigger the official live Razorpay Gateway UI popover
+        await launchOfficialRazorpaySDK(orderInitData);
       } else {
         const err = await res.json();
         addNotification(err.error || 'Checkout initialization failed', 'error');
       }
-    } catch {
-      addNotification('Network error starting checkout transaction', 'error');
+    } catch (e: any) {
+      addNotification('Network error starting checkout transaction: ' + e.message, 'error');
     }
   };
 
@@ -269,6 +320,19 @@ export default function App() {
       ? 'pay_RZPSIM_' + Math.random().toString(36).substr(2, 10).toUpperCase() 
       : undefined;
 
+    let selectedPaymentMethod = 'UPI_Razorpay';
+    if (status === 'success') {
+      if (checkoutMop === 'card') {
+        selectedPaymentMethod = 'Card_Razorpay';
+      } else if (checkoutMop === 'upi') {
+        selectedPaymentMethod = checkoutUpiMethod === 'vpa' ? `UPI_VPA_${checkoutUpiId}_Razorpay` : 'UPI_QR_Razorpay';
+      } else if (checkoutMop === 'netbanking') {
+        selectedPaymentMethod = `Netbanking_${checkoutBank}_Razorpay`;
+      } else if (checkoutMop === 'wallet') {
+        selectedPaymentMethod = `Wallet_${checkoutWallet}_Razorpay`;
+      }
+    }
+
     try {
       const res = await fetch('/api/orders/verify', {
         method: 'POST',
@@ -279,7 +343,8 @@ export default function App() {
         body: JSON.stringify({
           orderId: checkoutData.orderId,
           paymentId,
-          status
+          status,
+          paymentMethod: selectedPaymentMethod
         })
       });
 
@@ -302,11 +367,111 @@ export default function App() {
     }
   };
 
+  const launchOfficialRazorpaySDK = async (data: {
+    orderId: string;
+    amount: number;
+    keyId: string;
+    productName: string;
+  }) => {
+    setCheckoutLoading(true);
+    addNotification('Loading official Razorpay Payment Widget...', 'info');
+    
+    // Inject script if not already present
+    const loadScript = () => {
+      return new Promise((resolve) => {
+        if ((window as any).Razorpay) {
+          resolve(true);
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+    };
+
+    const isLoaded = await loadScript();
+    if (!isLoaded) {
+      setCheckoutLoading(false);
+      addNotification('Failed to load Razorpay library. Please check your internet connection or use the simulated payment option.', 'error');
+      return;
+    }
+
+    try {
+      const options = {
+        key: data.keyId,
+        amount: data.amount * 100, // standard Amount in paise
+        currency: 'INR',
+        name: 'Bsp Suryatech',
+        description: `Billing Software License for ${data.productName}`,
+        image: 'https://images.unsplash.com/photo-1554165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=200',
+        handler: async function (response: any) {
+          addNotification('Payment authorized successfully by Razorpay! Dispatched to Suryatech secure servers for sync...', 'success');
+          
+          const token = localStorage.getItem('bsp_token');
+          try {
+            const res = await fetch('/api/orders/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                orderId: data.orderId,
+                paymentId: response.razorpay_payment_id || 'pay_RZPLIVE_' + Math.random().toString(36).substr(2, 10).toUpperCase(),
+                status: 'success',
+                paymentMethod: 'Razorpay_Live_Gateway_Portal'
+              })
+            });
+            if (res.ok) {
+              setCheckoutActive(false);
+              setCheckoutData(null);
+              await fetchUserLicenses();
+              addNotification('Transaction successfully validated! Your license and invoice registers are activated.', 'success');
+              handleNavigatePage('portal');
+            } else {
+              addNotification('Razorpay Verification failed on server sync.', 'error');
+            }
+          } catch {
+            addNotification('Network sync error validating gateway transaction with server.', 'error');
+          }
+          setCheckoutLoading(false);
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: ''
+        },
+        theme: {
+          color: '#2563EB'
+        },
+        modal: {
+          ondismiss: function () {
+            setCheckoutLoading(false);
+            addNotification('Razorpay Checkout closed by customer.', 'info');
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      setCheckoutLoading(false);
+      addNotification('Error starting Razorpay checkout widget: ' + err.message, 'error');
+    }
+  };
+
+  const handleLaunchOfficialRazorpay = async () => {
+    if (!checkoutData) return;
+    await launchOfficialRazorpaySDK(checkoutData);
+  };
+
   return (
     <TranslationProvider user={user}>
       <Layout 
         currentPage={currentPage}
-        onPageChange={setCurrentPage} 
+        onPageChange={handleNavigatePage} 
         user={user}
         onLogout={handleLogout}
         notifications={notifications}
@@ -324,7 +489,7 @@ export default function App() {
         >
           {currentPage === 'home' && (
             <Home 
-              onPageChange={setCurrentPage} 
+              onPageChange={handleNavigatePage} 
               products={products}
               onTriggerTrialDownload={handleTriggerTrialDownload}
               testimonials={testimonials}
@@ -332,12 +497,12 @@ export default function App() {
           )}
 
           {currentPage === 'features' && (
-            <Features onPageChange={setCurrentPage} />
+            <Features onPageChange={handleNavigatePage} />
           )}
 
           {currentPage === 'pricing' && (
             <Pricing 
-              onPageChange={setCurrentPage}
+              onPageChange={handleNavigatePage}
               products={products}
               user={user}
               onInitiateSimulatedCheckout={handleInitiateSimulatedCheckout}
@@ -369,15 +534,16 @@ export default function App() {
               user={user}
               onLoginSuccess={handleLoginSuccess}
               onAddNotification={addNotification}
-              onPageChange={setCurrentPage}
+              onPageChange={handleNavigatePage}
               onTriggerTrialDownload={handleTriggerTrialDownload}
+              initialView={portalInitialView}
             />
           )}
 
           {currentPage === 'admin' && user?.role === 'admin' && (
             <AdminPortal 
               onAddNotification={addNotification}
-              onPageChange={setCurrentPage}
+              onPageChange={handleNavigatePage}
               onRefreshDownloads={fetchDownloads}
               videos={videos}
               onRefreshVideos={fetchVideos}
@@ -385,106 +551,6 @@ export default function App() {
           )}
         </motion.div>
       </AnimatePresence>
-
-      {/* --- RAZORPAY SECURITY SIMULATOR CHECKOUT PORTAL MODAL OVERLAY --- */}
-      {checkoutActive && checkoutData && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white border rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl shrink-0 flex flex-col text-left"
-            id="razorpay-simulated-iframe-wrapper"
-          >
-            {/* Header branding logo */}
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1 px-2.5 bg-blue-600 rounded-lg text-white font-extrabold text-xs">R</div>
-                <div className="flex flex-col">
-                  <span className="font-extrabold text-sm tracking-tight leading-none">Razorpay Checkout</span>
-                  <span className="text-[9px] text-[#A1A1AA] uppercase block font-bold mt-1 font-mono">Simulators Sandbox Test</span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setCheckoutActive(false)} 
-                className="text-slate-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Invoicing summary widget */}
-            <div className="bg-slate-100 p-4 border-b border-slate-200/80 flex justify-between items-center text-xs">
-              <div>
-                <span className="font-bold text-slate-800 leading-none">{checkoutData.productName}</span>
-                <span className="text-[9.5px] text-slate-400 block mt-1">BSP Suryatech Billing Software License</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wide">Total Amount</span>
-                <span className="text-base font-black text-blue-600 font-mono">₹{checkoutData.amount}</span>
-              </div>
-            </div>
-
-            {/* Sandbox details fields */}
-            <div className="p-5 space-y-4 text-xs">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2 text-[10px] text-amber-800 leading-relaxed">
-                <Info className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
-                <p>This payment screen acts as a secure interactive simulated sandbox API loop in absolute compliance with Indian POS mandates.</p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 font-mono block uppercase">Simulated Debit Card number</label>
-                  <input
-                    type="text"
-                    value={checkoutCardNo}
-                    onChange={(e) => setCheckoutCardNo(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2 rounded-xl text-xs font-mono font-bold text-slate-900"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 font-mono block uppercase">Expiry Date</label>
-                    <input
-                      type="text"
-                      value={checkoutCardExpiry}
-                      onChange={(e) => setCheckoutCardExpiry(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2 rounded-xl text-xs font-mono font-bold text-center text-slate-900"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 font-mono block uppercase">CVV Card mark</label>
-                    <input
-                      type="password"
-                      value={checkoutCardCvv}
-                      onChange={(e) => setCheckoutCardCvv(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2 rounded-xl text-xs font-mono font-bold text-center text-slate-900"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* simulated payment gateways buttons triggers */}
-              <div className="pt-4 grid grid-cols-2 gap-3 border-t border-slate-100">
-                <button
-                  onClick={() => handleCompleteSimulatedPayment('failed')}
-                  disabled={checkoutLoading}
-                  className="py-3 bg-red-50 text-red-650 hover:bg-red-100 text-[10.5px] font-extrabold uppercase rounded-xl transition-all cursor-pointer text-center"
-                >
-                  Decline Transaction
-                </button>
-                <button
-                  onClick={() => handleCompleteSimulatedPayment('success')}
-                  disabled={checkoutLoading}
-                  className="py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-extrabold uppercase rounded-xl transition-all cursor-pointer text-center shadow-md shadow-emerald-100"
-                >
-                  Authorize Payment
-                </button>
-              </div>
-
-            </div>
-          </motion.div>
-        </div>
-      )}
     </Layout>
     </TranslationProvider>
   );

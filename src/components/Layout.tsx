@@ -20,6 +20,8 @@ import {
   IndianRupee,
   Smartphone,
   CheckCircle2,
+  AlertCircle,
+  Info,
   Menu,
   X
 } from 'lucide-react';
@@ -46,6 +48,19 @@ export default function Layout({
   const { t, currentLanguage, languages, changeLanguage, loading } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [helpline, setHelpline] = useState<string>('+91 95535 28282');
+
+  useEffect(() => {
+    fetch('/api/helpline')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.helpline) {
+          setHelpline(data.helpline);
+        }
+      })
+      .catch(err => console.error('Failed to load helpline', err));
+  }, []);
+
   const announcementMsg = '🇮🇳 Special Offer: Desktop GST Billing Lifetime License now only ₹1999 / Free Trial Enabled';
 
   const navItems = [
@@ -142,13 +157,11 @@ export default function Layout({
                 <Building2 className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
-                <span className="font-black text-xl tracking-tighter text-white uppercase group-hover:text-blue-400 transition-colors">
+                <span className="font-black text-xl tracking-tighter text-white uppercase group-hover:text-blue-400 transition-colors whitespace-nowrap">
                   BSP <span className="text-[#2563EB] group-hover:text-emerald-400">Suryatech</span>
                 </span>
-                <span className="text-[10px] font-mono tracking-normal text-slate-500 uppercase font-bold mt-0 text-center block">
-                  // HIGH-PERFORMANCE
-                  <br />
-                  BILLING SOFTWARES
+                <span className="text-[10px] font-mono tracking-normal text-slate-500 font-bold mt-0.5 block">
+                  // Billing Solution
                 </span>
               </div>
             </div>
@@ -178,15 +191,12 @@ export default function Layout({
                 <div className="flex items-center gap-2">
                   <div 
                     onClick={() => handleNavClick('portal')}
-                    className="flex items-center gap-2.5 px-3 py-1.5 bg-[#1E293B] border border-slate-800 rounded-sm text-xs text-slate-200 cursor-pointer hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-2.5 px-3 py-1.5 bg-[#1E293B] border border-slate-800 rounded-sm text-xs text-slate-200 cursor-pointer hover:bg-slate-800 transition-colors shrink-0 whitespace-nowrap"
                     id="profile-pill-layout"
                   >
-                    <User className="w-4 h-4 text-blue-500" />
-                    <div className="flex flex-col text-left font-sans">
-                      <span className="font-bold text-white leading-none">{user.name}</span>
-                      <span className="text-[8px] text-slate-400 font-bold leading-none mt-1 uppercase tracking-wide">
-                        {user.role === 'admin' ? t('🇮🇳 SYSTEM ADMIN') : t('Customer Account')}
-                      </span>
+                    <User className="w-4 h-4 text-blue-500 shrink-0" />
+                    <div className="font-sans whitespace-nowrap">
+                      <span className="font-bold text-white leading-none block">{user.name}</span>
                     </div>
                   </div>
                   
@@ -319,7 +329,13 @@ export default function Layout({
             id={`toast-${notif.id}`}
           >
             <div className="flex items-center gap-2.5 font-bold uppercase tracking-wide">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-[#10B981]" />
+              {notif.type === 'error' ? (
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              ) : notif.type === 'info' ? (
+                <Info className="w-4 h-4 shrink-0 text-sky-450" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-[#10B981]" />
+              )}
               <span>{t(notif.text)}</span>
             </div>
             <button 
@@ -392,14 +408,14 @@ export default function Layout({
               <p className="text-slate-400 text-xs sm:text-sm flex gap-3 leading-relaxed">
                 <Building2 className="w-5 h-5 text-[#2563EB] shrink-0" />
                 <span className="font-sans leading-relaxed">
-                  BSP Suryatech Tower, Sector 62,<br />
-                  Electronic City, Noida,<br />
-                  Uttar Pradesh - 201301, India
+                  SSD Tower, Sector 3<br />
+                  Shivanand Nagar, Raipur<br />
+                  Chhattisgarh- 492008, India
                 </span>
               </p>
               <p className="text-slate-400 text-xs sm:text-sm flex items-center gap-3">
                 <Phone className="w-4 h-4 text-[#2563EB] shrink-0" />
-                <span className="font-mono">+91 95535 28282</span>
+                <span className="font-mono">{helpline}</span>
               </p>
               <p className="text-slate-400 text-xs sm:text-sm flex items-center gap-3">
                 <Mail className="w-4 h-4 text-[#2563EB] shrink-0" />

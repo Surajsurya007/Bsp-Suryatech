@@ -7,6 +7,40 @@ export interface LanguageConfig {
   enabled: boolean;
 }
 
+// Resilient localStorage utility to bypass any iframe sandboxing security restriction crashes
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {}
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  }
+};
+
+const DEFAULT_LANGUAGES: LanguageConfig[] = [
+  { code: 'en', name: 'English', flag: '🇺🇸', enabled: true },
+  { code: 'hi', name: 'Hindi', flag: '🇮🇳', enabled: true },
+  { code: 'mr', name: 'Marathi', flag: '🇮🇳', enabled: true },
+  { code: 'gu', name: 'Gujarati', flag: '🇮🇳', enabled: true },
+  { code: 'ta', name: 'Tamil', flag: '🇮🇳', enabled: true },
+  { code: 'te', name: 'Telugu', flag: '🇮🇳', enabled: true },
+  { code: 'bn', name: 'Bengali', flag: '🇮🇳', enabled: true },
+  { code: 'kn', name: 'Kannada', flag: '🇮🇳', enabled: true },
+  { code: 'ml', name: 'Malayalam', flag: '🇮🇳', enabled: true },
+  { code: 'pa', name: 'Punjabi', flag: '🇮🇳', enabled: true }
+];
+
 interface TranslationContextType {
   currentLanguage: string;
   languages: LanguageConfig[];
@@ -57,7 +91,7 @@ const STATIC_UI_DICTIONARY: Record<string, Record<string, string>> = {
     "POS Billing System": "पीओएस बिलिंग प्रणाली",
     "GST Billing Software": "जीएसटी बिलिंग सॉफ्टवेअर",
     "Wholesale & Retail Ledger": "थोक आणि किरकोळ खातेवही",
-    "Inventory & Expiry Tracker": "इन्व्हेंटरी आणि एक्सपायरी ट्रॅकर"
+    "Inventory & Expiry Tracker": "इन्हेंटरी आणि एक्सपायरी ट्रॅकर"
   },
   gu: {
     "Home": "હોમ",
@@ -67,7 +101,7 @@ const STATIC_UI_DICTIONARY: Record<string, Record<string, string>> = {
     "Tutorials": "ટ્યુટોરિયલ્સ",
     "About Us": "અમારા વિશે",
     "Contact Us": "સંપર્ક કરો",
-    "Client Portal": "ક્લાયંટ પોર્ટल"
+    "Client Portal": "ક્લાયંટ પોર્ટલ"
   },
   ta: {
     "Home": "முகப்பு",
@@ -92,15 +126,11 @@ const STATIC_UI_DICTIONARY: Record<string, Record<string, string>> = {
 
 export const TranslationProvider: React.FC<{ children: React.ReactNode; user: any; onUserLanguageLoaded?: (lang: string) => void }> = ({ children, user, onUserLanguageLoaded }) => {
   const [currentLanguage, setCurrentLanguage] = useState<string>('en');
-  const [languages, setLanguages] = useState<LanguageConfig[]>([]);
+  const [languages, setLanguages] = useState<LanguageConfig[]>(DEFAULT_LANGUAGES);
   const [loading, setLoading] = useState<boolean>(false);
   const [translationCache, setTranslationCache] = useState<Record<string, Record<string, string>>>(() => {
-    try {
-      const local = localStorage.getItem('bsp_trans_cache');
-      return local ? JSON.parse(local) : {};
-    } catch {
-      return {};
-    }
+    const local = safeLocalStorage.getItem('bsp_trans_cache');
+    return local ? JSON.parse(local) : {};
   });
 
   const translationQueue = useRef<string[]>([]);
@@ -116,7 +146,9 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
       const res = await fetch('/api/languages');
       if (res.ok) {
         const data = await res.json();
-        setLanguages(data);
+        if (data && Array.isArray(data) && data.length > 0) {
+          setLanguages(data);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch languages list', err);
@@ -126,7 +158,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
   // Set loaded preference settings on mount
   useEffect(() => {
     refreshLanguages();
-    const saved = localStorage.getItem('bsp_lang');
+    const saved = safeLocalStorage.getItem('bsp_lang');
     if (saved) {
       setCurrentLanguage(saved);
     }
@@ -137,7 +169,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
     if (user && user.language) {
       const userLang = user.language.toLowerCase();
       setCurrentLanguage(userLang);
-      localStorage.setItem('bsp_lang', userLang);
+      safeLocalStorage.setItem('bsp_lang', userLang);
       if (onUserLanguageLoaded) {
         onUserLanguageLoaded(userLang);
       }
@@ -148,7 +180,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
   const changeLanguage = async (langCode: string) => {
     const code = langCode.toLowerCase();
     setCurrentLanguage(code);
-    localStorage.setItem('bsp_lang', code);
+    safeLocalStorage.setItem('bsp_lang', code);
 
     // If returning back to English, reload the browser once to refresh original clean English virtual DOM nodes
     if (code === 'en') {
@@ -157,7 +189,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
     }
 
     // Sync user account settings
-    const token = localStorage.getItem('bsp_token');
+    const token = safeLocalStorage.getItem('bsp_token');
     if (user && token) {
       try {
         await fetch('/api/users/language', {
@@ -250,7 +282,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
               });
 
               if (hasNewPersistentTranslation) {
-                // Persistent cache in localStorage (only keep positive translations so we don't pollute cache with failed attempts)
+                // Persistent cache in safeLocalStorage (only keep positive translations so we don't pollute cache with failed attempts)
                 const cacheToPersist: Record<string, Record<string, string>> = {};
                 Object.keys(updated).forEach(lang => {
                   cacheToPersist[lang] = {};
@@ -261,7 +293,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
                     }
                   });
                 });
-                localStorage.setItem('bsp_trans_cache', JSON.stringify(cacheToPersist));
+                safeLocalStorage.setItem('bsp_trans_cache', JSON.stringify(cacheToPersist));
               }
 
               return updated;
