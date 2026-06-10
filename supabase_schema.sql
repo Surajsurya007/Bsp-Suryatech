@@ -220,34 +220,45 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 -- 1. Create Public Select Access Rules for Catalogs
 ALTER TABLE public.language_configs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select language_configs" ON public.language_configs;
 CREATE POLICY "Public select language_configs" ON public.language_configs FOR SELECT USING (true);
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select products" ON public.products;
 CREATE POLICY "Public select products" ON public.products FOR SELECT USING (true);
 
 ALTER TABLE public.downloads_info ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select downloads_info" ON public.downloads_info;
 CREATE POLICY "Public select downloads_info" ON public.downloads_info FOR SELECT USING (true);
 
 ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select coupons" ON public.coupons;
 CREATE POLICY "Public select coupons" ON public.coupons FOR SELECT USING (true);
 
 ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select testimonials" ON public.testimonials;
 CREATE POLICY "Public select testimonials" ON public.testimonials FOR SELECT USING (true);
 
 ALTER TABLE public.blogs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select blogs" ON public.blogs;
 CREATE POLICY "Public select blogs" ON public.blogs FOR SELECT USING (true);
 
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select reviews" ON public.reviews;
 CREATE POLICY "Public select reviews" ON public.reviews FOR SELECT USING (true);
 
 ALTER TABLE public.video_tutorials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select video_tutorials" ON public.video_tutorials;
 CREATE POLICY "Public select video_tutorials" ON public.video_tutorials FOR SELECT USING (true);
 
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select system_settings" ON public.system_settings;
 CREATE POLICY "Public select system_settings" ON public.system_settings FOR SELECT USING (true);
 
 
 -- 2. Customer Profiles RLS Policies
+DROP POLICY IF EXISTS "Manage profile" ON public.customer_profiles;
+DROP POLICY IF EXISTS "Users can manage own customer_profile" ON public.customer_profiles;
 CREATE POLICY "Users can manage own customer_profile" ON public.customer_profiles
     FOR ALL
     TO authenticated
@@ -255,6 +266,7 @@ CREATE POLICY "Users can manage own customer_profile" ON public.customer_profile
     WITH CHECK (auth.uid() = user_id);
 
 -- 3. Orders RLS Policies
+DROP POLICY IF EXISTS "Users can view and create own orders" ON public.orders;
 CREATE POLICY "Users can view and create own orders" ON public.orders
     FOR ALL
     TO authenticated
@@ -262,12 +274,14 @@ CREATE POLICY "Users can view and create own orders" ON public.orders
     WITH CHECK (auth.uid() = user_id);
 
 -- 4. Licenses RLS Policies
+DROP POLICY IF EXISTS "Users can view own licenses" ON public.licenses;
 CREATE POLICY "Users can view own licenses" ON public.licenses
     FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id);
 
 -- 5. Support Tickets RLS Policies
+DROP POLICY IF EXISTS "Users can view and manage own support_tickets" ON public.support_tickets;
 CREATE POLICY "Users can view and manage own support_tickets" ON public.support_tickets
     FOR ALL
     TO authenticated
@@ -275,18 +289,21 @@ CREATE POLICY "Users can view and manage own support_tickets" ON public.support_
     WITH CHECK (auth.uid() = user_id);
 
 -- 6. Payments RLS Policies
+DROP POLICY IF EXISTS "Users can view own payments" ON public.payments;
 CREATE POLICY "Users can view own payments" ON public.payments
     FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id);
 
 -- 7. Invoices RLS Policies
+DROP POLICY IF EXISTS "Users can view own invoices" ON public.invoices;
 CREATE POLICY "Users can view own invoices" ON public.invoices
     FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id);
 
 -- 8. Notifications RLS Policies
+DROP POLICY IF EXISTS "Users can manage own notifications" ON public.notifications;
 CREATE POLICY "Users can manage own notifications" ON public.notifications
     FOR ALL
     TO authenticated

@@ -8,6 +8,7 @@
 -- =========================================================================
 
 -- 1. VIEW POLICY: Users can view own files
+DROP POLICY IF EXISTS "Users can view own files" ON storage.objects;
 create policy "Users can view own files"
 on storage.objects for select
 to authenticated
@@ -17,6 +18,7 @@ using (
 );
 
 -- 2. UPLOAD POLICY: Users can upload to own folder
+DROP POLICY IF EXISTS "Users can upload to own folder" ON storage.objects;
 create policy "Users can upload to own folder"
 on storage.objects for insert
 to authenticated
@@ -26,6 +28,7 @@ with check (
 );
 
 -- 3. UPDATE POLICY: Users can update own files
+DROP POLICY IF EXISTS "Users can update own files" ON storage.objects;
 create policy "Users can update own files"
 on storage.objects for update
 to authenticated
@@ -35,6 +38,7 @@ using (
 );
 
 -- 4. DELETE POLICY: Users can delete own files
+DROP POLICY IF EXISTS "Users can delete own files" ON storage.objects;
 create policy "Users can delete own files"
 on storage.objects for delete
 to authenticated

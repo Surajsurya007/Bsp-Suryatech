@@ -251,6 +251,7 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
 -- Target Bucket: "app-files"
 
 -- 1. Users can view own files
+DROP POLICY IF EXISTS "Users can view own files" ON storage.objects;
 create policy "Users can view own files"
 on storage.objects for select
 to authenticated
@@ -260,6 +261,7 @@ using (
 );
 
 -- 2. Users can upload to own folder
+DROP POLICY IF EXISTS "Users can upload to own folder" ON storage.objects;
 create policy "Users can upload to own folder"
 on storage.objects for insert
 to authenticated
@@ -269,6 +271,7 @@ with check (
 );
 
 -- 3. Users can update own files
+DROP POLICY IF EXISTS "Users can update own files" ON storage.objects;
 create policy "Users can update own files"
 on storage.objects for update
 to authenticated
@@ -278,6 +281,7 @@ using (
 );
 
 -- 4. Users can delete own files
+DROP POLICY IF EXISTS "Users can delete own files" ON storage.objects;
 create policy "Users can delete own files"
 on storage.objects for delete
 to authenticated
@@ -1249,11 +1253,17 @@ using (
         setRzpWebhookSecret(data.webhookSecret || '');
         onAddNotification('Razorpay Payment Gateway configuration updated successfully!', 'success');
       } else {
-        const err = await res.json();
-        onAddNotification(err.error || 'Failed to update Razorpay configurations', 'error');
+        let errMsg = 'Failed to update Razorpay configurations';
+        try {
+          const err = await res.json();
+          errMsg = err.error || errMsg;
+        } catch {
+          errMsg = `Server responded with status ${res.status}`;
+        }
+        onAddNotification(errMsg, 'error');
       }
-    } catch {
-      onAddNotification('Connection error updating Razorpay gateway parameters', 'error');
+    } catch (err: any) {
+      onAddNotification(`Connection error updating Razorpay gateway parameters: ${err.message || err}`, 'error');
     } finally {
       setSavingRzp(false);
     }
@@ -1353,10 +1363,10 @@ using (
 
       {/* TABS ROW ROUTINGS */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3" id="admin-routes-tabs">
-        {(['stats', 'customers', 'products', 'licenses', 'downloads', 'tickets', 'coupons', 'languages', 'videos', 'razorpay', 'supabase', 'hostinger'] as const).map((tab) => (
+        {(['stats', 'customers', 'products', 'licenses', 'downloads', 'tickets', 'coupons', 'videos', 'razorpay', 'supabase', 'hostinger'] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveAdminTab(tab)}
+            onClick={() => setActiveAdminTab(tab as any)}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
               activeAdminTab === tab ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
             }`}
@@ -1369,7 +1379,6 @@ using (
             {tab === 'downloads' && 'Releases uploads'}
             {tab === 'tickets' && 'Support desk Incident'}
             {tab === 'coupons' && 'Promo Coupons'}
-            {tab === 'languages' && 'Language Manager'}
             {tab === 'videos' && 'Tutorial Videos'}
             {tab === 'razorpay' && 'Razorpay Settings'}
             {tab === 'supabase' && 'Supabase Integration'}
@@ -3427,7 +3436,8 @@ using (
                     <span className="bg-slate-850 border border-slate-700 text-slate-400 px-2 py-1 rounded text-[9px] font-bold font-mono tracking-wide uppercase">SQL Editor Code</span>
                   </div>
                   <pre className="text-left select-all whitespace-pre">
-{`create policy "Users can view own files"
+{`DROP POLICY IF EXISTS "Users can view own files" ON storage.objects;
+create policy "Users can view own files"
 on storage.objects for select
 to authenticated
 using (
@@ -3435,6 +3445,7 @@ using (
   and name like (auth.uid()::text || '/%')
 );
 
+DROP POLICY IF EXISTS "Users can upload to own folder" ON storage.objects;
 create policy "Users can upload to own folder"
 on storage.objects for insert
 to authenticated
@@ -3443,6 +3454,7 @@ with check (
   and name like (auth.uid()::text || '/%')
 );
 
+DROP POLICY IF EXISTS "Users can update own files" ON storage.objects;
 create policy "Users can update own files"
 on storage.objects for update
 to authenticated
@@ -3451,6 +3463,7 @@ using (
   and name like (auth.uid()::text || '/%')
 );
 
+DROP POLICY IF EXISTS "Users can delete own files" ON storage.objects;
 create policy "Users can delete own files"
 on storage.objects for delete
 to authenticated
