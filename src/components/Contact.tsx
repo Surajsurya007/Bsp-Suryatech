@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { 
   Phone, 
   Mail, 
@@ -33,14 +34,29 @@ export default function Contact({ onAddNotification }: ContactProps) {
   const [helpline, setHelpline] = useState<string>('+91 95535 28282');
 
   useEffect(() => {
-    fetch('/api/helpline')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.helpline) {
-          setHelpline(data.helpline);
+    const loadHelpline = async () => {
+      console.log("Contact Component: loading helpline configuration...");
+      try {
+        const { data, error } = await supabase.from('system_settings').select('*').eq('settings_key', 'helpline').single();
+        if (data && !error && data.settings_val) {
+          console.log("Contact Component: loaded helpline via Supabase:", data.settings_val);
+          setHelpline(data.settings_val);
+        } else {
+          if (error) {
+            console.error("Contact Component: Supabase helpline query returned error:", error.message);
+          }
+          const res = await fetch('/api/helpline');
+          const fallbackData = await res.json();
+          if (fallbackData && fallbackData.helpline) {
+            console.log("Contact Component: loaded helpline via API fallback:", fallbackData.helpline);
+            setHelpline(fallbackData.helpline);
+          }
         }
-      })
-      .catch(err => console.error('Failed to load helpline', err));
+      } catch (err: any) {
+        console.error('helpline load error:', err);
+      }
+    };
+    loadHelpline();
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {

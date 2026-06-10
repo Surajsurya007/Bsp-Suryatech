@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { supabase } from '../supabaseClient';
 
 export interface LanguageConfig {
   code: string;
@@ -143,11 +144,23 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
   // Fetch languages list
   const refreshLanguages = async () => {
     try {
-      const res = await fetch('/api/languages');
-      if (res.ok) {
-        const data = await res.json();
-        if (data && Array.isArray(data) && data.length > 0) {
-          setLanguages(data);
+      console.log('TranslationContext: Querying languages directly from Supabase...');
+      const { data, error } = await supabase.from('languages').select('*');
+      if (data && !error && data.length > 0) {
+        setLanguages(data.map(item => ({
+          code: item.code,
+          name: item.name,
+          flag: item.flag,
+          enabled: item.enabled
+        })));
+      } else {
+        // Falling back to check if endpoint exists or use static values
+        const res = await fetch('/api/languages');
+        if (res.ok) {
+          const apiData = await res.json();
+          if (apiData && Array.isArray(apiData) && apiData.length > 0) {
+            setLanguages(apiData);
+          }
         }
       }
     } catch (err) {
@@ -188,18 +201,18 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
       return;
     }
 
-    // Sync user account settings
-    const token = safeLocalStorage.getItem('bsp_token');
-    if (user && token) {
+    // Sync user account settings directly in Supabase
+    if (user && user.id) {
       try {
-        await fetch('/api/users/language', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ language: code })
-        });
+        console.log('TranslationContext: Syncing preferred language in Supabase for user:', user.id);
+        const { error } = await supabase
+          .from('customer_profiles')
+          .update({ preferred_language: code })
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('Failed to update preferred language in Supabase:', error.message);
+        }
       } catch (err) {
         console.error('Failed to sync preferred language in user database model', err);
       }

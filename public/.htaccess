@@ -1,12 +1,6 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  
-  # Ensure the /api path remains untouched for Node.js passenger handling or external requests
-  RewriteCond %{REQUEST_URI} ^/api/ [NC]
-  RewriteRule . - [L]
-
-  # Redirect all other non-existent physical files/directories to index.html for React SPA Router
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

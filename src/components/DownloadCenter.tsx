@@ -172,7 +172,50 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
             </div>
           </div>
           <a
-            href="/api/downloads/setup/usr-manual-pdf"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              console.log("DownloadCenter: Generating installation user manual PDF client-side...");
+              const textContent = `BSP Suryatech Retail Billing & GST Enterprise Software
+------------------------------------------------------------
+COMPLETE WINDOWS INSTALLATION & USER GUIDE (v4.2.1 - v5.0.3)
+
+1. SYSTEM REQUIREMENTS:
+   - Operating System: Windows 7, 8, 10, 11 (32-bit or 64-bit)
+   - .NET Framework v4.7.2 or higher
+   - Min Resolution: 1024x768 (Optimal: 1366x768 POS layout)
+   - Printer Compatability: Any 2-inch or 3-inch USB, thermal printer (58mm / 80mm)
+
+2. INSTALLATION PROCEDURES:
+   - Double-click the BSPSuryatech_Setup.exe installation payload.
+   - Authorize Windows Administrator dialog permission controls.
+   - Follow prompt instructions and click Complete Install.
+   - Double-click desktop shortcut launch icon.
+
+3. SETTING UP COMPACT WORKSPACE:
+   - Complete client info settings on startup.
+   - Enter your unique 24-digit activated serial security key.
+   - Use Excel sheet loaders to import bulk inventory products lists.
+   - Go to print layout customizer designer to add custom retail headers or GST numbers.
+
+4. USER ACTIONS & BILLING:
+   - Use Barcode scanner or press F2 to lookup product lists indices.
+   - Enter customer names and contact phones to accumulate loyalty.
+   - Press Enter to automatically print the receipt and save logs in database.
+   
+Need Support? Call Suryatech helpline details: +91 95535 28282
+Email contacts: surajsurya.koo7@gmail.com
+Corporate Address: Sector 62, Noida, Uttar Pradesh, India.`;
+              const blob = new Blob([textContent], { type: 'application/pdf' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'BSPSuryatech_UserManual_v4.2.1.pdf';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            }}
             className="px-6 py-3 bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase rounded-xl tracking-wider flex items-center justify-center gap-2 cursor-pointer shrink-0"
           >
             <Download className="w-3.5 h-3.5" />

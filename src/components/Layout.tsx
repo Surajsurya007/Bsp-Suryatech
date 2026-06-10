@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { useTranslation } from './TranslationContext';
 import { 
   Building2, 
@@ -51,14 +52,23 @@ export default function Layout({
   const [helpline, setHelpline] = useState<string>('+91 95535 28282');
 
   useEffect(() => {
-    fetch('/api/helpline')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.helpline) {
-          setHelpline(data.helpline);
+    const loadHelpline = async () => {
+      try {
+        const { data, error } = await supabase.from('system_settings').select('*').eq('settings_key', 'helpline').single();
+        if (data && !error && data.settings_val) {
+          setHelpline(data.settings_val);
+        } else {
+          const res = await fetch('/api/helpline');
+          const fallbackData = await res.json();
+          if (fallbackData && fallbackData.helpline) {
+            setHelpline(fallbackData.helpline);
+          }
         }
-      })
-      .catch(err => console.error('Failed to load helpline', err));
+      } catch (err: any) {
+        console.warn('Layout helpline loading issue:', err);
+      }
+    };
+    loadHelpline();
   }, []);
 
   const announcementMsg = '🇮🇳 Special Offer: Desktop GST Billing Lifetime License now only ₹1999 / Free Trial Enabled';

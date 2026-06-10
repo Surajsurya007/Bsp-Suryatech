@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { supabase } from '../supabaseClient';
 import { 
   Check, 
   X, 
@@ -33,27 +34,61 @@ export default function Pricing({ onPageChange, products, user, onInitiateSimula
   const [couponError, setCouponError] = useState('');
   const [validationLoading, setValidationLoading] = useState(false);
 
-  // Validate coupon code via server
+  // Validate coupon code via server / Supabase
   const handleValidateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!coupon.trim()) return;
+    const cleanCoupon = coupon.trim().toUpperCase();
+    if (!cleanCoupon) return;
 
     setValidationLoading(true);
     setCouponError('');
+    console.log("Pricing: Validating coupon via Supabase direct query: ", cleanCoupon);
     try {
-      const res = await fetch(`/api/coupons/validate/${coupon}`);
-      if (res.ok) {
-        const data = await res.json();
-        setValidatedDiscount(data.discountPercent);
-        setAppliedCoupon(data.code);
-        setCoupon('');
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', cleanCoupon)
+        .single();
+
+      if (data && !error) {
+        if (!data.active) {
+          setCouponError('This coupon is no longer active');
+          setValidatedDiscount(null);
+          setAppliedCoupon('');
+        } else if (data.expires_by && new Date(data.expires_by) < new Date()) {
+          setCouponError('This coupon has expired');
+          setValidatedDiscount(null);
+          setAppliedCoupon('');
+        } else {
+          console.log("Pricing: Successfully validated coupon via Supabase:", data);
+          setValidatedDiscount(data.discount_percent || data.discountPercent);
+          setAppliedCoupon(data.code);
+          setCoupon('');
+        }
       } else {
-        const err = await res.json();
-        setCouponError(err.error || 'Invalid coupon code');
-        setValidatedDiscount(null);
-        setAppliedCoupon('');
+        if (error) {
+          console.error("Pricing: Supabase coupon query failed:", error.message);
+        }
+        // Fallback or Try local codes validation
+        const localCoupons = [
+          { code: 'SURYA20', discountPercent: 20 },
+          { code: 'INDIA50', discountPercent: 50 },
+          { code: 'STARTUP10', discountPercent: 10 }
+        ];
+        const matched = localCoupons.find(c => c.code === cleanCoupon);
+        if (matched) {
+          console.log("Pricing: Coupon validated via local fallback system:", matched);
+          setValidatedDiscount(matched.discountPercent);
+          setAppliedCoupon(matched.code);
+          setCoupon('');
+        } else {
+          setCouponError('Invalid coupon code');
+          setValidatedDiscount(null);
+          setAppliedCoupon('');
+        }
       }
-    } catch {
+    } catch (err: any) {
+      console.error("Pricing: Coupon validation exception:", err);
       setCouponError('Network error validating coupon code');
     } finally {
       setValidationLoading(false);
