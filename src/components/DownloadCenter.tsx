@@ -18,7 +18,8 @@ import {
   FileText,
   Bookmark,
   Share2,
-  ShieldCheck
+  ShieldCheck,
+  ShoppingCart
 } from 'lucide-react';
 
 interface DownloadCenterProps {
@@ -26,9 +27,10 @@ interface DownloadCenterProps {
   totalDownloads: number;
   onTriggerTrialDownload: (prodId: string, isFull?: boolean) => void;
   onPageChange?: (page: string) => void;
+  onAddToCart?: (planId: string) => void;
 }
 
-export default function DownloadCenter({ downloads, totalDownloads, onTriggerTrialDownload, onPageChange }: DownloadCenterProps) {
+export default function DownloadCenter({ downloads, totalDownloads, onTriggerTrialDownload, onPageChange, onAddToCart }: DownloadCenterProps) {
   const [downloadFilter, setDownloadFilter] = useState<'all' | 'stable' | 'manuals'>('all');
 
   const systemRequirements = [
@@ -121,6 +123,15 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
 
                 {/* Big download action buttons */}
                 <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
+                  <button
+                    onClick={() => onAddToCart?.(dl.id === 'dl-1' ? 'prod-billing-pro' : 'prod-billing-enterprise')}
+                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold flex items-center justify-center gap-2 active:scale-98 transition-all duration-200 cursor-pointer text-xs shadow-md border-0 uppercase tracking-wider"
+                    id={`add-to-cart-download-btn-${dl.id}`}
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>Add to Cart & Choose Price Plan</span>
+                  </button>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       onClick={() => onTriggerTrialDownload(dl.id, false)}

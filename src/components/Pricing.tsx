@@ -17,17 +17,37 @@ import {
   Lock, 
   ArrowRight,
   Gift,
-  AlertCircle
+  AlertCircle,
+  ShoppingCart,
+  Trash2,
+  Sparkles,
+  Download
 } from 'lucide-react';
+
+interface CartItem {
+  id: string;
+  name: string;
+  category: string;
+  selectedPlanId: string;
+}
 
 interface PricingProps {
   onPageChange: (page: string) => void;
   products: any[];
   user: any;
   onInitiateSimulatedCheckout: (productId: string, couponCode?: string) => void;
+  cartItem: CartItem | null;
+  setCartItem: (item: CartItem | null) => void;
 }
 
-export default function Pricing({ onPageChange, products, user, onInitiateSimulatedCheckout }: PricingProps) {
+export default function Pricing({ 
+  onPageChange, 
+  products, 
+  user, 
+  onInitiateSimulatedCheckout,
+  cartItem,
+  setCartItem
+}: PricingProps) {
   const [coupon, setCoupon] = useState('');
   const [validatedDiscount, setValidatedDiscount] = useState<number | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<string>('');
@@ -61,7 +81,7 @@ export default function Pricing({ onPageChange, products, user, onInitiateSimula
           setAppliedCoupon('');
         } else {
           console.log("Pricing: Successfully validated coupon via Supabase:", data);
-          setValidatedDiscount(data.discount_percent || data.discountPercent);
+          setValidatedDiscount(data.discount_percent || data.discountPercent || 20);
           setAppliedCoupon(data.code);
           setCoupon('');
         }
@@ -101,281 +121,421 @@ export default function Pricing({ onPageChange, products, user, onInitiateSimula
     setCouponError('');
   };
 
-  const getPriceBeforeAndAfter = (originalPrice: number) => {
-    if (!validatedDiscount) return { price: originalPrice, discounted: false };
-    const finalAmount = Math.ceil(originalPrice * (1 - validatedDiscount / 100));
-    return { price: finalAmount, discounted: true, original: originalPrice };
-  };
-
   // Find real backend matching products based on connectedPlan or fallback id
   const dbProProduct = products?.find(p => p.connectedPlan === 'prod-billing-pro' || p.id === 'prod-billing-pro');
   const dbEnterpriseProduct = products?.find(p => p.connectedPlan === 'prod-billing-enterprise' || p.id === 'prod-billing-enterprise');
 
-  const plansList = [
-    {
-      id: 'plan-free-trial',
-      name: 'Free Trial Edition',
-      price: 0,
-      period: '15 Days Evaluation',
-      badge: 'Evaluation Only',
-      ctaText: 'Instantly Download EXE',
-      action: () => onPageChange('downloads'),
-      bullets: [
-        { active: true, txt: 'Up to 100 invoice trial prints' },
-        { active: true, txt: 'Thermal and Laser receipt templates' },
-        { active: true, txt: 'Full stock inventory ledger features' },
-        { active: false, txt: 'GSTR monthly JSON exporting' },
-        { active: false, txt: 'Multi-firm/Multi-branch files' },
-        { active: false, txt: 'Telephone hotline tech support' }
-      ]
-    },
-    {
-      id: 'prod-billing-pro',
-      name: dbProProduct?.name || 'Retail Billing Pro',
-      price: dbProProduct !== undefined ? dbProProduct.price : 1999,
-      originalPrice: dbProProduct !== undefined ? (dbProProduct.originalPrice || 2499) : 2499,
-      period: 'One-time Payment (Lifetime)',
-      badge: dbProProduct?.version ? `Best Seller • ${dbProProduct.version}` : 'Best Seller • 60% Off',
-      isPopular: true,
-      ctaText: 'Buy Lifetime License Now',
-      action: () => handleBuyClick(dbProProduct?.id || 'prod-billing-pro'),
-      bullets: dbProProduct?.features && dbProProduct.features.length > 0 
-        ? dbProProduct.features.map((f: string) => ({ active: true, txt: f }))
-        : [
-            { active: true, txt: 'UNLIMITED invoices & thermal prints' },
-            { active: true, txt: 'Interactive thermal print layout customizer' },
-            { active: true, txt: 'Barcode scanning & dynamic labels creator' },
-            { active: true, txt: 'Complete supplier credit ledger ledger' },
-            { active: true, txt: 'Monthly profit & loss spreadsheets' },
-            { active: false, txt: 'Multi-firm support (Single branch only)' }
-          ]
-    },
-    {
-      id: 'prod-billing-enterprise',
-      name: dbEnterpriseProduct?.name || 'GST Enterprise Suite',
-      price: dbEnterpriseProduct !== undefined ? dbEnterpriseProduct.price : 2999,
-      originalPrice: dbEnterpriseProduct !== undefined ? (dbEnterpriseProduct.originalPrice || 4999) : 4999,
-      period: 'One-time Payment (Lifetime)',
-      badge: dbEnterpriseProduct?.version ? `Multi-Firm • ${dbEnterpriseProduct.version}` : 'Multi-Firm • Complete Tech Support',
-      ctaText: 'Buy Enterprise License Now',
-      action: () => handleBuyClick(dbEnterpriseProduct?.id || 'prod-billing-enterprise'),
-      isPopular: false,
-      bullets: dbEnterpriseProduct?.features && dbEnterpriseProduct.features.length > 0
-        ? dbEnterpriseProduct.features.map((f: string) => ({ active: true, txt: f }))
-        : [
-            { active: true, txt: 'All features of Retail Billing Pro' },
-            { active: true, txt: 'Unlimited Firms & Branch accounts' },
-            { active: true, txt: 'Direct GSTR-1 & GSTR-3B JSON exports' },
-            { active: true, txt: 'Google Drive auto cloud data backups' },
-            { active: true, txt: 'Custom receipt canvas layout designer' },
-            { active: true, txt: 'Priority phone call installation assistance' }
-          ]
-    }
-  ];
+  const proPrice = dbProProduct !== undefined ? dbProProduct.price : 999;
+  const proOriginal = dbProProduct !== undefined ? (dbProProduct.originalPrice || 2499) : 2499;
 
-  const handleBuyClick = (productId: string) => {
+  const entPrice = dbEnterpriseProduct !== undefined ? dbEnterpriseProduct.price : 2999;
+  const entOriginal = dbEnterpriseProduct !== undefined ? (dbEnterpriseProduct.originalPrice || 4999) : 4999;
+
+  const currentPlanId = cartItem?.selectedPlanId || 'prod-billing-pro';
+  const rawPrice = currentPlanId === 'prod-billing-enterprise' ? entPrice : proPrice;
+  const rawOriginalPrice = currentPlanId === 'prod-billing-enterprise' ? entOriginal : proOriginal;
+
+  // Coupon discount computation
+  const discountPercent = validatedDiscount || 0;
+  const discountAmount = Math.ceil(rawPrice * (discountPercent / 100));
+  const netAmount = rawPrice - discountAmount;
+  
+  // Tax breakdown (18% inclusive GST calculation)
+  const gstInclusiveAmount = Math.ceil(netAmount * 0.18);
+  const basePriceExclusive = netAmount - gstInclusiveAmount;
+
+  const handleAddToCart = (planId: string) => {
+    setCartItem({
+      id: 'suryatech-billing',
+      name: 'BSP Suryatech GST Billing Desk',
+      category: 'Billing & POS Software',
+      selectedPlanId: planId
+    });
+  };
+
+  const handleRemoveFromCart = () => {
+    setCartItem(null);
+    handleClearCoupon();
+  };
+
+  const handleBuyClickInCart = () => {
+    if (!cartItem) return;
     if (!user) {
       // Must login/register first to track active keys!
       onPageChange('portal');
     } else {
-      onInitiateSimulatedCheckout(productId, appliedCoupon || undefined);
+      onInitiateSimulatedCheckout(cartItem.selectedPlanId, appliedCoupon || undefined);
     }
   };
 
   return (
-    <div className="py-16 space-y-20 pb-24">
+    <div className="py-12 space-y-16 pb-24 text-slate-800" id="pricing-page-root">
+      
       {/* HEADER CONTENT */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-        <h1 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-600">Pricing Packages</h1>
-        <p className="text-4xl font-extrabold tracking-tight text-slate-900 leading-none">
-          One-Time License. Zero Subscription Fee.
+        <h1 className="text-xs font-mono font-bold uppercase tracking-widest text-[#2563EB]">Pricing Packages</h1>
+        <p className="text-4xl font-black tracking-tight text-white leading-none">
+          Choose Your Lifetime License
         </p>
-        <p className="text-slate-500 text-sm max-w-2xl mx-auto">
-          Pay once, download active installer, and register forever. Save thousands annually compared to expensive recurring cloud subscription tools. No hidden catch!
+        <p className="text-slate-400 text-sm max-w-2xl mx-auto">
+          Add the BSP Suryatech software solution to your cart to customize your price plan, unlock discounts, and download the registered offline desktop platform.
         </p>
       </section>
 
-      {/* DYNAMIC COUPON REDUAL BLOCK */}
-      <section className="max-w-md mx-auto px-4">
-        <div className="bg-slate-100 border border-slate-200 p-5 rounded-2xl shadow-sm text-center space-y-3.5">
-          <div className="flex justify-center text-blue-600">
-            <Gift className="w-6 h-6 animate-bounce" />
-          </div>
-          <div>
-            <span className="font-extrabold text-sm text-slate-800">Have a Promotional Coupon?</span>
-            <p className="text-xs text-slate-500 leading-normal">Enter codes like <strong className="text-blue-600">INDIA50</strong> (50% Off) or <strong className="text-blue-600">SURYA20</strong> (20% Off) to apply instant discounts.</p>
-          </div>
-
-          {appliedCoupon ? (
-            <div className="bg-emerald-950 border border-emerald-800 p-3.5 rounded-xl flex items-center justify-between text-emerald-200">
-              <div className="flex items-center gap-2 text-xs">
-                <Percent className="w-4 h-4 shrink-0 text-emerald-400" />
-                <span>Coupon <strong>{appliedCoupon}</strong> active (<strong>-{validatedDiscount}% Off</strong>)</span>
-              </div>
-              <button 
-                onClick={handleClearCoupon} 
-                className="text-xs text-emerald-400 hover:text-white font-bold cursor-pointer"
-              >
-                Clear
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleValidateCoupon} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="PROMO CODE"
-                value={coupon}
-                onChange={(e) => setCoupon(e.target.value)}
-                className="flex-grow bg-white border border-slate-200 px-3.5 py-2.5 rounded-xl text-center font-bold text-sm text-slate-800 uppercase tracking-widest"
-                id="pricing-coupon-input"
-              />
-              <button
-                type="submit"
-                disabled={validationLoading}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase rounded-xl transition-colors cursor-pointer shrink-0"
-              >
-                {validationLoading ? '...' : 'Apply'}
-              </button>
-            </form>
-          )}
-          
-          {couponError && (
-            <div className="text-xs text-red-500 flex items-center justify-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>{couponError}</span>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* PLANS CARDS GRID */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          {plansList.map((plan) => {
-            const isMockFree = plan.price === 0;
-            const priceInfo = getPriceBeforeAndAfter(plan.price);
+      {/* DYNAMIC CART MAIN WORKSPACE */}
+      <section className="max-w-4xl mx-auto px-4">
+        {!cartItem ? (
+          /* CART IS EMPTY STATE - PROMPTS ADD SOFTWARE */
+          <div className="bg-[#1E293B] border border-slate-850 rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-2xl relative overflow-hidden" id="empty-cart-view">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#2563EB]/5 rounded-full blur-3xl -z-10 pointer-events-none" />
             
-            return (
-              <div 
-                key={plan.id}
-                className={`bg-white border rounded-3xl p-8 relative flex flex-col justify-between ${
-                  plan.isPopular 
-                    ? 'border-blue-500 shadow-xl shadow-blue-50/70 border-2' 
-                    : 'border-slate-200 shadow-sm hover:border-slate-350'
-                }`}
-                id={`price-plan-card-${plan.id}`}
-              >
-                {/* Popular Pill badge */}
-                {plan.isPopular && (
-                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-blue-600 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow">
-                    Most Popular Choice
+            <div className="mx-auto w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center border border-slate-750 text-slate-400">
+              <ShoppingCart className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-450 bg-blue-500/10 px-3 py-1 rounded-full">
+                Interactive Checkout Flow
+              </span>
+              <h2 className="text-2xl font-black text-white">Your Shopping Cart is Empty</h2>
+              <p className="text-slate-400 text-xs sm:text-sm max-w-lg mx-auto">
+                In BSP Suryatech, licensing is custom-mapped. Please first add the desktop software to your shopping cart to choose and review active price plans.
+              </p>
+            </div>
+
+            {/* PRODUCT ADD CARD BAR */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between text-left gap-6 max-w-2xl mx-auto">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-[#2563EB]/10 border border-blue-500/20 text-[#2563EB] text-[9.5px] rounded font-mono font-bold">
+                    DESKTOP BUILD
                   </span>
-                )}
+                  <span className="text-xs text-slate-400 font-extrabold font-mono">v4.2.1 • Windows Setup</span>
+                </div>
+                <h3 className="text-lg font-black text-white">BSP Suryatech GST Billing Desk</h3>
+                <p className="text-slate-400 text-xs leading-normal max-w-md">
+                  Lightweight and robust POS bookkeeping solution. Fully compliant with modern tax regimes, barcode scanners, and printer layouts. Runs 100% offline.
+                </p>
+              </div>
 
-                <div className="space-y-6">
-                  {/* Top Header Card info */}
-                  <div>
-                    <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-600 rounded text-[9.5px] font-mono uppercase tracking-wider font-bold">
-                      {plan.badge || 'Lifetime Access'}
-                    </span>
-                    <h3 className="text-2xl font-black text-slate-900 mt-3">{plan.name}</h3>
-                    <p className="text-slate-400 text-xs mt-1 leading-normal">Fully working desktop license.</p>
+              <button
+                onClick={() => handleAddToCart('prod-billing-pro')}
+                className="w-full md:w-auto px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg active:scale-97 cursor-pointer shrink-0 flex items-center justify-center gap-2"
+                id="add-software-to-cart-btn"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>Add to Cart</span>
+              </button>
+            </div>
+
+            <div className="pt-2 text-xs text-slate-500 flex items-center justify-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-[#10B981]" />
+              <span>Full 15-Days Evaluation Free Trial is also enabled inside the Download Center</span>
+            </div>
+          </div>
+        ) : (
+          /* CART CONTAINS SOFTWARE - CHOOSE PRICE PLAN ACTIVE STAGE */
+          <div className="bg-[#1E293B] border border-blue-500/20 rounded-3xl shadow-2xl p-6 sm:p-10 space-y-10" id="active-cart-view bg-zinc-950">
+            {/* Header of Active Cart */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-5 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600/15 border border-blue-500/30 rounded-xl flex items-center justify-center text-[#2563EB]">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider block">✓ Cart Active (1 Item)</span>
+                  <h2 className="text-xl font-black text-white">{cartItem.name}</h2>
+                </div>
+              </div>
+
+              <button
+                onClick={handleRemoveFromCart}
+                className="flex items-center gap-1.5 text-xs text-slate-450 hover:text-red-400 font-extrabold cursor-pointer self-start sm:self-center transition-colors px-2.5 py-1 bg-slate-900/60 rounded border border-slate-800 hover:bg-red-950/20 hover:border-red-900/40"
+                id="clear-cart-btn"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Empty Cart</span>
+              </button>
+            </div>
+
+            {/* GRID SELECTION OF PRICE PLAN */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#2563EB]">
+                Step 1: Choose Your License Price Plan
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* PLAN A: Pro */}
+                <div
+                  onClick={() => setCartItem({ ...cartItem, selectedPlanId: 'prod-billing-pro' })}
+                  className={`p-6 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
+                    currentPlanId === 'prod-billing-pro'
+                      ? 'border-blue-500 bg-slate-900 shadow-lg'
+                      : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
+                  }`}
+                  id="cart-choose-pro"
+                >
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <span className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/35 text-blue-400 text-[9px] rounded font-mono font-bold">
+                        PRO PLAN
+                      </span>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${currentPlanId === 'prod-billing-pro' ? 'border-blue-500' : 'border-slate-600'}`}>
+                        {currentPlanId === 'prod-billing-pro' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-extrabold text-base text-white">Retail Billing Pro Edition</h4>
+                      <p className="text-xs text-slate-450 mt-1 leading-relaxed">
+                        Lightweight single-terminal POS invoice operations. Includes stock minimum alerts, thermal customizing layouts, and full local ledgers.
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Pricing segment */}
-                  <div className="py-4 border-y border-slate-100">
-                    {isMockFree ? (
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-black text-slate-800">FREE</span>
-                        <span className="text-slate-500 text-sm font-medium">/{plan.period}</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {priceInfo.discounted && (
-                          <div className="text-xs text-slate-400 line-through">
-                            ₹{plan.originalPrice || plan.price}
-                          </div>
-                        )}
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-xs font-bold text-slate-500 font-mono">INR</span>
-                          <span className="text-4xl font-extrabold text-blue-600 tracking-tight">
-                            ₹{priceInfo.price}
-                          </span>
-                          <span className="text-xs text-slate-500 font-bold block ml-1 uppercase">One-Time Only</span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 block font-medium">No monthly billing. GST included.</span>
-                      </div>
-                    )}
+                  <div className="border-t border-slate-800/80 pt-4 mt-4 flex items-baseline gap-1.5">
+                    <span className="text-xs font-mono text-slate-500">Price:</span>
+                    <span className="text-2xl font-black text-white">₹{proPrice}</span>
+                    <span className="text-xs text-slate-500 line-through">₹{proOriginal}</span>
+                    <span className="text-[10px] bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold font-mono ml-auto">SAVE 60%</span>
                   </div>
-
-                  {/* Plan core bullets features */}
-                  <ul className="space-y-3.5">
-                    {plan.bullets.map((b, bIdx) => (
-                      <li key={bIdx} className="flex gap-2.5 text-sm" id={`plan-bullet-${plan.id}-${bIdx}`}>
-                        {b.active ? (
-                          <Check className="w-4.5 h-4.5 text-blue-600 shrink-0 mt-0.5" />
-                        ) : (
-                          <X className="w-4.5 h-4.5 text-slate-300 shrink-0 mt-0.5" />
-                        )}
-                        <span className={b.active ? 'text-slate-700 leading-snug' : 'text-slate-400 line-through leading-snug'}>
-                          {b.txt}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
 
-                {/* Primary CTA Buy button action */}
-                <div className="pt-8">
-                  <button
-                    onClick={plan.action}
-                    className={`w-full py-4 rounded-xl font-black text-sm tracking-wide shadow active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      plan.isPopular
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-400/20 shadow-lg'
-                        : 'bg-slate-900 hover:bg-slate-850 text-white'
-                    }`}
-                    id={`price-cta-buy-${plan.id}`}
-                  >
-                    <span>{plan.ctaText}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                  {!isMockFree && !user && (
-                    <span className="text-[9.5px] text-center text-slate-400 block mt-2">Requires Customer Portal login for instant code activations.</span>
+                {/* PLAN B: Enterprise */}
+                <div
+                  onClick={() => setCartItem({ ...cartItem, selectedPlanId: 'prod-billing-enterprise' })}
+                  className={`p-6 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
+                    currentPlanId === 'prod-billing-enterprise'
+                      ? 'border-blue-500 bg-slate-900 shadow-lg'
+                      : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
+                  }`}
+                  id="cart-choose-enterprise"
+                >
+                  {currentPlanId === 'prod-billing-enterprise' && (
+                    <span className="absolute -top-2.5 right-6 px-2.5 py-0.5 bg-[#10B981] text-black text-[9px] font-black uppercase tracking-widest rounded-full">
+                      BEST VALUE
+                    </span>
+                  )}
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/35 text-emerald-400 text-[9px] rounded font-mono font-bold">
+                        MULTIFIRM SUITE
+                      </span>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${currentPlanId === 'prod-billing-enterprise' ? 'border-blue-500' : 'border-slate-600'}`}>
+                        {currentPlanId === 'prod-billing-enterprise' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-extrabold text-base text-white">GST Enterprise Suite</h4>
+                      <p className="text-xs text-slate-450 mt-1 leading-relaxed">
+                        Direct GST Portal JSON monthly exports (GSTR-1, GSTR-3B), unlimited firms/branch records, Google Drive automatic cloud backups, and priority hotline calls support.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-800/80 pt-4 mt-4 flex items-baseline gap-1.5">
+                    <span className="text-xs font-mono text-slate-500">Price:</span>
+                    <span className="text-2xl font-black text-white">₹{entPrice}</span>
+                    <span className="text-xs text-slate-500 line-through">₹{entOriginal}</span>
+                    <span className="text-[10px] bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold font-mono ml-auto">SAVE 40%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* COUPON INPUT AND TALLY */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start border-t border-slate-800 pt-8">
+              
+              {/* Left Column: Coupon Input */}
+              <div className="lg:col-span-5 space-y-4">
+                <span className="text-xs font-mono font-bold uppercase tracking-widest text-slate-400 block">
+                  Promotional Coupon
+                </span>
+
+                <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 space-y-4 text-center">
+                  <div className="flex justify-center text-blue-500">
+                    <Gift className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-extrabold text-white">Have a discount coupon?</h5>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Enter codes like <strong className="text-blue-400">INDIA50</strong> (50% Off) or <strong className="text-blue-400">SURYA20</strong> (20% Off).
+                    </p>
+                  </div>
+
+                  {appliedCoupon ? (
+                    <div className="bg-emerald-950/40 border border-emerald-900/60 p-2.5 rounded-xl flex items-center justify-between text-emerald-300">
+                      <span className="text-xs font-extrabold font-mono text-emerald-400">{appliedCoupon} (-{discountPercent}%)</span>
+                      <button
+                        onClick={handleClearCoupon}
+                        className="text-[11px] text-red-400 hover:text-red-300 font-extrabold cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleValidateCoupon} className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="PROMO CODE"
+                        value={coupon}
+                        onChange={(e) => setCoupon(e.target.value)}
+                        className="flex-grow bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-center font-bold text-xs text-white uppercase tracking-wider focus:border-blue-500 outline-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={validationLoading}
+                        className="px-3.5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                      >
+                        {validationLoading ? '...' : 'Apply'}
+                      </button>
+                    </form>
+                  )}
+
+                  {couponError && (
+                    <p className="text-[10px] text-red-400 font-sans">{couponError}</p>
                   )}
                 </div>
-
               </div>
-            );
-          })}
+
+              {/* Right Column: Pricing Breakdown & Checkout Action */}
+              <div className="lg:col-span-7 space-y-4">
+                <span className="text-xs font-mono font-bold uppercase tracking-widest text-slate-400 block">
+                  Detailed Billing Summary
+                </span>
+
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-3 font-mono text-xs">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Selected Plan Original Price:</span>
+                    <span className="line-through text-slate-500">₹{rawOriginalPrice}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-slate-300">
+                    <span>Software Base Price:</span>
+                    <span>₹{rawPrice}</span>
+                  </div>
+
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-emerald-400 bg-emerald-950/20 px-2 py-1.5 rounded">
+                      <span>Promo Coupon Discount ({appliedCoupon}):</span>
+                      <span>-₹{discountAmount}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between text-slate-450 border-t border-slate-800/80 pt-2.5">
+                    <span>Tax Exclusive Net Value:</span>
+                    <span>₹{basePriceExclusive}</span>
+                  </div>
+
+                  <div className="flex justify-between text-slate-500">
+                    <span>18% Inclusive CGST + SGST Rate:</span>
+                    <span>₹{gstInclusiveAmount}</span>
+                  </div>
+
+                  <div className="flex justify-between text-white text-base font-black border-t-2 border-dashed border-slate-850 pt-3 font-sans">
+                    <span className="text-slate-300">Total Price (Payable):</span>
+                    <div className="text-right">
+                      <span className="text-2xl text-blue-400">₹{netAmount}</span>
+                      <span className="block text-[9px] text-slate-450 font-normal mt-0.5 tracking-tight font-mono">
+                        // ONE-TIME ONLY PAYMENT, NO RENEWALS
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleBuyClickInCart}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                  id="checkout-proceed-cart-btn"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Proceed to Simulated Razorpay Secure Gateway</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                
+                {!user && (
+                  <span className="text-[10px] text-center text-yellow-450 block font-medium">
+                    ⚠️ Note: You will be redirected to complete Client Portal Registration/Login first. Your Cart details will persist automatically!
+                  </span>
+                )}
+              </div>
+
+            </div>
+
+          </div>
+        )}
+      </section>
+
+      {/* PLANS COMPARE MATRIX BULLETS MAP */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+        <div className="text-center space-y-2 mb-10">
+          <span className="text-xs font-mono font-bold uppercase tracking-widest text-[#2563EB]">Features Grid</span>
+          <h3 className="text-2xl font-black text-white">Compare Editions</h3>
+          <p className="text-slate-450 text-xs">Review standard feature differences mapped between Pro and Enterprise licenses.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          {/* Pro Column Bullet List comparison */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
+            <span className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/35 text-blue-400 text-[9px] rounded font-mono font-bold uppercase">
+              Retail Billing Pro
+            </span>
+            <ul className="space-y-3 text-xs text-slate-300">
+              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>UNLIMITED invoice generations & cashier lanes printing</span></li>
+              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>Thermal printer canvas size customizer (58mm / 80mm roll setups)</span></li>
+              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>Dynamic high speed PDF outputs formats generator</span></li>
+              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>Barcode automated printing & fast hardware scanning support</span></li>
+              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>Supplier credit ledgers, dynamic cashbook registers balances</span></li>
+              <li className="flex gap-2 text-slate-500 line-through"><X className="w-4 h-4 shrink-0 mt-0.5" /> <span>Multi-firm ledger management (Single trading company file only)</span></li>
+              <li className="flex gap-2 text-slate-500 line-through"><X className="w-4 h-4 shrink-0 mt-0.5" /> <span>Direct government GST portal portal JSON uploads GSTR-1 formatted</span></li>
+            </ul>
+          </div>
+
+          {/* Enterprise Column Bullet List comparison */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
+            <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/35 text-emerald-400 text-[9px] rounded font-mono font-bold uppercase">
+              GST Enterprise Suite
+            </span>
+            <ul className="space-y-3 text-xs text-slate-300">
+              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span><strong>EVERY FEATURE</strong> included in the standard Retail Billing Pro</span></li>
+              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Unlimited physical firms, multiple branch databases records</span></li>
+              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Direct government GST format exporting files (JSON, CSV, XLS)</span></li>
+              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Auto-scheduled drive data cloud synchronization backup schedules</span></li>
+              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Highly detailed permissions roles management (Cashier vs Admin)</span></li>
+              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Priority premium technical telephonic support & setup help desk</span></li>
+            </ul>
+          </div>
         </div>
       </section>
 
       {/* CORE SECURE FEATURES ACCREDIT */}
-      <section className="bg-slate-100 py-16 border-y border-slate-200 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 rounded-3xl">
+      <section className="bg-slate-900/60 py-12 border-y border-slate-850 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 rounded-3xl mt-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
           
           <div className="space-y-2.5 p-4" id="assurance-billing-safety">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-200 shadow-sm mx-auto md:mx-0">
-              <ShieldCheck className="w-5 h-5 text-emerald-500" />
+            <div className="w-10 h-10 bg-slate-850 rounded-lg flex items-center justify-center border border-slate-800 shadow-sm mx-auto md:mx-0 text-emerald-450">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <h4 className="font-extrabold text-slate-800 text-base leading-snug">Instant Automated Verification</h4>
-            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">Once you complete the simulation deposit, our licensing backend automatically allocates serial credentials within 3 seconds visible inside your dashboard.</p>
+            <h4 className="font-extrabold text-[#F8FAFC] text-base leading-snug">Instant Automated Verification</h4>
+            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">Once you complete the simulation deposit, our licensing backend automatically allocates serial credentials within 3 seconds visible inside your dashboard.</p>
           </div>
 
           <div className="space-y-2.5 p-4" id="assurance-payment-modes">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-200 shadow-sm mx-auto md:mx-0">
-              <CreditCard className="w-5 h-5 text-blue-500" />
+            <div className="w-10 h-10 bg-slate-850 rounded-lg flex items-center justify-center border border-slate-800 shadow-sm mx-auto md:mx-0 text-blue-450">
+              <CreditCard className="w-5 h-5" />
             </div>
-            <h4 className="font-extrabold text-slate-800 text-base leading-snug">All Indian Payment Methods</h4>
-            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">Accepting standard Credit/Debit Cards, UPI scanner, PhonePe, Google Pay, NetBanking and major wallets supported by secure sandbox credentials.</p>
+            <h4 className="font-extrabold text-[#F8FAFC] text-base leading-snug">All Indian Payment Methods</h4>
+            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">Accepting standard Credit/Debit Cards, UPI scanner, PhonePe, Google Pay, NetBanking and major wallets supported by secure sandbox credentials.</p>
           </div>
 
           <div className="space-y-2.5 p-4" id="assurance-unlimited-terms">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-200 shadow-sm mx-auto md:mx-0">
-              <Cpu className="w-5 h-5 text-[#10B981]" />
+            <div className="w-10 h-10 bg-slate-850 rounded-lg flex items-center justify-center border border-slate-800 shadow-sm mx-auto md:mx-0 text-[#10B981]">
+              <Cpu className="w-5 h-5" />
             </div>
-            <h4 className="font-extrabold text-slate-800 text-base leading-snug">30-Day Money-Back Guarantee</h4>
-            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">Try Suryatech completely risk free. If it does not connect to your barcode scanner or prints paper tickets incorrectly, raise a support ticket for full license refunds.</p>
+            <h4 className="font-extrabold text-[#F8FAFC] text-base leading-snug">30-Day Money-Back Guarantee</h4>
+            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">Try Suryatech completely risk free. If it does not connect to your barcode scanner or prints paper tickets incorrectly, raise a support ticket for full license refunds.</p>
           </div>
 
         </div>

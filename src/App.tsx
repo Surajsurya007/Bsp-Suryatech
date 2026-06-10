@@ -49,6 +49,24 @@ export default function App() {
   const [totalDownloads, setTotalDownloads] = useState<number>(1420);
   const [videos, setVideos] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Array<{ id: string; text: string; type: 'success' | 'info' | 'error' }>>([]);
+  const [cartItem, setCartItem] = useState<{
+    id: string;
+    name: string;
+    category: string;
+    selectedPlanId: string;
+  } | null>(null);
+
+  const handleAddToCartAndChoosePrice = (planId: string) => {
+    setCartItem({
+      id: 'suryatech-billing',
+      name: 'BSP Suryatech GST Billing Desk',
+      category: 'Billing & POS Software',
+      selectedPlanId: planId || 'prod-billing-pro'
+    });
+    addNotification('Added BSP Suryatech Software to Cart! Select details in the Cart layout below.', 'success');
+    setCurrentPage('pricing');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Checkout modal states (Simulated Razorpay Checkout Gateway)
   const [checkoutActive, setCheckoutActive] = useState(false);
@@ -783,6 +801,7 @@ export default function App() {
         onLogout={handleLogout}
         notifications={notifications}
         removeNotification={removeNotification}
+        cartItem={cartItem}
       >
       <AnimatePresence mode="wait">
         <motion.div
@@ -813,6 +832,8 @@ export default function App() {
               products={products}
               user={user}
               onInitiateSimulatedCheckout={handleInitiateSimulatedCheckout}
+              cartItem={cartItem}
+              setCartItem={setCartItem}
             />
           )}
 
@@ -822,6 +843,7 @@ export default function App() {
               totalDownloads={totalDownloads}
               onTriggerTrialDownload={handleTriggerTrialDownload}
               onPageChange={handleNavigatePage}
+              onAddToCart={handleAddToCartAndChoosePrice}
             />
           )}
 
@@ -843,7 +865,7 @@ export default function App() {
               products={products}
               onPageChange={handleNavigatePage}
               onTriggerTrialDownload={handleTriggerTrialDownload}
-              onInitiateSimulatedCheckout={handleInitiateSimulatedCheckout}
+              onInitiateSimulatedCheckout={handleAddToCartAndChoosePrice}
               user={user}
             />
           )}

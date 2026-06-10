@@ -36,6 +36,7 @@ interface LayoutProps {
   onLogout: () => void;
   notifications: Array<{ id: string; text: string; type: 'success' | 'info' | 'error' }>;
   removeNotification: (id: string) => void;
+  cartItem?: any;
 }
 
 export default function Layout({ 
@@ -45,7 +46,8 @@ export default function Layout({
   user, 
   onLogout,
   notifications,
-  removeNotification
+  removeNotification,
+  cartItem
 }: LayoutProps) {
   const { t, currentLanguage, languages, changeLanguage, loading } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -197,6 +199,16 @@ export default function Layout({
 
             {/* Account / Portal Area */}
             <div className="hidden lg:flex items-center gap-3">
+              <button
+                onClick={() => handleNavClick('pricing')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#1E293B]/80 hover:bg-[#1E293B] hover:text-white text-slate-300 border border-slate-800 hover:border-blue-600/40 rounded-sm text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 group/cart shrink-0"
+                title={t('View Store / Pricing')}
+                id="header-cart-icon-btn"
+              >
+                <ShoppingCart className="w-4 h-4 text-blue-500 group-hover/cart:text-blue-400 transition-colors shrink-0" />
+                <span className="text-[10px] bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded-xs font-mono font-black">{cartItem ? 1 : 0}</span>
+              </button>
+
               {user ? (
                 <div className="flex items-center gap-2">
                   <div 
@@ -241,7 +253,17 @@ export default function Layout({
             </div>
 
             {/* Mobile Menu Action */}
-            <div className="flex lg:hidden items-center gap-3">
+            <div className="flex lg:hidden items-center gap-2">
+              <button
+                onClick={() => handleNavClick('pricing')}
+                className="p-1 px-2 border border-slate-850 rounded-sm text-blue-400 bg-[#1E293B] hover:text-white flex items-center gap-1 shrink-0"
+                id="mobile-cart-shortcut-btn"
+                title={t('View Store / Pricing')}
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span className="text-[9px] font-bold font-mono text-slate-300">{cartItem ? 1 : 0}</span>
+              </button>
+
               {user && (
                 <button 
                   onClick={() => handleNavClick('portal')} 
