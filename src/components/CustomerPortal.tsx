@@ -1015,7 +1015,7 @@ export default function CustomerPortal({
                  <button
                    type="submit"
                    disabled={authLoading}
-                   className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm tracking-wider uppercase rounded-xl transition-colors cursor-pointer block mt-6 shadow"
+                   className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm tracking-wider uppercase rounded-xl transition-all duration-200 cursor-pointer block mt-6 shadow-md hover:shadow-lg active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                    id="login-submit-button"
                  >
                    {authLoading ? 'Signing In Workspace...' : 'Secure Sign In'}
@@ -1031,7 +1031,7 @@ export default function CustomerPortal({
                    type="button"
                    onClick={handleGoogleLogin}
                    disabled={authLoading}
-                   className="w-full py-3.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.985]"
+                   className="w-full py-3.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.985] focus:outline-none focus:ring-2 focus:ring-slate-300"
                    id="google-signin-button"
                  >
                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

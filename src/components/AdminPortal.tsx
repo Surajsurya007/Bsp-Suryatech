@@ -232,6 +232,8 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [supabaseEnabled, setSupabaseEnabled] = useState(false);
   const [savingSupabase, setSavingSupabase] = useState(false);
   const [testingSupabase, setTestingSupabase] = useState(false);
+  const [supabaseFullSchema, setSupabaseFullSchema] = useState('');
+  const [loadingSupabaseSchema, setLoadingSupabaseSchema] = useState(false);
 
   // Hostinger Configuration States
   const [hostingerHost, setHostingerHost] = useState('');
@@ -285,6 +287,35 @@ using (
 );`;
     navigator.clipboard.writeText(sql);
     onAddNotification('Storage SQL Security Policies copied to clipboard!', 'success');
+  };
+
+  const handleCopyDatabaseSchema = () => {
+    if (supabaseFullSchema) {
+      navigator.clipboard.writeText(supabaseFullSchema);
+      onAddNotification('Full Supabase Database SQL Schema copied to clipboard!', 'success');
+    } else {
+      onAddNotification('Schema file is currently loading. Please click "Fetch Active Database SQL Schema" first!', 'info');
+    }
+  };
+
+  const handleFetchSchemaManually = async () => {
+    setLoadingSupabaseSchema(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const res = await fetch('/api/admin/supabase-schema', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setSupabaseFullSchema(data.schema || '');
+        onAddNotification('Successfully loaded database schemas! You can now copy or view it below.', 'success');
+      } else {
+        onAddNotification('Failed to retrieve schema file.', 'error');
+      }
+    } catch (err) {
+      onAddNotification('Error retrieving schema file.', 'error');
+    } finally {
+      setLoadingSupabaseSchema(false);
+    }
   };
 
   // Selected Customer Detail States
@@ -404,6 +435,12 @@ using (
   useEffect(() => {
     fetchAdminData();
   }, []);
+
+  useEffect(() => {
+    if (activeAdminTab === 'supabase' && !supabaseFullSchema) {
+      handleFetchSchemaManually();
+    }
+  }, [activeAdminTab]);
 
   // Language management actions
   const handleToggleLanguage = async (code: string, currentEnabled: boolean) => {
@@ -3318,6 +3355,48 @@ using (
                       {testingSupabase ? 'Testing connection...' : 'Run Parameters Health Ping'}
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* Database Tables and Schemas Panel */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                      <Database className="w-5 h-5 text-emerald-600 animate-pulse" />
+                      <span>STEP 1: Bootstrap Supabase Database Tables & Schema</span>
+                    </h4>
+                    <p className="text-slate-500 text-[11px] mt-1">
+                      To prevent <code className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded font-mono font-bold">Could not find table 'public.customer_profiles' in the schema cache</code> errors, you <b>must</b> execute this SQL script under your <b>Supabase Dashboard {`->`} SQL Editor</b> to create tables.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleFetchSchemaManually}
+                      className="px-4 py-2.5 bg-slate-200 hover:bg-slate-350 text-slate-800 font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-slate-300 cursor-pointer active:scale-[0.98]"
+                      disabled={loadingSupabaseSchema}
+                    >
+                      {loadingSupabaseSchema ? 'Loading...' : 'Reload SQL'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyDatabaseSchema}
+                      className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all border border-emerald-700 cursor-pointer active:scale-[0.98] shadow-md shadow-emerald-100"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Full SQL Schema</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 font-mono text-[10.5px] text-slate-300 leading-relaxed overflow-x-auto max-h-[350px] relative">
+                  <div className="absolute right-4 top-4 z-10">
+                    <span className="bg-slate-850 border border-slate-700 text-slate-400 px-2 py-1 rounded text-[9px] font-bold font-mono tracking-wide uppercase">supabase_schema.sql</span>
+                  </div>
+                  <pre className="text-left select-all whitespace-pre">
+                    {supabaseFullSchema || 'Loading active database schema from supabase_schema.sql... Please wait.'}
+                  </pre>
                 </div>
               </div>
 

@@ -1816,6 +1816,20 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json(dbActions.getSupabaseConfig ? dbActions.getSupabaseConfig() : { url: '', anonKey: '', enabled: false });
   });
 
+  // Admin: Get Supabase database SQL schema directly from the project directory
+  app.get('/api/admin/supabase-schema', requireAdmin, (req, res) => {
+    try {
+      const schemaPath = path.join(process.cwd(), 'supabase_schema.sql');
+      if (fs.existsSync(schemaPath)) {
+        const schemaContent = fs.readFileSync(schemaPath, 'utf8');
+        return res.json({ schema: schemaContent });
+      }
+      return res.status(404).json({ error: 'supabase_schema.sql file not found in build directory' });
+    } catch (err: any) {
+      return res.status(500).json({ error: `Failed to read schema file: ${err.message}` });
+    }
+  });
+
   // Admin: Update Supabase configuration settings
   app.put('/api/admin/supabase-config', requireAdmin, (req, res) => {
     const { url, anonKey, enabled } = req.body;
