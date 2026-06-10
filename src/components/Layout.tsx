@@ -24,7 +24,8 @@ import {
   AlertCircle,
   Info,
   Menu,
-  X
+  X,
+  ShoppingCart
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -49,7 +50,7 @@ export default function Layout({
   const { t, currentLanguage, languages, changeLanguage, loading } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
-  const [helpline, setHelpline] = useState<string>('+91 95535 28282');
+  const [helpline, setHelpline] = useState<string>('+91 95169 16415');
 
   useEffect(() => {
     const loadHelpline = async () => {
@@ -97,15 +98,15 @@ export default function Layout({
       <div className="relative inline-block text-left" id="language-switcher-container">
         <button
           onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 hover:bg-slate-750 text-[#E2E8F0] border border-slate-700/80 hover:border-slate-600 rounded-sm text-xs font-black tracking-wider transition-all duration-250 uppercase cursor-pointer"
+          className="flex items-center gap-2.5 px-3.5 py-1.5 bg-[#1E293B]/90 hover:bg-[#1E293B] text-[#F8FAFC] border border-slate-750 hover:border-[#2563EB]/60 rounded-sm text-xs font-black tracking-widest transition-all duration-200 uppercase cursor-pointer active:scale-97 group/cart"
           id="language-switcher-button"
         >
-          <span>{currentLangConfig.flag}</span>
+          <ShoppingCart className="w-3.5 h-3.5 text-blue-500 group-hover/cart:text-blue-400 transition-colors shrink-0" />
           <span>{currentLangConfig.code}</span>
           {loading ? (
             <span className="w-1.5 h-1.5 bg-emerald-450 border border-emerald-400 rounded-full animate-ping ml-0.5" />
           ) : (
-            <span className="text-[9px] text-slate-400 ml-0.5">▼</span>
+            <span className="text-[9px] text-slate-500 group-hover/cart:text-slate-350 ml-0.5 transition-colors">▼</span>
           )}
         </button>
 
@@ -196,7 +197,6 @@ export default function Layout({
 
             {/* Account / Portal Area */}
             <div className="hidden lg:flex items-center gap-3">
-              {renderLanguageSelector()}
               {user ? (
                 <div className="flex items-center gap-2">
                   <div 
@@ -242,7 +242,6 @@ export default function Layout({
 
             {/* Mobile Menu Action */}
             <div className="flex lg:hidden items-center gap-3">
-              {renderLanguageSelector()}
               {user && (
                 <button 
                   onClick={() => handleNavClick('portal')} 

@@ -572,7 +572,7 @@ export async function migrateLocalDataToHostinger(): Promise<{ success: boolean;
     const settings = {
       downloadCounter: String(downloadCounter),
       razorpayConfig: JSON.stringify(razorpayConfig || {}),
-      helpline: helpline || '+91 95535 28282',
+      helpline: helpline || '+91 95169 16415',
       geminiApiKey: geminiApiKey || '',
       supabaseConfig: JSON.stringify(supabaseConfig || {})
     };

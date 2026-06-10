@@ -35,10 +35,12 @@ import AboutUs from './components/AboutUs';
 import Contact from './components/Contact';
 import CustomerPortal from './components/CustomerPortal';
 import AdminPortal from './components/AdminPortal';
+import SoftwareDetails from './components/SoftwareDetails';
 import { TranslationProvider } from './components/TranslationContext';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
+  const [selectedSoftwareId, setSelectedSoftwareId] = useState<string>('prod-billing-pro');
   const [user, setUser] = useState<any>(null);
   const [portalInitialView, setPortalInitialView] = useState<'dashboard' | 'tickets' | 'new-ticket' | 'profile' | 'payments' | 'invoices' | 'notifications'>('dashboard');
   const [products, setProducts] = useState<any[]>([]);
@@ -168,18 +170,54 @@ export default function App() {
     }
   }, [currentPage]);
 
+  // Handle SEO-friendly hash routing with deep link fallback
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/software/')) {
+        const slug = hash.replace('#/software/', '');
+        // Match the slug or direct ID on loaded products
+        const matched = products.find((p: any) => p.id === slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug);
+        if (matched) {
+          setSelectedSoftwareId(matched.id);
+          setCurrentPage('software-details');
+        }
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    if (products && products.length > 0) {
+      handleHashChange();
+    }
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [products]);
+
   const fetchProducts = async () => {
     try {
-      console.log("App: Fetching products direct from Supabase DB...");
-      const { data, error } = await supabase.from('products').select('*');
-      if (data && !error && data.length > 0) {
-        const parsedProducts = data.map(item => ({
+      console.log("App: Fetching products dynamically from API...");
+      const res = await fetch('/api/products');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const parsedProducts = data.map((item: any) => ({
+            ...item,
+            features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || [])
+          }));
+          setProducts(parsedProducts);
+          return;
+        }
+      }
+      
+      // Fallback: Query Supabase directly
+      console.log("App: Fetching products fallback direct from Supabase DB...");
+      const { data: sbData, error: sbError } = await supabase.from('products').select('*');
+      if (sbData && !sbError && sbData.length > 0) {
+        const parsedProducts = sbData.map(item => ({
           ...item,
           features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || [])
         }));
         setProducts(parsedProducts);
       } else {
-        if (error) console.error("App: Supabase products fetch warning:", error.message);
+        if (sbError) console.log("App: Supabase products table fetch fallback error. Profile details:", sbError.message);
         setProducts(defaultProducts);
       }
     } catch (err) {
@@ -195,7 +233,7 @@ export default function App() {
       if (data && !error && data.length > 0) {
         setVideos(data);
       } else {
-        if (error) console.error("App: Supabase video tutorials fetch warning:", error.message);
+        if (error) console.log("App: Supabase video tutorials table empty or missing, using local default. Profile details:", error.message);
         setVideos(defaultVideos);
       }
     } catch (err) {
@@ -211,7 +249,7 @@ export default function App() {
       if (data && !error && data.length > 0) {
         setTestimonials(data);
       } else {
-        if (error) console.error("App: Supabase testimonials fetch warning:", error.message);
+        if (error) console.log("App: Supabase testimonials table empty or missing, using local default. Profile details:", error.message);
         setTestimonials(defaultTestimonials);
       }
     } catch (err) {
@@ -233,7 +271,7 @@ export default function App() {
         const counts = formatted.reduce((sum, item) => sum + (item.download_count || item.downloadCount || 0), 0);
         setTotalDownloads(counts || 1420);
       } else {
-        if (error) console.error("App: Supabase downloads fetch warning:", error.message);
+        if (error) console.log("App: Supabase downloads table empty or missing, using local default. Profile details:", error.message);
         setDownloads(defaultDownloads);
         setTotalDownloads(1420);
       }
@@ -301,6 +339,12 @@ export default function App() {
   };
 
   const handleNavigatePage = (page: string) => {
+    if (page.startsWith('software-details:')) {
+      const parts = page.split(':');
+      setSelectedSoftwareId(parts[1]);
+      setCurrentPage('software-details');
+      return;
+    }
     if (page === 'portal') {
       setPortalInitialView('dashboard');
     }
@@ -777,6 +821,7 @@ export default function App() {
               downloads={downloads}
               totalDownloads={totalDownloads}
               onTriggerTrialDownload={handleTriggerTrialDownload}
+              onPageChange={handleNavigatePage}
             />
           )}
 
@@ -790,6 +835,17 @@ export default function App() {
 
           {currentPage === 'contact' && (
             <Contact onAddNotification={addNotification} />
+          )}
+
+          {currentPage === 'software-details' && (
+            <SoftwareDetails 
+              productId={selectedSoftwareId}
+              products={products}
+              onPageChange={handleNavigatePage}
+              onTriggerTrialDownload={handleTriggerTrialDownload}
+              onInitiateSimulatedCheckout={handleInitiateSimulatedCheckout}
+              user={user}
+            />
           )}
 
           {currentPage === 'portal' && (

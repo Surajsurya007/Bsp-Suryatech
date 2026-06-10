@@ -84,6 +84,12 @@ export interface Product {
   downloadUrl: string;
   createdAt: string;
   connectedPlan?: string;
+  category?: string;
+  fullDescription?: string;
+  systemRequirements?: string;
+  licenseInfo?: string;
+  demoVideoUrl?: string;
+  gallery?: string[];
 }
 
 export interface Order {

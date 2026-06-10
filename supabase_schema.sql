@@ -335,5 +335,5 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Seed system helpline
 INSERT INTO public.system_settings (settings_key, settings_val) VALUES
-('helpline', '+91 95535 28282')
+('helpline', '+91 95169 16415')
 ON CONFLICT (settings_key) DO NOTHING;

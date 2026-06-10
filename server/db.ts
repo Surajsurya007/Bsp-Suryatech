@@ -125,7 +125,7 @@ export let db: DatabaseSchema = {
   downloadCounter: 1420,
   languageConfigs: [],
   videos: [],
-  helpline: '+91 95535 28282',
+  helpline: '+91 95169 16415',
   hostingerConfig: {
     host: '',
     user: '',
@@ -160,7 +160,17 @@ const defaultProducts: Product[] = [
     description: 'All-in-one GST billing and inventory desktop software designed for Kirana stores, pharmacies, electronics shops, supermarkets, and distributors across India. Lightweight, ultra-fast, and runs 100% offline.',
     downloadUrl: '/api/downloads/setup/prod-billing-pro',
     createdAt: '2026-01-10T00:00:00Z',
-    connectedPlan: 'prod-billing-pro'
+    connectedPlan: 'prod-billing-pro',
+    category: 'Retail & POS Billing',
+    fullDescription: "BSP Suryatech Retail Billing Pro is India's leading lightweight, ultra-fast and incredibly reliable offline desktop-first billing and inventory software. It provides out-of-the-box barcode creation, wholesale/retail billing, automated tax calculation, and profit and loss registers. Designed specifically for retail shop owners to streamline billing lanes and keep inventory in perfect synchronization without requiring internet connectivity.",
+    systemRequirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
+    licenseInfo: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
+    demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800'
+    ]
   },
   {
     id: 'prod-billing-enterprise',
@@ -182,7 +192,17 @@ const defaultProducts: Product[] = [
     description: 'Enterprise grade GST compliance and multi-user billing software with multi-firm support, direct GSTR ledger formatting, designable invoices, and automated backup mechanisms.',
     downloadUrl: '/api/downloads/setup/prod-billing-enterprise',
     createdAt: '2026-03-15T00:00:00Z',
-    connectedPlan: 'prod-billing-enterprise'
+    connectedPlan: 'prod-billing-enterprise',
+    category: 'Enterprise GST Compliance',
+    fullDescription: 'The BSP Suryatech GST Enterprise Suite is the state-of-the-art POS & Accounting platform built for Indian enterprises, wholesalers, and multi-firm operations. It handles robust multi-firm and multi-branch structures on a single workstation terminal, exports GSTR-1 & GSTR-3B compliant JSON files direct to the GST portal, schedules real-time secure Google Drive cloud backups, and empowers admins with custom visually designable invoice layout designers. Backed by enterprise-rate 24/7 priority support.',
+    systemRequirements: 'Operating System: Windows 10 or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i5 or AMD Ryzen 5 or equivalent\nMemory: 4 GB RAM recommended\nStorage: 200 MB free space\nDatabase: SQLite or cloud-integrated backup storage',
+    licenseInfo: 'Multi-Firm Unlimited Terminal Site License Key. Priority 24/7 Telephone and On-Site Setup consultation support included.',
+    demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800'
+    ]
   }
 ];
 
@@ -361,11 +381,11 @@ export function initDB() {
         db.razorpayConfig = { ...defaultRazorpayConfig };
       }
       if (!db.helpline) {
-        db.helpline = '+91 95535 28282';
+        db.helpline = '+91 95169 16415';
       }
 
       // Force-ensure admin exists with proper credentials
-      const targetAdminEmail = 'Surajsurya.koo7@gmail.com';
+      const targetAdminEmail = 'surajsurya.koo7@gmail.com';
       let adminObj = db.users.find(u => u.email && u.email.toLowerCase() === targetAdminEmail.toLowerCase());
       if (!adminObj) {
         adminObj = {
@@ -411,7 +431,7 @@ function seedDB() {
     languageConfigs: [...defaultLanguageConfigs],
     videos: [...defaultVideos],
     razorpayConfig: { ...defaultRazorpayConfig },
-    helpline: '+91 95535 28282'
+    helpline: '+91 95169 16415'
   };
 
   // Seed default admin
@@ -419,7 +439,7 @@ function seedDB() {
   const adminUser: User = {
     id: adminId,
     name: 'BSP Suryatech Admin',
-    email: 'Surajsurya.koo7@gmail.com',
+    email: 'surajsurya.koo7@gmail.com',
     role: 'admin',
     createdAt: new Date().toISOString()
   };
@@ -1003,7 +1023,7 @@ export const dbActions = {
     return db.razorpayConfig;
   },
   getHelpline: () => {
-    return db.helpline || '+91 95535 28282';
+    return db.helpline || '+91 95169 16415';
   },
   updateHelpline: (number: string) => {
     db.helpline = number;

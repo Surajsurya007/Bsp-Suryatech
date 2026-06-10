@@ -25,9 +25,10 @@ interface DownloadCenterProps {
   downloads: any[];
   totalDownloads: number;
   onTriggerTrialDownload: (prodId: string, isFull?: boolean) => void;
+  onPageChange?: (page: string) => void;
 }
 
-export default function DownloadCenter({ downloads, totalDownloads, onTriggerTrialDownload }: DownloadCenterProps) {
+export default function DownloadCenter({ downloads, totalDownloads, onTriggerTrialDownload, onPageChange }: DownloadCenterProps) {
   const [downloadFilter, setDownloadFilter] = useState<'all' | 'stable' | 'manuals'>('all');
 
   const systemRequirements = [
@@ -91,9 +92,17 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                         <span className="text-emerald-600">Downloads: {dl.downloadCount}</span>
                       </div>
                     </div>
-                    <div className="p-3 bg-blue-50/50 rounded-xl text-blue-600">
+                    <button
+                      onClick={() => {
+                        const mappedProdId = dl.id === 'dl-1' ? 'prod-billing-pro' : 'prod-billing-enterprise';
+                        onPageChange?.(`software-details:${mappedProdId}`);
+                      }}
+                      className="p-3 bg-blue-50 hover:bg-blue-105 text-blue-600 hover:text-blue-700 hover:scale-105 active:scale-95 rounded-xl cursor-pointer transition-all duration-200 border-0 flex items-center justify-center shadow-sm"
+                      title="View Full Software Details"
+                      id={`view-software-details-btn-${dl.id}`}
+                    >
                       <Terminal className="w-5 h-5" />
-                    </div>
+                    </button>
                   </div>
 
                   {/* Release bullet log changes */}
@@ -203,8 +212,8 @@ COMPLETE WINDOWS INSTALLATION & USER GUIDE (v4.2.1 - v5.0.3)
    - Enter customer names and contact phones to accumulate loyalty.
    - Press Enter to automatically print the receipt and save logs in database.
    
-Need Support? Call Suryatech helpline details: +91 95535 28282
-Email contacts: surajsurya.koo7@gmail.com
+Need Support? Call Suryatech helpline details: +91 95169 16415
+Email contacts: Support@bspsuryatech.in
 Corporate Address: Sector 62, Noida, Uttar Pradesh, India.`;
               const blob = new Blob([textContent], { type: 'application/pdf' });
               const url = URL.createObjectURL(blob);

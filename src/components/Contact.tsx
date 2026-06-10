@@ -31,7 +31,7 @@ export default function Contact({ onAddNotification }: ContactProps) {
     message: ''
   });
   const [loading, setLoading] = useState(false);
-  const [helpline, setHelpline] = useState<string>('+91 95535 28282');
+  const [helpline, setHelpline] = useState<string>('+91 95169 16415');
 
   useEffect(() => {
     const loadHelpline = async () => {
@@ -151,7 +151,7 @@ export default function Contact({ onAddNotification }: ContactProps) {
                 <p className="text-emerald-700 text-xs leading-normal">Our sales engineers reply on WhatsApp under 5 minutes to generate custom corporate invoicing sheets.</p>
               </div>
               <a
-                href="https://wa.me/919553528282?text=Hi%20Suryatech%20I%20have%20billing%20billing%20enquiry"
+                href="https://wa.me/919516916415?text=Hi%20Suryatech%20I%20have%20billing%20billing%20enquiry"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase rounded-xl tracking-wider shadow shrink-0 flex items-center justify-center gap-2 cursor-pointer"

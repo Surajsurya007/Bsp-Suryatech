@@ -27,6 +27,8 @@ import {
   Settings,
   User,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Eye,
   HelpCircle,
   Shield,
@@ -135,6 +137,12 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [prodDesc, setProdDesc] = useState('');
   const [prodFeatures, setProdFeatures] = useState('');
   const [prodConnectedPlan, setProdConnectedPlan] = useState('');
+  const [prodCategory, setProdCategory] = useState('Retail & POS Billing');
+  const [prodFullDesc, setProdFullDesc] = useState('');
+  const [prodSysReqs, setProdSysReqs] = useState('');
+  const [prodLicenseInfo, setProdLicenseInfo] = useState('');
+  const [prodDemoVideo, setProdDemoVideo] = useState('');
+  const [prodGallery, setProdGallery] = useState<string[]>([]);
   const [addingProd, setAddingProd] = useState(false);
 
   // Product Edit states
@@ -147,7 +155,43 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [editDesc, setEditDesc] = useState('');
   const [editFeatures, setEditFeatures] = useState('');
   const [editConnectedPlan, setEditConnectedPlan] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editFullDesc, setEditFullDesc] = useState('');
+  const [editSysReqs, setEditSysReqs] = useState('');
+  const [editLicenseInfo, setEditLicenseInfo] = useState('');
+  const [editDemoVideo, setEditDemoVideo] = useState('');
+  const [editGallery, setEditGallery] = useState<string[]>([]);
   const [updatingProd, setUpdatingProd] = useState(false);
+
+  // Interactive link entry helper
+  const [inputUrlPhoto, setInputUrlPhoto] = useState('');
+
+  // Helper to reorder gallery photo lists
+  const moveGalleryItem = (gallery: string[], index: number, direction: 'up' | 'down', setter: (g: string[]) => void) => {
+    const nextIdx = direction === 'up' ? index - 1 : index + 1;
+    if (nextIdx < 0 || nextIdx >= gallery.length) return;
+    const list = [...gallery];
+    const temp = list[index];
+    list[index] = list[nextIdx];
+    list[nextIdx] = temp;
+    setter(list);
+  };
+
+  const deleteGalleryItem = (gallery: string[], index: number, setter: (g: string[]) => void) => {
+    setter(gallery.filter((_, i) => i !== index));
+  };
+
+  const handleGalleryFileUpload = (file: File, gallery: string[], setter: (g: string[]) => void) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        setter([...gallery, reader.result]);
+        onAddNotification('Screenshot file loaded and appended to gallery!', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Video Management States
   const [vidTitle, setVidTitle] = useState('');
@@ -175,7 +219,7 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [savingRzp, setSavingRzp] = useState(false);
 
   // Helpline Configuration States
-  const [helpline, setHelpline] = useState('+91 95535 28282');
+  const [helpline, setHelpline] = useState('+91 95169 16415');
   const [savingHelpline, setSavingHelpline] = useState(false);
 
   // Gemini Configuration States
@@ -320,7 +364,7 @@ using (
 
         if (helplineRes.ok) {
           const helplineData = await helplineRes.json();
-          setHelpline(helplineData.helpline || '+91 95535 28282');
+          setHelpline(helplineData.helpline || '+91 95169 16415');
         }
 
         if (geminiRes && geminiRes.ok) {
@@ -902,7 +946,13 @@ using (
           originalPrice: Number(prodOrigPrice),
           description: prodDesc,
           features: prodFeatures.split('\n').filter(Boolean),
-          connectedPlan: prodConnectedPlan || ''
+          connectedPlan: prodConnectedPlan || '',
+          category: prodCategory,
+          fullDescription: prodFullDesc,
+          systemRequirements: prodSysReqs,
+          licenseInfo: prodLicenseInfo,
+          demoVideoUrl: prodDemoVideo,
+          gallery: prodGallery
         })
       });
 
@@ -914,6 +964,12 @@ using (
         setProdDesc('');
         setProdFeatures('');
         setProdConnectedPlan('');
+        setProdCategory('Retail & POS Billing');
+        setProdFullDesc('');
+        setProdSysReqs('');
+        setProdLicenseInfo('');
+        setProdDemoVideo('');
+        setProdGallery([]);
         fetchAdminData();
       } else {
         onAddNotification('Unable to upload catalog item', 'error');
@@ -952,6 +1008,12 @@ using (
     setEditDesc(p.description || '');
     setEditFeatures(Array.isArray(p.features) ? p.features.join('\n') : '');
     setEditConnectedPlan(p.connectedPlan || '');
+    setEditCategory(p.category || 'Retail & POS Billing');
+    setEditFullDesc(p.fullDescription || p.description || '');
+    setEditSysReqs(p.systemRequirements || '');
+    setEditLicenseInfo(p.licenseInfo || '');
+    setEditDemoVideo(p.demoVideoUrl || '');
+    setEditGallery(p.gallery || []);
   };
 
   const handleCancelEdit = () => {
@@ -982,7 +1044,13 @@ using (
           originalPrice: Number(editOrigPrice),
           description: editDesc,
           features: editFeatures.split('\n').filter(Boolean),
-          connectedPlan: editConnectedPlan || ''
+          connectedPlan: editConnectedPlan || '',
+          category: editCategory,
+          fullDescription: editFullDesc,
+          systemRequirements: editSysReqs,
+          licenseInfo: editLicenseInfo,
+          demoVideoUrl: editDemoVideo,
+          gallery: editGallery
         })
       });
 
@@ -1691,6 +1759,129 @@ using (
                       </select>
                     </div>
 
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Software Category</label>
+                      <select
+                        value={prodCategory}
+                        onChange={(e) => setProdCategory(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3 py-2.5 rounded-xl text-xs text-slate-900 focus:bg-white"
+                      >
+                        <option value="Retail & POS Billing">Retail & POS Billing</option>
+                        <option value="ERP & Enterprise Logistics">ERP & Enterprise Logistics</option>
+                        <option value="GST Suite Solutions">GST Suite Solutions</option>
+                        <option value="Accounting & General ledger">Accounting & General ledger</option>
+                        <option value="Healthcare & Pharmacy POS">Healthcare & Pharmacy POS</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Full Detailed Description</label>
+                      <textarea
+                        rows={3} placeholder="Provide extensive marketing and technical feature checklists here..." value={prodFullDesc}
+                        onChange={(e) => setProdFullDesc(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 p-3 rounded-xl text-xs resize-none text-slate-900"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">System Requirements</label>
+                      <input
+                        type="text" placeholder="Windows 10+, Intel i3 Core, 4GB RAM, 200MB Storage" value={prodSysReqs}
+                        onChange={(e) => setProdSysReqs(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs text-slate-900"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">License Terms</label>
+                      <input
+                        type="text" placeholder="Lifetime offline activation key. Unlimited workstations." value={prodLicenseInfo}
+                        onChange={(e) => setProdLicenseInfo(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs text-slate-900"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Demo Video URL or ID</label>
+                      <input
+                        type="text" placeholder="https://www.youtube.com/embed/dQw4w9WgXcQ" value={prodDemoVideo}
+                        onChange={(e) => setProdDemoVideo(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs text-slate-900"
+                      />
+                    </div>
+
+                    {/* Screenshot Gallery Manager */}
+                    <div className="space-y-2 border border-slate-205/65 p-3 rounded-2xl bg-slate-50/50">
+                      <label className="text-[10px] font-black text-slate-700 font-mono block uppercase">Screenshot Image Gallery Manager</label>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="text" placeholder="Paste image URL..." value={inputUrlPhoto}
+                          onChange={(e) => setInputUrlPhoto(e.target.value)}
+                          className="flex-1 bg-white border border-slate-200.80 px-3 py-2 rounded-xl text-xs text-slate-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (inputUrlPhoto) {
+                              setProdGallery([...prodGallery, inputUrlPhoto]);
+                              setInputUrlPhoto('');
+                            }
+                          }}
+                          className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+                        >
+                          Add URL
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9.5px] text-slate-400">or</span>
+                        <input
+                          type="file" accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleGalleryFileUpload(file, prodGallery, setProdGallery);
+                            }
+                          }}
+                          className="text-[10px] text-slate-500 cursor-pointer"
+                        />
+                      </div>
+
+                      {prodGallery.length > 0 && (
+                        <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200/50 mt-2">
+                          {prodGallery.map((img, i) => (
+                            <div key={i} className="relative group border border-slate-200 bg-white p-1 rounded-lg">
+                              <img src={img} className="w-full h-10 object-contain rounded" alt="" />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 rounded">
+                                <button
+                                  type="button" title="Move Left"
+                                  onClick={() => moveGalleryItem(prodGallery, i, 'up', setProdGallery)}
+                                  className="p-0.5 bg-slate-800 text-white rounded hover:bg-slate-700"
+                                >
+                                  <ChevronUp className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button" title="Move Right"
+                                  onClick={() => moveGalleryItem(prodGallery, i, 'down', setProdGallery)}
+                                  className="p-0.5 bg-slate-800 text-white rounded hover:bg-slate-700"
+                                >
+                                  <ChevronDown className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button" title="Delete Image"
+                                  onClick={() => deleteGalleryItem(prodGallery, i, setProdGallery)}
+                                  className="p-0.5 bg-red-600 text-white rounded hover:bg-red-500"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     <button
                       type="submit" disabled={addingProd}
                       className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase rounded-xl transition-colors cursor-pointer text-center block"
@@ -1802,6 +1993,139 @@ using (
                                   <option value="prod-billing-pro">Retail Billing Pro (Pro Plan Card)</option>
                                   <option value="prod-billing-enterprise">GST Enterprise Suite (Enterprise Plan Card)</option>
                                 </select>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">Software Category</label>
+                                <select
+                                  value={editCategory}
+                                  onChange={(e) => setEditCategory(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                >
+                                  <option value="Retail & POS Billing">Retail & POS Billing</option>
+                                  <option value="ERP & Enterprise Logistics">ERP & Enterprise Logistics</option>
+                                  <option value="GST Suite Solutions">GST Suite Solutions</option>
+                                  <option value="Accounting & General ledger">Accounting & General ledger</option>
+                                  <option value="Healthcare & Pharmacy POS">Healthcare & Pharmacy POS</option>
+                                </select>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">Full Detailed Description</label>
+                                <textarea
+                                  rows={4}
+                                  value={editFullDesc}
+                                  onChange={(e) => setEditFullDesc(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs resize-none text-slate-800 focus:bg-white"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">System Requirements</label>
+                                <input
+                                  type="text"
+                                  value={editSysReqs}
+                                  onChange={(e) => setEditSysReqs(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">License Terms</label>
+                                <input
+                                  type="text"
+                                  value={editLicenseInfo}
+                                  onChange={(e) => setEditLicenseInfo(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block">Demo Video URL or ID</label>
+                                <input
+                                  type="text"
+                                  value={editDemoVideo}
+                                  onChange={(e) => setEditDemoVideo(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                />
+                              </div>
+
+                              {/* Screenshot Gallery Manager */}
+                              <div className="space-y-2 border border-slate-200 p-3 rounded-2xl bg-slate-50/50">
+                                <label className="text-[10px] font-black text-slate-700 font-mono block uppercase">Screenshot Image Gallery Manager</label>
+                                
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Paste image URL..."
+                                    value={inputUrlPhoto}
+                                    onChange={(e) => setInputUrlPhoto(e.target.value)}
+                                    className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (inputUrlPhoto) {
+                                        setEditGallery([...editGallery, inputUrlPhoto]);
+                                        setInputUrlPhoto('');
+                                      }
+                                    }}
+                                    className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+                                  >
+                                    Add URL
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9.5px] text-slate-400">or</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        handleGalleryFileUpload(file, editGallery, setEditGallery);
+                                      }
+                                    }}
+                                    className="text-[10px] text-slate-500 cursor-pointer"
+                                  />
+                                </div>
+
+                                {editGallery.length > 0 && (
+                                  <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200 mt-2">
+                                    {editGallery.map((img, i) => (
+                                      <div key={i} className="relative group border border-slate-200 bg-white p-1 rounded-lg">
+                                        <img src={img} className="w-full h-10 object-contain rounded" alt="" />
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 rounded">
+                                          <button
+                                            type="button"
+                                            title="Move Left"
+                                            onClick={() => moveGalleryItem(editGallery, i, 'up', setEditGallery)}
+                                            className="p-0.5 bg-slate-800 text-white rounded hover:bg-slate-700"
+                                          >
+                                            <ChevronUp className="w-3 h-3" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            title="Move Right"
+                                            onClick={() => moveGalleryItem(editGallery, i, 'down', setEditGallery)}
+                                            className="p-0.5 bg-slate-800 text-white rounded hover:bg-slate-700"
+                                          >
+                                            <ChevronDown className="w-3 h-3" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            title="Delete Image"
+                                            onClick={() => deleteGalleryItem(editGallery, i, setEditGallery)}
+                                            className="p-0.5 bg-red-650 text-white rounded hover:bg-red-500"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -2841,7 +3165,7 @@ using (
                     <input
                       type="text"
                       required
-                      placeholder="+91 95535 28282"
+                      placeholder="+91 95169 16415"
                       value={helpline}
                       onChange={(e) => setHelpline(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-250 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-slate-950"

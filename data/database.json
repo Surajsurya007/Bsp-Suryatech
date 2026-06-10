@@ -3,7 +3,7 @@
     {
       "id": "u-admin",
       "name": "BSP Suryatech Admin",
-      "email": "admin@bspsuryatech.in",
+      "email": "surajsurya.koo7@gmail.com",
       "role": "admin",
       "createdAt": "2026-06-06T14:28:24.278Z"
     },
@@ -13,13 +13,6 @@
       "email": "test@gmail.com",
       "role": "customer",
       "createdAt": "2026-06-06T14:28:24.279Z"
-    },
-    {
-      "id": "u-admin",
-      "name": "BSP Suryatech Admin",
-      "email": "Surajsurya.koo7@gmail.com",
-      "role": "admin",
-      "createdAt": "2026-06-09T06:28:04.526Z"
     },
     {
       "name": "Suraj surya",
@@ -38,7 +31,7 @@
     }
   ],
   "passwordHashes": {
-    "u-admin": "dbe8bab38e87e892a495bcb69d90e29e:76cc180bea894e603ff473c1f3864cbc657bc3f45b5aa12fba8a1458d768e26e4b1355f09a7402bda0637d92795a72aaeaa2b3432d153c802587545c9f283ca2",
+    "u-admin": "2818a971de954ad8168727169985a644:2cf5cf29460f7a7f7bdf3d2233acaaecd33e2bdcae74c0d012d1609a0edff1cb96b0a8bcc8ef79ac0f463c308936a022a2dd1e46fa2bcb8737d1d6774786c6a9",
     "u-customer": "b9ccc2338bf8b5bd3bcd5dbea1001339:ea390073d180cee9336d82e4dc34eefd3e2a12a0ed27318662dac716f7a2d0ec5311db41f80a5520b0492eb1993b313ae1aa442adda7af46e3a8d0e32f3eedf9",
     "u-uj137orkt": "166fa432211355487677d46a637de1c1:d850c445d5fffb3469bffcdc5a7ab58a2dcf80815075d0674a560aa85773ebfa59d1693a94e41ba9aedd30d59777d8bbf9fe56c86ff9fdfb8b74d3ea1f135b6b",
     "u-f04fqbizv": "26b62f5e59666df8af89d9024e91dabe:6d4f83d3a83b04cef63c96639f4a726c61b943c9e5c72674db889bdd7184135440afbea1e25fdd8e8b97f71cfb61f49ab2841f48d4e24c8b548e021a4200cc1e"
@@ -493,5 +486,5 @@
     "enabled": true,
     "webhookSecret": ""
   },
-  "helpline": "+91 95535 28282"
+  "helpline": "+91 95169 16415"
 }
