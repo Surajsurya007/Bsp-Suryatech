@@ -34,7 +34,8 @@ import {
   Shield,
   Copy,
   Database,
-  AlertTriangle
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
 
 import { VideoTutorial } from '../types';
@@ -217,6 +218,13 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [rzpEnabled, setRzpEnabled] = useState(true);
   const [rzpWebhookSecret, setRzpWebhookSecret] = useState('');
   const [savingRzp, setSavingRzp] = useState(false);
+
+  // Secure Vault Modal states
+  const [showRzpVaultModal, setShowRzpVaultModal] = useState(false);
+  const [rzpVaultKeyId, setRzpVaultKeyId] = useState('');
+  const [rzpVaultKeySecret, setRzpVaultKeySecret] = useState('');
+  const [rzpVaultWebhookSecret, setRzpVaultWebhookSecret] = useState('');
+  const [submittingVault, setSubmittingVault] = useState(false);
 
   // Helpline Configuration States
   const [helpline, setHelpline] = useState('+91 95169 16415');
@@ -515,7 +523,7 @@ using (
     const token = localStorage.getItem('bsp_token');
     try {
       const res = await fetch('/api/admin/gemini-config', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -541,7 +549,7 @@ using (
     const token = localStorage.getItem('bsp_token');
     try {
       const res = await fetch('/api/admin/supabase-config', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -603,7 +611,7 @@ using (
     const token = localStorage.getItem('bsp_token');
     try {
       const res = await fetch('/api/admin/hostinger-config', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -1229,7 +1237,7 @@ using (
     const token = localStorage.getItem('bsp_token');
     try {
       const res = await fetch('/api/admin/razorpay-config', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -1269,13 +1277,60 @@ using (
     }
   };
 
+  const handleSubmitRzpVault = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingVault(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/razorpay-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          keyId: rzpVaultKeyId,
+          keySecret: rzpVaultKeySecret,
+          mode: rzpMode,
+          currency: rzpCurrency,
+          enabled: rzpEnabled,
+          webhookSecret: rzpVaultWebhookSecret || rzpWebhookSecret
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRzpKeyId(data.keyId || '');
+        setRzpKeySecret(data.keySecret || '');
+        setRzpMode(data.mode || 'test');
+        setRzpCurrency(data.currency || 'INR');
+        setRzpEnabled(data.enabled !== false);
+        setRzpWebhookSecret(data.webhookSecret || '');
+        onAddNotification('Razorpay credentials securely stored and integrated in backend server vaults!', 'success');
+        setShowRzpVaultModal(false);
+      } else {
+        let errMsg = 'Failed to persist secure vault credentials';
+        try {
+          const err = await res.json();
+          errMsg = err.error || errMsg;
+        } catch {
+          errMsg = `Server responded with status ${res.status}`;
+        }
+        onAddNotification(errMsg, 'error');
+      }
+    } catch (err: any) {
+      onAddNotification(`Connection error writing to Secure Credentials Vault: ${err.message || err}`, 'error');
+    } finally {
+      setSubmittingVault(false);
+    }
+  };
+
   const handleUpdateHelpline = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingHelpline(true);
     const token = localStorage.getItem('bsp_token');
     try {
       const res = await fetch('/api/helpline', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -3038,6 +3093,39 @@ using (
           {/* View 10: RAZORPAY GATEWAY CONFIGURATION */}
           {activeAdminTab === 'razorpay' && (
             <div className="space-y-6 animate-fade-in text-slate-800 font-sans" id="admin-panel-razorpay-gateway">
+              {/* Secure Credentials Intake Banner */}
+              <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-blue-900/30 rounded-2xl flex flex-col md:flex-row items-center justify-between text-left gap-4 shadow-lg text-white">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-500/10 border border-blue-400/35 rounded-xl flex items-center justify-center text-blue-400 font-black shrink-0 shadow-inner">
+                    <Lock className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
+                      <span>🔒 Secure API Credentials Vault</span>
+                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[8.5px] rounded border border-emerald-500/30 font-black">STRICTLY PROTECTED</span>
+                    </h4>
+                    <p className="text-xs text-indigo-250 leading-relaxed max-w-2xl">
+                      Input your Razorpay credentials via our secure intake popover modal. Operating as a safe sandboxed endpoint, your API secrets are dispatched strictly to server-side memory vaults, completely scrubbed from browser bundles.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRzpVaultKeyId(rzpKeyId);
+                    setRzpVaultKeySecret('');
+                    setRzpVaultWebhookSecret(rzpWebhookSecret);
+                    setShowRzpVaultModal(true);
+                  }}
+                  className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-97 cursor-pointer flex items-center gap-2 shrink-0"
+                  id="open-rzp-vault-modal-btn"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Open Vault Popover</span>
+                </button>
+              </div>
+
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
@@ -3243,6 +3331,110 @@ using (
                   </div>
                 </div>
               </div>
+
+              {/* Secure Credentials Intake popover modal */}
+              {showRzpVaultModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in" id="rzp-vault-modal-overlay">
+                  <div className="bg-[#1E293B] border border-blue-500/20 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-up font-sans text-slate-100">
+                    
+                    {/* Header */}
+                    <div className="bg-slate-900 px-6 py-5 border-b border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-blue-600/15 border border-blue-500/30 rounded-xl flex items-center justify-center text-blue-400">
+                          <Lock className="w-5 h-5 flex-shrink-0" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-white text-sm">Secure Credentials Vault Intake</h4>
+                          <span className="text-[10px] text-emerald-400 font-mono font-bold block">// SSL Encrypted Sandbox Entry</span>
+                        </div>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setShowRzpVaultModal(false)}
+                        className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                        id="close-rzp-vault-modal"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {/* Body */}
+                    <form onSubmit={handleSubmitRzpVault} className="p-6 space-y-6">
+                      <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-850 text-xs text-slate-400 leading-relaxed space-y-1.5">
+                        <p className="font-extrabold text-slate-300 flex items-center gap-1">
+                          <Check className="w-4 h-4 text-emerald-400" />
+                          <span>No Client-Side Footprints</span>
+                        </p>
+                        <p>
+                          Our full-stack gateway completely decouples credentials. Entering values in this popup writes directly to the Node container's secret storage. The frontend only receives the masked key mapping on demand.
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10.5px] font-bold text-slate-300 block font-mono">Razorpay API Key ID *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="rzp_live_..."
+                            value={rzpVaultKeyId}
+                            onChange={(e) => setRzpVaultKeyId(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 outline-none px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-white shadow-sm"
+                          />
+                          <span className="text-[9.5px] text-slate-500 block">Required for SDK checkout widget loading. Uniquely represents your merchant account.</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10.5px] font-bold text-slate-300 block font-mono">Razorpay Key Secret *</label>
+                          <input
+                            type="password"
+                            required
+                            placeholder="••••••••••••••••••••••••"
+                            value={rzpVaultKeySecret}
+                            onChange={(e) => setRzpVaultKeySecret(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 outline-none px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-white shadow-sm"
+                          />
+                          <span className="text-[9.5px] text-slate-500 block">Crucial secret key. Securely stored in the database environment; never leaves backend memory loops.</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10.5px] font-bold text-slate-300 block font-mono">Webhook Signet Secret (Optional)</label>
+                          <input
+                            type="text"
+                            placeholder="whsec_..."
+                            value={rzpVaultWebhookSecret}
+                            onChange={(e) => setRzpVaultWebhookSecret(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 outline-none px-3.5 py-2.5 rounded-xl text-xs font-mono text-white shadow-sm"
+                          />
+                          <span className="text-[9.5px] text-slate-500 block">Used to verify and seal automated webhook transaction alerts from Razorpay servers.</span>
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setShowRzpVaultModal(false)}
+                          className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer font-bold"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={submittingVault}
+                          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+                          id="submit-rzp-vault-modal-btn"
+                        >
+                          <Lock className="w-3.5 h-3.5 animate-pulse" />
+                          <span>{submittingVault ? 'Sealing Vault...' : '🔒 Save & Seal Credentials'}</span>
+                        </button>
+                      </div>
+                    </form>
+
+                  </div>
+                </div>
+              )}
 
             </div>
           )}

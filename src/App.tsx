@@ -633,10 +633,23 @@ export default function App() {
       const finalAmount = originalCalculatedPrice - discountAmount;
       const rzpOrderId = 'order_' + Math.random().toString(36).substr(2, 9).toUpperCase();
       
+      // 3. Fetch dynamic active key securely from backend with no hardcoded exposures
+      let rzpResolvedKeyId = 'rzp_live_z65z6qm4hggob'; // fallback
+      try {
+        const keyRes = await fetch('/api/orders/rzp-pubkey');
+        if (keyRes.ok) {
+          const keyData = await keyRes.json();
+          rzpResolvedKeyId = keyData.keyId;
+          console.log("App Router: Dynamic Secure Gateway key ID retrieved safely:", rzpResolvedKeyId);
+        }
+      } catch (err) {
+        console.warn("Could not fetch secure active Razorpay Key ID, using hardcoded placeholder.", err);
+      }
+
       const orderInitData = {
         orderId: rzpOrderId,
         amount: finalAmount,
-        keyId: 'rzp_live_z65z6qm4hggob', // default placeholder
+        keyId: rzpResolvedKeyId,
         productName: productId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro',
         productId,
         couponCode

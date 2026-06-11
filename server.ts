@@ -1339,15 +1339,17 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json({ helpline: dbActions.getHelpline() });
   });
 
-  // Update current system helpline number (Admin only)
-  app.put('/api/helpline', requireAdmin, (req, res) => {
+  // Update current system helpline number (Admin only) - Supports PUT & POST fallback
+  const saveHelplineHandler = (req: any, res: any) => {
     const { helpline } = req.body;
     if (!helpline) {
       return res.status(400).json({ error: 'Helpline number is required' });
     }
     const updated = dbActions.updateHelpline(helpline);
     res.json({ success: true, helpline: updated });
-  });
+  };
+  app.put('/api/helpline', requireAdmin, saveHelplineHandler);
+  app.post('/api/helpline', requireAdmin, saveHelplineHandler);
 
   // Retrieve available languages configs
   app.get('/api/languages', (req, res) => {
@@ -1511,6 +1513,36 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
 
   // --- SECURE CUSTOMER ENDPOINTS ---
+
+  // Public dynamic endpoint to load configured Razorpay Key ID securely without exposing secrets
+  app.get('/api/orders/rzp-pubkey', async (req: any, res: any) => {
+    // Sync from Supabase first if active
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('settings_val')
+          .eq('settings_key', 'razorpay_config')
+          .maybeSingle();
+        
+        if (data && data.settings_val) {
+          const parsed = JSON.parse(data.settings_val);
+          dbActions.updateRazorpayConfig(parsed);
+        }
+      } catch (sbErr: any) {
+        console.warn("Supabase Config Fetch Failed (using local cache fallback):", sbErr.message || sbErr);
+      }
+    }
+
+    const rzpConfig = dbActions.getRazorpayConfig();
+    res.json({
+      keyId: rzpConfig.enabled ? rzpConfig.keyId : 'rzp_test_SURYA2026KEY',
+      enabled: rzpConfig.enabled || false,
+      currency: rzpConfig.currency || 'INR',
+      mode: rzpConfig.mode || 'test'
+    });
+  });
 
   // Create Order (Razorpay Simulation Initializer)
   app.post('/api/orders/create', authenticateToken, (req: any, res: any) => {
@@ -1763,15 +1795,37 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json(dbActions.getGeminiConfig ? dbActions.getGeminiConfig() : { apiKey: '' });
   });
 
-  // Admin: Save or update Gemini translation key
-  app.put('/api/admin/gemini-config', requireAdmin, (req, res) => {
+  // Admin: Save or update Gemini translation key (Supports PUT & POST fallback)
+  const saveGeminiConfigHandler = (req: any, res: any) => {
     const { apiKey } = req.body;
     const config = dbActions.updateGeminiConfig ? dbActions.updateGeminiConfig(apiKey) : { apiKey };
     res.json(config);
-  });
+  };
+  app.put('/api/admin/gemini-config', requireAdmin, saveGeminiConfigHandler);
+  app.post('/api/admin/gemini-config', requireAdmin, saveGeminiConfigHandler);
 
   // Admin: Get Razorpay gateway settings with credential masking
-  app.get('/api/admin/razorpay-config', requireAdmin, (req, res) => {
+  app.get('/api/admin/razorpay-config', requireAdmin, async (req, res) => {
+    // Sync from Supabase first if active
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('settings_val')
+          .eq('settings_key', 'razorpay_config')
+          .maybeSingle();
+        
+        if (data && data.settings_val) {
+          const parsed = JSON.parse(data.settings_val);
+          dbActions.updateRazorpayConfig(parsed);
+          console.log("Supabase: Pulled Razorpay configuration from cloud settings cache.");
+        }
+      } catch (sbErr: any) {
+        console.warn("Supabase Config Fetch Failed (using local cache fallback):", sbErr.message || sbErr);
+      }
+    }
+
     const config = dbActions.getRazorpayConfig();
     res.json({
       ...config,
@@ -1780,8 +1834,8 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     });
   });
 
-  // Admin: Update Razorpay gateway settings with mask protection
-  app.put('/api/admin/razorpay-config', requireAdmin, (req, res) => {
+  // Admin: Update Razorpay gateway settings with mask protection (Supports PUT & POST fallback)
+  const saveRazorpayConfigHandler = async (req: any, res: any) => {
     const { keyId, keySecret, mode, currency, enabled, webhookSecret } = req.body;
     const existingConfig = dbActions.getRazorpayConfig();
     
@@ -1804,12 +1858,36 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       webhookSecret: finalWebhookSecret 
     });
 
+    // Write to Supabase system_settings table if active to keep backend persistent in cloudSQL/Postgres
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const payloadString = JSON.stringify({ 
+          keyId, 
+          keySecret: finalSecret, 
+          mode, 
+          currency, 
+          enabled, 
+          webhookSecret: finalWebhookSecret 
+        });
+        
+        await supabase
+          .from('system_settings')
+          .upsert({ settings_key: 'razorpay_config', settings_val: payloadString }, { onConflict: 'settings_key' });
+        console.log("Supabase: Razorpay configuration successfully synchronized.");
+      } catch (sbErr: any) {
+        console.error("Supabase Sync Failed for Razorpay Config:", sbErr.message || sbErr);
+      }
+    }
+
     res.json({
       ...config,
       keySecret: config.keySecret ? '********' : '',
       webhookSecret: config.webhookSecret ? '********' : ''
     });
-  });
+  };
+  app.put('/api/admin/razorpay-config', requireAdmin, saveRazorpayConfigHandler);
+  app.post('/api/admin/razorpay-config', requireAdmin, saveRazorpayConfigHandler);
 
   // Admin: Get Supabase configuration settings
   app.get('/api/admin/supabase-config', requireAdmin, (req, res) => {
@@ -1830,12 +1908,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     }
   });
 
-  // Admin: Update Supabase configuration settings
-  app.put('/api/admin/supabase-config', requireAdmin, (req, res) => {
+  // Admin: Update Supabase configuration settings (Supports PUT & POST fallback)
+  const saveSupabaseConfigHandler = (req: any, res: any) => {
     const { url, anonKey, enabled } = req.body;
     const config = dbActions.updateSupabaseConfig ? dbActions.updateSupabaseConfig({ url, anonKey, enabled }) : { url, anonKey, enabled };
     res.json(config);
-  });
+  };
+  app.put('/api/admin/supabase-config', requireAdmin, saveSupabaseConfigHandler);
+  app.post('/api/admin/supabase-config', requireAdmin, saveSupabaseConfigHandler);
 
   // Admin: Test connection of Supabase integration
   app.post('/api/admin/supabase-config/test', requireAdmin, async (req, res) => {
@@ -1863,8 +1943,8 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json(dbActions.getHostingerConfig ? dbActions.getHostingerConfig() : { host: '', user: '', pass: '', database: '', port: 3306, enabled: false });
   });
 
-  // Admin: Update Hostinger MySQL configuration settings
-  app.put('/api/admin/hostinger-config', requireAdmin, async (req, res) => {
+  // Admin: Update Hostinger MySQL configuration settings (Supports PUT & POST fallback)
+  const saveHostingerConfigHandler = async (req: any, res: any) => {
     const { host, user, pass, database, port, enabled } = req.body;
     const config = dbActions.updateHostingerConfig 
       ? dbActions.updateHostingerConfig({ host, user, pass, database, port, enabled }) 
@@ -1881,7 +1961,9 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       }
     }
     res.json(config);
-  });
+  };
+  app.put('/api/admin/hostinger-config', requireAdmin, saveHostingerConfigHandler);
+  app.post('/api/admin/hostinger-config', requireAdmin, saveHostingerConfigHandler);
 
   // Admin: Test connection of Hostinger database integration
   app.post('/api/admin/hostinger-config/test', requireAdmin, async (req, res) => {
