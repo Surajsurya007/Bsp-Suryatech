@@ -94,17 +94,29 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                         <span className="text-emerald-600">Downloads: {dl.downloadCount}</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        const mappedProdId = dl.id === 'dl-1' ? 'prod-billing-pro' : 'prod-billing-enterprise';
-                        onPageChange?.(`software-details:${mappedProdId}`);
-                      }}
-                      className="p-3 bg-blue-50 hover:bg-blue-105 text-blue-600 hover:text-blue-700 hover:scale-105 active:scale-95 rounded-xl cursor-pointer transition-all duration-200 border-0 flex items-center justify-center shadow-sm"
-                      title="View Full Software Details"
-                      id={`view-software-details-btn-${dl.id}`}
-                    >
-                      <Terminal className="w-5 h-5" />
-                    </button>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <button
+                        onClick={() => {
+                          const mappedProdId = dl.id === 'dl-1' ? 'prod-billing-pro' : 'prod-billing-enterprise';
+                          onPageChange?.(`software-details:${mappedProdId}`);
+                        }}
+                        className="p-3 bg-blue-50 hover:bg-blue-105 text-blue-600 hover:text-blue-700 hover:scale-105 active:scale-95 rounded-xl cursor-pointer transition-all duration-200 border-0 flex items-center justify-center shadow-sm text-center"
+                        title="View Full Software Details"
+                        id={`view-software-details-btn-${dl.id}`}
+                      >
+                        <Terminal className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          onAddToCart?.(dl.id === 'dl-1' ? 'prod-billing-pro' : 'prod-billing-enterprise');
+                        }}
+                        className="p-3 bg-blue-50 hover:bg-blue-105 text-blue-600 hover:text-blue-700 hover:scale-105 active:scale-95 rounded-xl cursor-pointer transition-all duration-200 border-0 flex items-center justify-center shadow-sm text-center"
+                        title="Add to Cart"
+                        id={`add-to-cart-download-btn-${dl.id}`}
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Release bullet log changes */}
@@ -122,16 +134,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                 </div>
 
                 {/* Big download action buttons */}
-                <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
-                  <button
-                    onClick={() => onAddToCart?.(dl.id === 'dl-1' ? 'prod-billing-pro' : 'prod-billing-enterprise')}
-                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold flex items-center justify-center gap-2 active:scale-98 transition-all duration-200 cursor-pointer text-xs shadow-md border-0 uppercase tracking-wider"
-                    id={`add-to-cart-download-btn-${dl.id}`}
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>Add to Cart & Choose Price Plan</span>
-                  </button>
-
+                <div className="pt-6 mt-6 border-t border-slate-100">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       onClick={() => onTriggerTrialDownload(dl.id, false)}

@@ -93,21 +93,123 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [langConfigs, setLangConfigs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const revenueData = [
-    { name: 'Jan', Amount: 185000 },
-    { name: 'Feb', Amount: 240000 },
-    { name: 'Mar', Amount: 310000 },
-    { name: 'Apr', Amount: 280000 },
-    { name: 'May', Amount: 420000 },
-    { name: 'Jun', Amount: stats?.totalRevenue || 563000 },
-  ];
+  const revenueData = React.useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthlyRevenue = months.reduce((acc, m) => {
+      acc[m] = 0;
+      return acc;
+    }, {} as Record<string, number>);
 
-  const salesByProductData = [
-    { name: 'Billing Pro', value: 45 },
-    { name: 'Enterprise Suite', value: 30 },
-    { name: 'Retail Lite', value: 15 },
-    { name: 'Other products', value: 10 },
-  ];
+    orders.forEach((o: any) => {
+      if (o.status === 'success') {
+        const date = new Date(o.createdAt);
+        if (!isNaN(date.getTime())) {
+          const m = months[date.getMonth()];
+          if (m) {
+            monthlyRevenue[m] += o.amount;
+          }
+        }
+      }
+    });
+
+    const currentMonthIdx = new Date().getMonth();
+    const last6Months = [];
+    for (let i = 5; i >= 0; i--) {
+      const idx = (currentMonthIdx - i + 12) % 12;
+      last6Months.push({
+        name: months[idx],
+        Amount: monthlyRevenue[months[idx]]
+      });
+    }
+    return last6Months;
+  }, [orders]);
+
+  const salesByProductData = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    let totalSalesCount = 0;
+    
+    orders.forEach((o: any) => {
+      if (o.status === 'success') {
+        const name = o.productName || 'Other products';
+        counts[name] = (counts[name] || 0) + 1;
+        totalSalesCount++;
+      }
+    });
+
+    if (totalSalesCount === 0) {
+      return [
+        { name: 'Billing Pro', value: 0 },
+        { name: 'Enterprise Suite', value: 0 }
+      ];
+    }
+
+    return Object.entries(counts).map(([name, count]) => ({
+      name,
+      value: Math.round((count / totalSalesCount) * 100)
+    }));
+  }, [orders]);
+
+  const monthlyBarChartData = React.useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthlyRevenue = months.reduce((acc, m) => {
+      acc[m] = 0;
+      return acc;
+    }, {} as Record<string, number>);
+
+    orders.forEach((o: any) => {
+      if (o.status === 'success') {
+        const date = new Date(o.createdAt);
+        if (!isNaN(date.getTime())) {
+          const m = months[date.getMonth()];
+          if (m) {
+            monthlyRevenue[m] += o.amount;
+          }
+        }
+      }
+    });
+
+    const currentMonthIdx = new Date().getMonth();
+    const last6Months = [];
+    for (let i = 5; i >= 0; i--) {
+      const idx = (currentMonthIdx - i + 12) % 12;
+      last6Months.push({
+        month: months[idx],
+        Sales: monthlyRevenue[months[idx]]
+      });
+    }
+    return last6Months;
+  }, [orders]);
+
+  const reportsStats = React.useMemo(() => {
+    const successOrders = orders.filter((o: any) => o.status === 'success');
+    const totalRev = successOrders.reduce((sum: number, o: any) => sum + o.amount, 0);
+    const aov = successOrders.length > 0 ? totalRev / successOrders.length : 0;
+    
+    // Order Success Rate
+    const orderSuccessRate = orders.length > 0 ? (successOrders.length / orders.length) * 100 : 0;
+    
+    // Active licenses rate
+    const activeLics = licenses.filter((l: any) => l.status === 'active').length;
+    const licenseActiveRate = licenses.length > 0 ? (activeLics / licenses.length) * 100 : 0;
+
+    // Support case resolution rate
+    const resolvedTk = tickets.filter((t: any) => t.status === 'resolved').length;
+    const supportResolveRate = tickets.length > 0 ? (resolvedTk / tickets.length) * 100 : 0;
+
+    return {
+      aov: `₹${Math.round(aov).toLocaleString('en-IN')}`,
+      aovStat: `Based on ${successOrders.length} paid orders`,
+      
+      successRate: `${Math.round(orderSuccessRate)}%`,
+      successRateStat: `${successOrders.length} of ${orders.length} orders settled`,
+
+      licRate: `${Math.round(licenseActiveRate)}%`,
+      licRateStat: `${activeLics} of ${licenses.length} licenses active`,
+
+      resolveRate: `${Math.round(supportResolveRate)}%`,
+      resolveRateStat: `${resolvedTk} of ${tickets.length} cases resolved`
+    };
+  }, [orders, licenses, tickets]);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
 
@@ -407,8 +509,8 @@ using (
     }
   };
 
-  const fetchAdminData = async () => {
-    setLoading(true);
+  const fetchAdminData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     const token = localStorage.getItem('bsp_token');
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
@@ -481,18 +583,26 @@ using (
 
         onRefreshVideos?.();
       } else {
-        onAddNotification('Refused admin entry. Session expired.', 'error');
-        onPageChange('portal');
+        if (!isBackground) {
+          onAddNotification('Refused admin entry. Session expired.', 'error');
+          onPageChange('portal');
+        }
       }
     } catch {
-      onAddNotification('Connection error fetching administrative profiles registers', 'error');
+      if (!isBackground) {
+        onAddNotification('Connection error fetching administrative profiles registers', 'error');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchAdminData();
+    const liveUpdateInterval = setInterval(() => {
+      fetchAdminData(true);
+    }, 3000);
+    return () => clearInterval(liveUpdateInterval);
   }, []);
 
   useEffect(() => {
@@ -1504,7 +1614,6 @@ using (
             <div className="space-y-1">
               {[
                 { id: 'users', label: 'User Management', icon: Shield },
-                { id: 'languages', label: 'Website Localization', icon: Globe },
                 { id: 'cms', label: 'CMS Pages', icon: FileCode },
                 { id: 'emails', label: 'Email Templates', icon: Mail },
                 { id: 'logs', label: 'Activity Logs', icon: Terminal },
@@ -1644,12 +1753,12 @@ using (
                   {/* Stat grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-5">
                     {[
-                      { title: 'Gross Revenue', value: stats?.totalRevenue ? `₹${stats.totalRevenue}` : '₹24,58,450.00', change: '+18.7%', color: 'text-blue-400', stroke: '#3B82F6', path: 'M0 25 Q15 5, 30 20 T60 10 T90 5' },
-                      { title: 'Total Orders', value: stats?.totalOrders || '1,248', change: '+12.4%', color: 'text-emerald-400', stroke: '#10B981', path: 'M0 25 Q15 15, 30 25 T60 10 T90 8' },
-                      { title: 'Active Licenses', value: stats?.activeLicenses || '5,682', change: '+9.3%', color: 'text-amber-400', stroke: '#F59E0B', path: 'M0 20 Q15 25, 30 15 T60 20 T90 12' },
-                      { title: 'New Customers', value: stats?.totalCustomers || '823', change: '+14.1%', color: 'text-violet-450', stroke: '#A78BFA', path: 'M0 25 Q15 18, 30 18 T60 12 T90 5' },
-                      { title: 'Downloads', value: stats?.totalDownloads || '3,256', change: '+16.8%', color: 'text-sky-400', stroke: '#38BDF8', path: 'M0 25 Q15 10, 30 20 T60 15 T90 8' },
-                      { title: 'Open Tickets', value: stats?.openTickets || '47', change: '-3.2%', color: 'text-rose-450', stroke: '#FB7185', path: 'M0 10 Q15 15, 30 10 T60 20 T90 25' }
+                      { title: 'Gross Revenue', value: stats ? `₹${(stats.totalRevenue || 0).toLocaleString('en-IN')}` : '₹0', change: 'Real-time', color: 'text-blue-400', stroke: '#3B82F6', path: 'M0 25 Q15 5, 30 20 T60 10 T90 5' },
+                      { title: 'Total Orders', value: stats ? String(stats.totalOrders || 0) : '0', change: 'Real-time', color: 'text-emerald-400', stroke: '#10B981', path: 'M0 25 Q15 15, 30 25 T60 10 T90 8' },
+                      { title: 'Active Licenses', value: stats ? String(stats.activeLicenses || 0) : '0', change: 'Active now', color: 'text-amber-400', stroke: '#F59E0B', path: 'M0 20 Q15 25, 30 15 T60 20 T90 12' },
+                      { title: 'New Customers', value: stats ? String(stats.totalCustomers || 0) : '0', change: 'Registered', color: 'text-violet-400', stroke: '#A78BFA', path: 'M0 25 Q15 18, 30 18 T60 12 T90 5' },
+                      { title: 'Downloads', value: stats ? String(stats.totalDownloads || 0) : '0', change: 'Counter', color: 'text-sky-400', stroke: '#38BDF8', path: 'M0 25 Q15 10, 30 20 T60 15 T90 8' },
+                      { title: 'Open Tickets', value: stats ? String(stats.openTickets || 0) : '0', change: 'Needs action', color: 'text-rose-450', stroke: '#FB7185', path: 'M0 10 Q15 15, 30 10 T60 20 T90 25' }
                     ].map((card, idx) => (
                       <div key={idx} className="bg-[#1E293B] rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between hover:border-slate-700 hover:shadow-2xl transition-all">
                         <div>
@@ -1720,7 +1829,9 @@ using (
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute text-center select-none">
-                          <div className="text-2xl font-black text-white">₹2.4M</div>
+                          <div className="text-xl font-black text-white">
+                            {stats?.totalRevenue ? (stats.totalRevenue >= 100000 ? `₹${(stats.totalRevenue / 100000).toFixed(1)}L` : `₹${stats.totalRevenue.toLocaleString('en-IN')}`) : '₹0'}
+                          </div>
                           <div className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Total Sales</div>
                         </div>
                       </div>
@@ -1790,7 +1901,7 @@ using (
                         {[
                           { label: 'Server Status', value: 'Healthy', color: 'text-emerald-400 font-bold', sub: 'Region: global edge' },
                           { label: 'Database Sync', value: supabaseEnabled ? 'Connected' : 'Local Sandbox', color: 'text-blue-400 font-bold', sub: '100% cloud parity' },
-                          { label: 'Storage Used', value: '42.6% of 250GB', color: 'text-slate-300 font-mono font-bold', sub: '91 GB available' },
+                          { label: 'Licensed Catalog', value: `${products.length} Products`, color: 'text-amber-400 font-bold font-mono', sub: 'Active releases list' },
                           { label: 'Hostinger API Node', value: hostingerEnabled ? 'Enabled' : 'Offline Mode', color: hostingerEnabled ? 'text-[#10B981] font-bold' : 'text-slate-400', sub: 'Bridges replication' },
                           { label: 'Gemini Integrations', value: geminiApiKey ? 'Ready' : 'Pending Key', color: geminiApiKey ? 'text-violet-400 font-semibold' : 'text-slate-500', sub: 'Auto-reply automation' },
                         ].map((diag, i) => (
@@ -1913,10 +2024,10 @@ using (
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
-                      { title: 'Average Order Value (AOV)', value: '₹1,968.00', stat: 'Stable (+0.5%)' },
-                      { title: 'Gross Revenue Target', value: '98.4%', stat: '₹25L Cap Margin' },
-                      { title: 'Active Trials Conversion', value: '42.8%', stat: '4 out of 10 convert' },
-                      { title: 'Net Retention', value: '96.4%', stat: 'Annual subscriptions' }
+                      { title: 'Average Order Value (AOV)', value: reportsStats.aov, stat: reportsStats.aovStat },
+                      { title: 'Order Success Rate', value: reportsStats.successRate, stat: reportsStats.successRateStat },
+                      { title: 'License Activation Rate', value: reportsStats.licRate, stat: reportsStats.licRateStat },
+                      { title: 'Support Case Resolution', value: reportsStats.resolveRate, stat: reportsStats.resolveRateStat }
                     ].map((item, idx) => (
                       <div key={idx} className="bg-[#1E293B] border border-slate-800 rounded-2xl p-5 shadow-xl text-left">
                         <span className="text-[10px] text-slate-450 font-black uppercase tracking-wider font-mono block text-left">{item.title}</span>
@@ -1927,21 +2038,14 @@ using (
                   </div>
 
                   <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-6 shadow-xl">
-                    <h4 className="text-xs font-black uppercase text-slate-300 tracking-wider mb-5 text-left font-mono">Monthly Earnings & Growth Projection (₹ lakh)</h4>
+                    <h4 className="text-xs font-black uppercase text-slate-300 tracking-wider mb-5 text-left font-mono">Monthly Earnings & Growth Projection (₹)</h4>
                     <div className="h-[280px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={[
-                          { month: 'Jan', Sales: 4.2 },
-                          { month: 'Feb', Sales: 5.8 },
-                          { month: 'Mar', Sales: 7.1 },
-                          { month: 'Apr', Sales: 6.2 },
-                          { month: 'May', Sales: 9.8 },
-                          { month: 'Jun', Sales: 12.4 },
-                        ]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <BarChart data={monthlyBarChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#2D3748" vertical={false} />
                           <XAxis dataKey="month" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
-                          <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', color: '#F8FAFC' }} />
+                          <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
+                          <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', color: '#F8FAFC' }} formatter={(value: any) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']} />
                           <Bar dataKey="Sales" fill="#3B82F6" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
