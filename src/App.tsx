@@ -72,9 +72,12 @@ export default function App() {
   const [checkoutActive, setCheckoutActive] = useState(false);
   const [checkoutData, setCheckoutData] = useState<{
     orderId: string;
+    razorpayOrderId?: string;
     amount: number;
     keyId: string;
     productName: string;
+    productId?: string;
+    couponCode?: string;
   } | null>(null);
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -120,7 +123,11 @@ export default function App() {
                     profile: profile || null
                   };
                   setUser(u);
-                  handleNavigatePage('portal');
+                  if (u.role === 'admin') {
+                    setCurrentPage('admin');
+                  } else {
+                    handleNavigatePage('portal');
+                  }
                 });
             }
           }
@@ -153,6 +160,9 @@ export default function App() {
           };
           setUser(u);
           localStorage.setItem('bsp_token', session.access_token);
+          if (u.role === 'admin') {
+            setCurrentPage('admin');
+          }
         } else {
           // Backward compatible token fallback
           const localToken = localStorage.getItem('bsp_token');
@@ -371,8 +381,16 @@ export default function App() {
 
   const handleLoginSuccess = (token: string, userData: any) => {
     localStorage.setItem('bsp_token', token);
-    setUser(userData);
-    handleNavigatePage('portal');
+    const updatedUser = {
+      ...userData,
+      role: userData.email?.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : userData.role
+    };
+    setUser(updatedUser);
+    if (updatedUser.role === 'admin') {
+      setCurrentPage('admin');
+    } else {
+      handleNavigatePage('portal');
+    }
   };
 
   const handleLogout = () => {
@@ -612,45 +630,32 @@ export default function App() {
         return;
       }
 
-      // 2. Profile is completed! Directly initialize official order serverless
-      addNotification('Billing profile verified successfully. Loading secure checkout...', 'info');
+      // 2. Profile is completed! Fetch Razorpay key ID and create secure order on our backend
+      addNotification('Billing profile verified successfully. Initiating secure order...', 'info');
       
-      let originalCalculatedPrice = productId === 'prod-billing-enterprise' ? 2999 : 999;
-      // Fetch coupon discount percent if applicable
-      let discountAmount = 0;
-      if (couponCode) {
-        const { data: couponData } = await supabase
-          .from('coupons')
-          .select('*')
-          .eq('code', couponCode.toUpperCase())
-          .single();
-        
-        if (couponData && couponData.active) {
-          discountAmount = Math.floor(originalCalculatedPrice * (couponData.discountPercent || couponData.discount_percent || 20) / 100);
-        }
+      const token = localStorage.getItem('bsp_token');
+      const orderCreateRes = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ productId, couponCode })
+      });
+
+      if (!orderCreateRes.ok) {
+        throw new Error('Failed to initialize transaction order on secure payments server.');
       }
 
-      const finalAmount = originalCalculatedPrice - discountAmount;
-      const rzpOrderId = 'order_' + Math.random().toString(36).substr(2, 9).toUpperCase();
-      
-      // 3. Fetch dynamic active key securely from backend with no hardcoded exposures
-      let rzpResolvedKeyId = 'rzp_live_z65z6qm4hggob'; // fallback
-      try {
-        const keyRes = await fetch('/api/orders/rzp-pubkey');
-        if (keyRes.ok) {
-          const keyData = await keyRes.json();
-          rzpResolvedKeyId = keyData.keyId;
-          console.log("App Router: Dynamic Secure Gateway key ID retrieved safely:", rzpResolvedKeyId);
-        }
-      } catch (err) {
-        console.warn("Could not fetch secure active Razorpay Key ID, using hardcoded placeholder.", err);
-      }
+      const orderData = await orderCreateRes.json();
+      console.log("Secure order initialized successfully:", orderData);
 
       const orderInitData = {
-        orderId: rzpOrderId,
-        amount: finalAmount,
-        keyId: rzpResolvedKeyId,
-        productName: productId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro',
+        orderId: orderData.orderId,
+        razorpayOrderId: orderData.razorpayOrderId,
+        amount: orderData.amount,
+        keyId: orderData.keyId,
+        productName: orderData.productName || (productId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro'),
         productId,
         couponCode
       };
@@ -666,7 +671,7 @@ export default function App() {
     }
   };
 
-  // Complete simulated pay status
+  // Complete simulated/manual pay status
   const handleCompleteSimulatedPayment = async (status: 'success' | 'failed') => {
     if (!checkoutData) return;
 
@@ -689,6 +694,23 @@ export default function App() {
     }
 
     try {
+      // Notify secure backend verification of manual status simulation
+      const token = localStorage.getItem('bsp_token');
+      await fetch('/api/orders/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          orderId: checkoutData.orderId,
+          paymentId: paymentId,
+          status,
+          paymentMethod: selectedPaymentMethod
+        })
+      });
+
+      // Maintain direct Supabase write fallback
       await verifyOrderInDatabase(
         checkoutData.orderId,
         checkoutData.productId || 'prod-billing-pro',
@@ -713,6 +735,7 @@ export default function App() {
 
   const launchOfficialRazorpaySDK = async (data: {
     orderId: string;
+    razorpayOrderId?: string;
     amount: number;
     keyId: string;
     productName: string;
@@ -745,6 +768,7 @@ export default function App() {
     }
 
     try {
+      console.log("Opening official Razorpay UI for Order:", data.razorpayOrderId || "Direct payment (no order id)");
       const options = {
         key: data.keyId,
         amount: data.amount * 100, // standard Amount in paise
@@ -752,10 +776,37 @@ export default function App() {
         name: 'Bsp Suryatech',
         description: `Billing Software License for ${data.productName}`,
         image: 'https://images.unsplash.com/photo-1554165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=200',
+        order_id: data.razorpayOrderId || undefined, // Real razorpay order reference
         handler: async function (response: any) {
-          addNotification('Payment authorized successfully by Razorpay! Launching database validation registers...', 'success');
+          addNotification('Payment authorized by Razorpay! Running secure backend signature validations...', 'info');
           
           try {
+            const token = localStorage.getItem('bsp_token');
+            const verifyRes = await fetch('/api/orders/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                orderId: data.orderId,
+                razorpay_order_id: response.razorpay_order_id || data.razorpayOrderId,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                status: 'success',
+                paymentMethod: 'Razorpay_Live_Gateway_Portal'
+              })
+            });
+
+            if (!verifyRes.ok) {
+              const verifyErrJson = await verifyRes.json();
+              throw new Error(verifyErrJson.error || 'Cryptographic transaction validation failed.');
+            }
+
+            const verifyResult = await verifyRes.json();
+            console.log("Cryptographic validation success:", verifyResult);
+
+            // Backwards compatible sync: Trigger Supabase clients write if necessary
             await verifyOrderInDatabase(
               data.orderId,
               data.productId || 'prod-billing-pro',
@@ -772,7 +823,7 @@ export default function App() {
             handleNavigatePage('portal');
           } catch (err: any) {
             console.error(err);
-            addNotification('Error verifying live payment in database.', 'error');
+            addNotification('Secure payment verification failed: ' + err.message, 'error');
           }
           setCheckoutLoading(false);
         },
@@ -807,25 +858,58 @@ export default function App() {
 
   return (
     <TranslationProvider user={user}>
-      <Layout 
-        currentPage={currentPage}
-        onPageChange={handleNavigatePage} 
-        user={user}
-        onLogout={handleLogout}
-        notifications={notifications}
-        removeNotification={removeNotification}
-        cartItem={cartItem}
-      >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentPage}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -12 }}
-          transition={{ duration: 0.25 }}
-          className="w-full h-full"
-          id={`page-${currentPage}`}
+      {user?.role === 'admin' ? (
+        <div className="w-full min-h-screen bg-[#0F172A] text-[#F8FAFC] font-sans" id="admin-fullscreen-root">
+          <AdminPortal 
+            onAddNotification={addNotification}
+            onPageChange={handleNavigatePage}
+            onRefreshDownloads={fetchDownloads}
+            videos={videos}
+            onRefreshVideos={fetchVideos}
+            onLogout={handleLogout}
+            user={user}
+          />
+          {/* Floating Notifications Toaster */}
+          <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+            {notifications.map((notif) => (
+              <div
+                key={notif.id}
+                className={`pointer-events-auto flex items-center justify-between p-4 rounded-xl shadow-lg border animate-slide-in text-xs font-sans ${
+                  notif.type === 'success' 
+                    ? 'bg-emerald-950 border-emerald-700 text-emerald-200' 
+                    : notif.type === 'error'
+                    ? 'bg-rose-950 border-rose-700 text-rose-200'
+                    : 'bg-slate-900 border-slate-700 text-slate-200'
+                }`}
+              >
+                <span>{notif.text}</span>
+                <button onClick={() => removeNotification(notif.id)} className="ml-4 hover:opacity-75">
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Layout 
+          currentPage={currentPage}
+          onPageChange={handleNavigatePage} 
+          user={user}
+          onLogout={handleLogout}
+          notifications={notifications}
+          removeNotification={removeNotification}
+          cartItem={cartItem}
         >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentPage}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25 }}
+            className="w-full h-full"
+            id={`page-${currentPage}`}
+          >
           {currentPage === 'home' && (
             <Home 
               onPageChange={handleNavigatePage} 
@@ -895,17 +979,15 @@ export default function App() {
           )}
 
           {currentPage === 'admin' && user?.role === 'admin' && (
-            <AdminPortal 
-              onAddNotification={addNotification}
-              onPageChange={handleNavigatePage}
-              onRefreshDownloads={fetchDownloads}
-              videos={videos}
-              onRefreshVideos={fetchVideos}
-            />
+            <div className="p-8 text-center bg-white rounded-2xl shadow border border-slate-200 max-w-md mx-auto my-12">
+              <h2 className="text-xl font-bold text-slate-900 mb-2">Redirecting to Admin Dashboard...</h2>
+              <p className="text-slate-600 text-sm">Please wait while we log you into the secure admin control panel.</p>
+            </div>
           )}
         </motion.div>
       </AnimatePresence>
     </Layout>
+      )}
     </TranslationProvider>
   );
 }

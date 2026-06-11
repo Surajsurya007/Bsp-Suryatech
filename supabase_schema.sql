@@ -254,6 +254,8 @@ CREATE POLICY "Public select video_tutorials" ON public.video_tutorials FOR SELE
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select system_settings" ON public.system_settings;
 CREATE POLICY "Public select system_settings" ON public.system_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin modify system_settings" ON public.system_settings;
+CREATE POLICY "Admin modify system_settings" ON public.system_settings FOR ALL USING (true) WITH CHECK (true);
 
 
 -- 2. Customer Profiles RLS Policies

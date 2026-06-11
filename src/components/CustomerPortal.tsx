@@ -439,9 +439,13 @@ export default function CustomerPortal({
         onLoginSuccess(data.session?.access_token || 'bsp_auth_token_simulated', userObj);
         onAddNotification(`Welcome back, ${userObj.name}!`, 'success');
         
-        // 3) Redirect user to default main Home page ("/")
-        onPageChange('home');
-        window.history.pushState({}, '', '/');
+        // 3) Redirect user to admin panel or default main Home page ("/")
+        if (userObj.role === 'admin') {
+          onPageChange('admin');
+        } else {
+          onPageChange('home');
+          window.history.pushState({}, '', '/');
+        }
       } else {
         setSupabaseErrorMsg('Authenication session missing');
         onAddNotification('Authentication completed but no user session was returned.', 'error');

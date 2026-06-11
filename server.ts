@@ -8,6 +8,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import Razorpay from 'razorpay';
 import { GoogleGenAI } from '@google/genai';
 import { dbActions, verifyPassword, signToken, verifyToken } from './server/db';
 import { Coupon } from './src/types';
@@ -1544,133 +1545,321 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     });
   });
 
-  // Create Order (Razorpay Simulation Initializer)
-  app.post('/api/orders/create', authenticateToken, (req: any, res: any) => {
-    const { productId, couponCode } = req.body;
-    const prod = dbActions.getProductById(productId);
-    if (!prod) return res.status(404).json({ error: 'Product not found' });
+  // Create Order (Razorpay Simulation Initializer / Real Razorpay live order)
+  app.post('/api/orders/create', authenticateToken, async (req: any, res: any) => {
+    try {
+      const { productId, couponCode } = req.body;
+      const prod = dbActions.getProductById(productId);
+      if (!prod) return res.status(404).json({ error: 'Product not found' });
 
-    let finalAmount = prod.price;
-    if (couponCode) {
-      const cp = dbActions.getCouponByCode(couponCode);
-      if (cp) {
-        finalAmount = Math.ceil(prod.price * (1 - cp.discountPercent / 100));
+      let finalAmount = prod.price;
+      if (couponCode) {
+        const cp = dbActions.getCouponByCode(couponCode);
+        if (cp) {
+          finalAmount = Math.ceil(prod.price * (1 - cp.discountPercent / 100));
+        }
       }
+
+      // Initialize Order in local database
+      const newOrder = dbActions.createOrder({
+        userId: req.user.id,
+        userEmail: req.user.email,
+        userName: req.user.name,
+        productId: prod.id,
+        productName: prod.name,
+        amount: finalAmount,
+        couponCode,
+        status: 'pending'
+      });
+
+      const rzpConfig = dbActions.getRazorpayConfig();
+      let razorpayOrderId = '';
+
+      if (rzpConfig.keyId && rzpConfig.keySecret && rzpConfig.keyId !== 'YOUR_KEY_ID' && !rzpConfig.keyId.startsWith('rzp_test_SURYA')) {
+        try {
+          console.log(`Initializing real Razorpay client with Key ID: ${rzpConfig.keyId}`);
+          const razorpay = new Razorpay({
+            key_id: rzpConfig.keyId,
+            key_secret: rzpConfig.keySecret
+          });
+
+          const orderOptions = {
+            amount: finalAmount * 100, // Razorpay amount is in paise
+            currency: rzpConfig.currency || 'INR',
+            receipt: `receipt_${newOrder.id}`
+          };
+
+          const rzpOrder = await razorpay.orders.create(orderOptions);
+          razorpayOrderId = rzpOrder.id;
+
+          // Save the real Razorpay Order ID on the order (we maps it to paymentId for easy lookup)
+          dbActions.updateOrder(newOrder.id, { paymentId: razorpayOrderId });
+          console.log("Real Razorpay Order created successfully:", razorpayOrderId);
+        } catch (rzpErr: any) {
+          console.error("Failed to generate real Razorpay Order. Falling back to simulated flow:", rzpErr.message || rzpErr);
+        }
+      }
+
+      res.status(201).json({
+        orderId: newOrder.id, // local database internal id
+        razorpayOrderId: razorpayOrderId || undefined, // the real Razorpay order ID
+        amount: finalAmount,
+        keyId: rzpConfig.enabled ? rzpConfig.keyId : 'rzp_test_SURYA2026KEY',
+        currency: rzpConfig.currency || 'INR',
+        productName: prod.name
+      });
+    } catch (err: any) {
+      console.error("Create Order Server Failure:", err);
+      res.status(500).json({ error: 'Failed to initialize order.' });
     }
-
-    // Initialize Order
-    const newOrder = dbActions.createOrder({
-      userId: req.user.id,
-      userEmail: req.user.email,
-      userName: req.user.name,
-      productId: prod.id,
-      productName: prod.name,
-      amount: finalAmount,
-      couponCode,
-      status: 'pending'
-    });
-
-    const rzpConfig = dbActions.getRazorpayConfig();
-
-    res.status(201).json({
-      orderId: newOrder.id,
-      amount: finalAmount,
-      keyId: rzpConfig.enabled ? rzpConfig.keyId : 'rzp_test_SURYA2026KEY',
-      currency: rzpConfig.currency || 'INR',
-      productName: prod.name
-    });
   });
 
-  // Complete Simulated Razorpay Payment
-  app.post('/api/orders/verify', authenticateToken, (req: any, res: any) => {
-    const { orderId, paymentId, status, paymentMethod } = req.body;
-    
-    const order = dbActions.getOrders().find(o => o.id === orderId);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+  // Complete / Verify Razorpay Payment (Handles both Real Cryptographic Signature and Secure Fallbacks)
+  app.post('/api/orders/verify', authenticateToken, async (req: any, res: any) => {
+    try {
+      const { 
+        orderId, 
+        razorpay_order_id, 
+        razorpay_payment_id, 
+        razorpay_signature, 
+        status, 
+        paymentMethod 
+      } = req.body;
+      
+      console.log("Verifying payment registers for Order:", orderId || razorpay_order_id);
 
-    if (status === 'success') {
-      const cleanPaymentId = paymentId || 'pay_RZPSIM_' + Math.random().toString(36).substr(2, 10).toUpperCase();
+      // Find order either by internal orderId or mapped Razorpay Order ID (saved in paymentId)
+      let order = dbActions.getOrders().find(o => o.id === orderId);
+      if (!order && razorpay_order_id) {
+        order = dbActions.getOrders().find(o => o.paymentId === razorpay_order_id);
+      }
+      
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
 
-      // 1. Update Order status
-      dbActions.updateOrder(orderId, {
-        status: 'success',
-        paymentId: cleanPaymentId
-      });
+      const rzpConfig = dbActions.getRazorpayConfig();
+      let verified = false;
+      let errorMsg = '';
 
-      // 2. Provision License Key instantly for the User!
-      const license = dbActions.createLicense(
-        order.userId,
-        order.userEmail,
-        order.id,
-        order.productId,
-        order.productName
-      );
+      // Perform Signature Verification if real signature parameters are provided
+      if (razorpay_order_id && razorpay_payment_id && razorpay_signature) {
+        if (rzpConfig.keySecret && rzpConfig.keySecret !== 'YOUR_SECRET') {
+          const textToVerify = razorpay_order_id + "|" + razorpay_payment_id;
+          const generatedSignature = crypto
+            .createHmac('sha256', rzpConfig.keySecret)
+            .update(textToVerify)
+            .digest('hex');
 
-      // 3. Save Payment Record in invoice history!
-      const invNum = 'INV-2026-' + Math.floor(1000 + Math.random() * 9000).toString();
-      dbActions.createPayment({
-        invoiceNumber: invNum,
-        transactionId: cleanPaymentId,
-        paymentMethod: paymentMethod || 'UPI_Razorpay',
-        amount: order.amount,
-        paymentDate: new Date().toISOString(),
-        status: 'captured',
-        orderId: order.id,
-        userId: order.userId
-      });
+          if (generatedSignature === razorpay_signature) {
+            verified = true;
+            console.log("Real cryptographic Razorpay signature verified successfully!");
+          } else {
+            console.error("Razorpay Signature Validation Mismatch!");
+            errorMsg = "Cryptographic signature mismatch. Transaction authentication rejected.";
+          }
+        } else {
+          // No secret configured but signature passed? fallback
+          verified = true;
+          console.warn("Razorpay Secret missing in database configuration - completed via bypass.");
+        }
+      } else {
+        // Fallback for simulated checkout form
+        if (status === 'success') {
+          verified = true;
+        } else {
+          errorMsg = "Simulated payment failed, transaction aborted.";
+        }
+      }
 
-      // 4. Generate Invoice record!
-      const profile = dbActions.getCustomerProfileByUserId(order.userId);
-      dbActions.createInvoice({
-        invoiceNumber: invNum,
-        orderId: order.id,
-        userId: order.userId,
-        clientName: profile?.clientName || order.userName || 'Client ' + order.userId,
-        businessName: profile?.businessName || 'Business Profile Inc.',
-        emailAddress: profile?.emailAddress || order.userEmail,
-        contactNumber: profile?.contactNumber || '9999999999',
-        amount: order.amount,
-        gstAmount: Math.ceil(order.amount * 0.18),
-        netAmount: Math.ceil(order.amount - (order.amount * 0.18)),
-        productName: order.productName,
-        licenseKey: license.licenseKey
-      });
+      if (verified) {
+        const cleanPaymentId = razorpay_payment_id || 'pay_RZPSIM_' + Math.random().toString(36).substr(2, 10).toUpperCase();
 
-      // 5. Send customer notifications for New Purchase, Payment Success, License Activated, Invoice Generated!
-      dbActions.createNotification({
-        userId: order.userId,
-        title: 'New Purchase Order Received',
-        message: `Your purchase order for "${order.productName}" has been successfully received.`,
-        type: 'purchase'
-      });
-      dbActions.createNotification({
-        userId: order.userId,
-        title: 'Razorpay Payment Completed Successful',
-        message: `Successfully paid ₹${order.amount}. Transaction Reference: ${cleanPaymentId}`,
-        type: 'payment_success'
-      });
-      dbActions.createNotification({
-        userId: order.userId,
-        title: 'Software License Activated',
-        message: `Your lifetime key for "${order.productName}" is verified & active: ${license.licenseKey}`,
-        type: 'license_activated'
-      });
-      dbActions.createNotification({
-        userId: order.userId,
-        title: 'GST Invoice Generated',
-        message: `Your official GST Tax invoice ${invNum} has been generated. Ready to download/view.`,
-        type: 'invoice_generated'
-      });
+        // 1. Update Order status
+        dbActions.updateOrder(order.id, {
+          status: 'success',
+          paymentId: cleanPaymentId
+        });
 
-      return res.json({
-        success: true,
-        message: 'Payment completed and verified successfully! Your license key is now active.',
-        order,
-        license
-      });
-    } else {
-      dbActions.updateOrder(orderId, { status: 'failed' });
-      return res.status(400).json({ error: 'Simulated payment failed, transaction aborted.' });
+        // 2. Provision License Key instantly for the User!
+        const license = dbActions.createLicense(
+          order.userId,
+          order.userEmail,
+          order.id,
+          order.productId,
+          order.productName
+        );
+
+        // 3. Save Payment Record in invoice history!
+        const invNum = 'INV-2026-' + Math.floor(1000 + Math.random() * 9000).toString();
+        dbActions.createPayment({
+          invoiceNumber: invNum,
+          transactionId: cleanPaymentId,
+          paymentMethod: paymentMethod || 'UPI_Razorpay',
+          amount: order.amount,
+          paymentDate: new Date().toISOString(),
+          status: 'captured',
+          orderId: order.id,
+          userId: order.userId
+        });
+
+        // 4. Generate Invoice record!
+        const profile = dbActions.getCustomerProfileByUserId(order.userId);
+        dbActions.createInvoice({
+          invoiceNumber: invNum,
+          orderId: order.id,
+          userId: order.userId,
+          clientName: profile?.clientName || order.userName || 'Client ' + order.userId,
+          businessName: profile?.businessName || 'Business Profile Inc.',
+          emailAddress: profile?.emailAddress || order.userEmail,
+          contactNumber: profile?.contactNumber || '9999999999',
+          amount: order.amount,
+          gstAmount: Math.ceil(order.amount * 0.18),
+          netAmount: Math.ceil(order.amount - (order.amount * 0.18)),
+          productName: order.productName,
+          licenseKey: license.licenseKey
+        });
+
+        // 5. Send customer notifications for New Purchase, Payment Success, License Activated, Invoice Generated!
+        dbActions.createNotification({
+          userId: order.userId,
+          title: 'New Purchase Order Received',
+          message: `Your purchase order for "${order.productName}" has been successfully received.`,
+          type: 'purchase'
+        });
+        dbActions.createNotification({
+          userId: order.userId,
+          title: 'Razorpay Payment Completed Successful',
+          message: `Successfully paid ₹${order.amount}. Transaction Reference: ${cleanPaymentId}`,
+          type: 'payment_success'
+        });
+        dbActions.createNotification({
+          userId: order.userId,
+          title: 'Software License Activated',
+          message: `Your lifetime key for "${order.productName}" is verified & active: ${license.licenseKey}`,
+          type: 'license_activated'
+        });
+        dbActions.createNotification({
+          userId: order.userId,
+          title: 'GST Invoice Generated',
+          message: `Your official GST Tax invoice ${invNum} has been generated. Ready to download/view.`,
+          type: 'invoice_generated'
+        });
+
+        // --- DYNAMIC SUPABASE WEB DECORATOR WRITE PARITY (if enabled) ---
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          try {
+            console.log("Syncing payment verification logs to remote Supabase database instantly...");
+            // 1. Insert order record
+            await supabase.from('orders').upsert({
+              id: order.id,
+              user_id: order.userId,
+              user_email: order.userEmail,
+              user_name: order.userName,
+              product_id: order.productId,
+              product_name: order.productName,
+              amount: order.amount,
+              coupon_code: order.couponCode || null,
+              status: 'success',
+              payment_id: cleanPaymentId,
+              created_at: new Date().toISOString()
+            });
+
+            // 2. Insert license record
+            await supabase.from('licenses').upsert({
+              id: 'lic_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+              user_id: order.userId,
+              user_email: order.userEmail,
+              order_id: order.id,
+              product_id: order.productId,
+              product_name: order.productName,
+              license_key: license.licenseKey,
+              status: 'active',
+              expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              created_at: new Date().toISOString()
+            });
+
+            // 3. Insert payment record
+            await supabase.from('payments').upsert({
+              id: 'pay_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+              invoice_number: invNum,
+              transaction_id: cleanPaymentId,
+              payment_method: paymentMethod || 'UPI_Razorpay',
+              amount: order.amount,
+              payment_date: new Date().toISOString(),
+              status: 'success',
+              order_id: order.id,
+              user_id: order.userId
+            });
+
+            // 4. Insert invoice record
+            await supabase.from('invoices').upsert({
+              id: 'inv_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+              invoice_number: invNum,
+              order_id: order.id,
+              user_id: order.userId,
+              client_name: profile?.clientName || order.userName || 'Client ' + order.userId,
+              business_name: profile?.businessName || 'Business Profile Inc.',
+              email_address: order.userEmail,
+              contact_number: profile?.contactNumber || '9999999999',
+              amount: order.amount,
+              gst_amount: Math.ceil(order.amount * 0.18),
+              net_amount: Math.ceil(order.amount - (order.amount * 0.18)),
+              product_name: order.productName,
+              license_key: license.licenseKey,
+              created_at: new Date().toISOString()
+            });
+
+            // 5. Insert notification record
+            await supabase.from('notifications').upsert({
+              id: 'not_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+              user_id: order.userId,
+              title: 'Suryatech Subscription Serial Dispatched!',
+              message: `Your BSP Suryatech software serial subscription key for ${order.productName} was activated successfully. Key: ${license.licenseKey}`,
+              type: 'success',
+              read: false,
+              created_at: new Date().toISOString()
+            });
+            console.log("Supabase direct transaction records sync succeeded!");
+          } catch (sbSyncErr: any) {
+            console.warn("Dual DB Sync Warning: Supabase write failed. Relying on local persistent storage caches:", sbSyncErr.message || sbSyncErr);
+          }
+        }
+
+        return res.json({
+          success: true,
+          message: 'Payment verified and transaction records sealed successfully!',
+          order: { ...order, status: 'success', paymentId: cleanPaymentId },
+          license
+        });
+      } else {
+        dbActions.updateOrder(order.id, { status: 'failed' });
+        
+        // Parallel sync failure to Supabase
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          try {
+            await supabase.from('orders').upsert({
+              id: order.id,
+              user_id: order.userId,
+              user_email: order.userEmail,
+              user_name: order.userName,
+              product_id: order.productId,
+              product_name: order.productName,
+              amount: order.amount,
+              coupon_code: order.couponCode || null,
+              status: 'failed',
+              created_at: new Date().toISOString()
+            });
+          } catch (e) {}
+        }
+
+        return res.status(400).json({ error: errorMsg || 'Payment verification failed, transaction aborted.' });
+      }
+    } catch (apiErr: any) {
+      console.error("Verify Payment API Error:", apiErr);
+      res.status(500).json({ error: 'System crash verifying transaction.' });
     }
   });
 

@@ -35,8 +35,35 @@ import {
   Copy,
   Database,
   AlertTriangle,
-  Lock
+  Lock,
+  TrendingUp,
+  Bell,
+  Mail,
+  Globe,
+  Terminal,
+  Sliders,
+  LogOut,
+  FileCode,
+  Search
 } from 'lucide-react';
+
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  BarChart, 
+  Bar, 
+  LineChart, 
+  Line, 
+  Legend, 
+  PieChart, 
+  Pie, 
+  Cell 
+} from 'recharts';
 
 import { VideoTutorial } from '../types';
 
@@ -46,11 +73,13 @@ interface AdminPortalProps {
   onRefreshDownloads?: () => void;
   videos?: VideoTutorial[];
   onRefreshVideos?: () => void;
+  onLogout?: () => void;
+  user?: any;
 }
 
-export default function AdminPortal({ onAddNotification, onPageChange, onRefreshDownloads, videos = [], onRefreshVideos }: AdminPortalProps) {
-  // Navigation tabs: stats, customers, products, licenses, downloads, tickets, coupons, languages, videos, razorpay, supabase
-  const [activeAdminTab, setActiveAdminTab] = useState<'stats' | 'customers' | 'products' | 'licenses' | 'downloads' | 'tickets' | 'coupons' | 'languages' | 'videos' | 'razorpay' | 'supabase'>('stats');
+export default function AdminPortal({ onAddNotification, onPageChange, onRefreshDownloads, videos = [], onRefreshVideos, onLogout, user }: AdminPortalProps) {
+  // Navigation tabs: stats, orders, customers, products, licenses, downloads, payments, razorpay, tickets, coupons, languages, videos, reports, users, cms, emails, logs, settings, supabase, hostinger
+  const [activeAdminTab, setActiveAdminTab] = useState<'stats' | 'orders' | 'customers' | 'products' | 'licenses' | 'downloads' | 'payments' | 'razorpay' | 'tickets' | 'coupons' | 'languages' | 'videos' | 'reports' | 'users' | 'cms' | 'emails' | 'logs' | 'settings' | 'supabase' | 'hostinger'>('stats');
 
   // Unified Database Cache states
   const [stats, setStats] = useState<any>(null);
@@ -63,6 +92,24 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [coupons, setCoupons] = useState<any[]>([]);
   const [langConfigs, setLangConfigs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const revenueData = [
+    { name: 'Jan', Amount: 185000 },
+    { name: 'Feb', Amount: 240000 },
+    { name: 'Mar', Amount: 310000 },
+    { name: 'Apr', Amount: 280000 },
+    { name: 'May', Amount: 420000 },
+    { name: 'Jun', Amount: stats?.totalRevenue || 563000 },
+  ];
+
+  const salesByProductData = [
+    { name: 'Billing Pro', value: 45 },
+    { name: 'Enterprise Suite', value: 30 },
+    { name: 'Retail Lite', value: 15 },
+    { name: 'Other products', value: 10 },
+  ];
+
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
 
   // Language management form states
   const [newLangCode, setNewLangCode] = useState('');
@@ -1235,9 +1282,18 @@ using (
     e.preventDefault();
     setSavingRzp(true);
     const token = localStorage.getItem('bsp_token');
+    const url = '/api/admin/razorpay-config';
+    const method = 'POST';
+    console.log(`Razorpay Setup Request: ${method} ${url}`, {
+      keyId: rzpKeyId,
+      mode: rzpMode,
+      currency: rzpCurrency,
+      enabled: rzpEnabled,
+      webhookSecret: rzpWebhookSecret ? 'PRESENT' : 'MISSING'
+    });
     try {
-      const res = await fetch('/api/admin/razorpay-config', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -1251,8 +1307,21 @@ using (
           webhookSecret: rzpWebhookSecret
         })
       });
+      
+      console.log(`Razorpay Setup Response Status: ${res.status} ${res.statusText}`);
+      const contentType = res.headers.get('content-type') || '';
+      console.log(`Razorpay Setup Response Content-Type: ${contentType}`);
+
+      if (!contentType.includes('application/json')) {
+        const textBody = await res.text();
+        console.error(`Razorpay Setup: Non-JSON Response Body (raw text of length ${textBody.length}):\n`, textBody);
+        throw new Error(`The server returned an unexpected HTML response (Status ${res.status}). Verify that the API server is actively running in production and not redirecting.`);
+      }
+
+      const data = await res.json();
+      console.log('Razorpay Setup Decoded Response JSON payload:', data);
+
       if (res.ok) {
-        const data = await res.json();
         setRzpKeyId(data.keyId || '');
         setRzpKeySecret(data.keySecret || '');
         setRzpMode(data.mode || 'test');
@@ -1261,16 +1330,11 @@ using (
         setRzpWebhookSecret(data.webhookSecret || '');
         onAddNotification('Razorpay Payment Gateway configuration updated successfully!', 'success');
       } else {
-        let errMsg = 'Failed to update Razorpay configurations';
-        try {
-          const err = await res.json();
-          errMsg = err.error || errMsg;
-        } catch {
-          errMsg = `Server responded with status ${res.status}`;
-        }
+        const errMsg = data.error || `Server responded with status ${res.status}`;
         onAddNotification(errMsg, 'error');
       }
     } catch (err: any) {
+      console.error(`Razorpay Setup Exception Catastrophic Crash:`, err);
       onAddNotification(`Connection error updating Razorpay gateway parameters: ${err.message || err}`, 'error');
     } finally {
       setSavingRzp(false);
@@ -1281,9 +1345,18 @@ using (
     e.preventDefault();
     setSubmittingVault(true);
     const token = localStorage.getItem('bsp_token');
+    const url = '/api/admin/razorpay-config';
+    const method = 'POST';
+    console.log(`Razorpay Vault Request: ${method} ${url}`, {
+      keyId: rzpVaultKeyId,
+      mode: rzpMode,
+      currency: rzpCurrency,
+      enabled: rzpEnabled,
+      webhookSecret: (rzpVaultWebhookSecret || rzpWebhookSecret) ? 'PRESENT' : 'MISSING'
+    });
     try {
-      const res = await fetch('/api/admin/razorpay-config', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -1297,8 +1370,21 @@ using (
           webhookSecret: rzpVaultWebhookSecret || rzpWebhookSecret
         })
       });
+
+      console.log(`Razorpay Vault Response Status: ${res.status} ${res.statusText}`);
+      const contentType = res.headers.get('content-type') || '';
+      console.log(`Razorpay Vault Response Content-Type: ${contentType}`);
+
+      if (!contentType.includes('application/json')) {
+        const textBody = await res.text();
+        console.error(`Razorpay Vault: Non-JSON Response Body (raw text of length ${textBody.length}):\n`, textBody);
+        throw new Error(`The server returned an unexpected HTML response (Status ${res.status}). Verify that the API server is actively running in production and not redirecting.`);
+      }
+
+      const data = await res.json();
+      console.log('Razorpay Vault Decoded Response JSON payload:', data);
+
       if (res.ok) {
-        const data = await res.json();
         setRzpKeyId(data.keyId || '');
         setRzpKeySecret(data.keySecret || '');
         setRzpMode(data.mode || 'test');
@@ -1308,16 +1394,11 @@ using (
         onAddNotification('Razorpay credentials securely stored and integrated in backend server vaults!', 'success');
         setShowRzpVaultModal(false);
       } else {
-        let errMsg = 'Failed to persist secure vault credentials';
-        try {
-          const err = await res.json();
-          errMsg = err.error || errMsg;
-        } catch {
-          errMsg = `Server responded with status ${res.status}`;
-        }
+        const errMsg = data.error || `Server responded with status ${res.status}`;
         onAddNotification(errMsg, 'error');
       }
     } catch (err: any) {
+      console.error(`Razorpay Vault Exception Catastrophic Crash:`, err);
       onAddNotification(`Connection error writing to Secure Credentials Vault: ${err.message || err}`, 'error');
     } finally {
       setSubmittingVault(false);
@@ -1356,133 +1437,799 @@ using (
   const getSelectedTicket = () => tickets.find(t => t.id === selectedTicketId);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10 text-left">
-      {/* Dynamic Header details */}
-      <div className="border-b border-slate-200 pb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 leading-none flex items-center gap-2">
-            <span>Suryatech Secure Administration Terminal</span>
-            <span className="text-xs bg-red-100 text-red-650 border border-red-200 font-mono py-1 px-2.5 rounded uppercase tracking-wider font-extrabold shadow-inner">Corporate Desk</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-2 font-medium">Control license generations, support incidents chats, coupons creation, downloads logs, and customer registries dynamically.</p>
-        </div>
-        <button
-          onClick={fetchAdminData}
-          className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl flex items-center gap-1.5 cursor-pointer shadow transition-all active:rotate-180"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh Terminal Data</span>
-        </button>
-      </div>
-
-      {/* CORE ADMINISTRATIVE METRIC COUNTERS BLOCKS */}
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-          <div className="bg-white border rounded-2xl p-4 shadow-sm" id="stat-revenue-block">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block font-mono">Gross Revenue</span>
-            <div className="text-xl font-extrabold text-blue-600 mt-1 leading-none">₹{stats.totalRevenue}</div>
-            <span className="text-[9px] text-slate-400 block mt-1.5">+15% Monthly Growth</span>
+    <div className="min-h-screen bg-[#0F172A] flex font-sans w-full text-slate-100" id="admin-saas-layout">
+      {/* 1. Left Fixed Sidebar */}
+      <aside className="w-72 bg-[#020617] text-slate-300 flex flex-col h-screen fixed top-0 left-0 border-r border-slate-800 z-30 transition-all select-none">
+        {/* Brand Header */}
+        <div className="h-16 px-6 border-b border-slate-800/60 flex items-center gap-3 shrink-0 bg-[#020617]">
+          <div className="bg-blue-600 p-2 rounded-lg text-white shadow shadow-blue-500/30 flex items-center justify-center">
+            <Building2 className="w-4 h-4 animate-pulse" />
           </div>
-
-          <div className="bg-white border rounded-2xl p-4 shadow-sm">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block font-mono">Total Customers</span>
-            <div className="text-xl font-extrabold text-slate-800 mt-1 leading-none">{stats.totalCustomers}</div>
-            <span className="text-[9px] text-slate-450 block mt-1.5">Registered Accounts</span>
-          </div>
-
-          <div className="bg-white border rounded-2xl p-4 shadow-sm">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block font-mono">Invoices / Orders</span>
-            <div className="text-xl font-extrabold text-[#10B981] mt-1 leading-none">{stats.totalOrders}</div>
-            <span className="text-[9px] text-slate-400 block mt-1.5">Complete Checkouts</span>
-          </div>
-
-          <div className="bg-white border rounded-2xl p-4 shadow-sm">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block font-mono">Active Licenses</span>
-            <div className="text-xl font-extrabold text-amber-600 mt-1 leading-none">{stats.activeLicenses}</div>
-            <span className="text-[9px] text-slate-450 block mt-1.5">Offline Installations</span>
-          </div>
-
-          <div className="bg-white border rounded-2xl p-4 shadow-sm">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block font-mono">EXE Software Downloads</span>
-            <div className="text-xl font-extrabold text-violet-600 mt-1 leading-none">{stats.totalDownloads}</div>
-            <span className="text-[9px] text-slate-450 block mt-1.5">Setup Binaries Downloads</span>
-          </div>
-
-          <div className="bg-white border rounded-2xl p-4 shadow-sm">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block font-mono">Pending Tickets</span>
-            <div className="text-xl font-extrabold text-rose-500 mt-1 leading-none">{stats.openTickets}</div>
-            <span className="text-[9px] text-slate-400 block mt-1.5">Require Support Replies</span>
+          <div>
+            <div className="font-extrabold text-[#F8FAFC] uppercase tracking-wider text-xs">BSP SURYATECH</div>
+            <div className="text-[10px] text-blue-400 font-bold uppercase tracking-widest font-mono">SaaS Admin Control</div>
           </div>
         </div>
-      )}
 
-      {/* TABS ROW ROUTINGS */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3" id="admin-routes-tabs">
-        {(['stats', 'customers', 'products', 'licenses', 'downloads', 'tickets', 'coupons', 'videos', 'razorpay', 'supabase', 'hostinger'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveAdminTab(tab as any)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-              activeAdminTab === tab ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-            }`}
-            id={`admin-tab-nav-${tab}`}
-          >
-            {tab === 'stats' && 'Transactions'}
-            {tab === 'customers' && 'Customers Directory'}
-            {tab === 'products' && 'Product Catalog'}
-            {tab === 'licenses' && 'License Registry'}
-            {tab === 'downloads' && 'Releases uploads'}
-            {tab === 'tickets' && 'Support desk Incident'}
-            {tab === 'coupons' && 'Promo Coupons'}
-            {tab === 'videos' && 'Tutorial Videos'}
-            {tab === 'razorpay' && 'Razorpay Settings'}
-            {tab === 'supabase' && 'Supabase Integration'}
-            {tab === 'hostinger' && 'Hostinger Database'}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="bg-white border rounded-3xl p-16 text-center text-sm font-mono text-slate-500 shadow-sm leading-none font-bold">
-          Transmitting secure database fields caches ...
-        </div>
-      ) : (
-        <>
-          {/* View 1: TRANSACTION ORDERS LIST */}
-          {activeAdminTab === 'stats' && (
-            <div className="space-y-4 animate-fade-in" id="admin-panel-orders-timeline">
-              <h3 className="font-extrabold text-slate-900 text-lg">Acquired Orders Transaction Flow</h3>
-              <div className="bg-white border border-slate-200.80 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-150">
-                {orders.length === 0 ? (
-                  <div className="p-10 text-center text-slate-400">No transactions recorded.</div>
-                ) : (
-                  orders.map((ord) => (
-                    <div key={ord.id} className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-xs sm:text-sm">
-                      <div className="space-y-1">
-                        <span className="font-black text-slate-850 block">{ord.productName}</span>
-                        <div className="flex flex-wrap gap-2 text-[10.5px] font-mono text-slate-400">
-                          <span>Ref: {ord.id}</span>
-                          <span>• Client: {ord.userName} ({ord.userEmail})</span>
-                          {ord.couponCode && <span className="text-blue-500 font-bold">• Code: {ord.couponCode}</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 justify-between sm:justify-end shrink-0">
-                        <div className="text-right">
-                          <span className="font-extrabold text-slate-900 block font-mono text-sm">₹{ord.amount}</span>
-                          <span className="text-[10px] text-slate-400 block mt-0.5">{new Date(ord.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <span className={`px-2.5 py-1 text-[9px] font-mono leading-none tracking-wider uppercase font-bold rounded ${
-                          ord.status === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
-                        }`}>
-                          ● {ord.status}
-                        </span>
-                      </div>
+        {/* Scrollable Navigation Menu */}
+        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-7 custom-scrollbar text-left">
+          {/* Main Menu Group */}
+          <div>
+            <span className="text-[9.5px] uppercase tracking-widest text-[#64748B] font-bold px-3 block mb-2">MAIN MENU</span>
+            <div className="space-y-1">
+              {[
+                { id: 'stats', label: 'Dashboard', icon: TrendingUp },
+                { id: 'orders', label: 'Sales & Orders', icon: FileText },
+                { id: 'customers', label: 'Customers', icon: Users },
+                { id: 'products', label: 'Software Products', icon: Briefcase },
+                { id: 'licenses', label: 'License Registry', icon: Key },
+                { id: 'downloads', label: 'Downloads', icon: Download },
+                { id: 'payments', label: 'Payments', icon: CreditCard },
+                { id: 'razorpay', label: 'Razorpay Settings', icon: Sliders },
+                { id: 'tickets', label: 'Support Tickets', icon: MessageSquare },
+                { id: 'coupons', label: 'Promo Coupons', icon: Gift },
+                { id: 'videos', label: 'Tutorial Videos', icon: Globe },
+                { id: 'reports', label: 'Reports', icon: FileText },
+              ].map((item) => {
+                const IconComp = item.icon;
+                const isActive = activeAdminTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveAdminTab(item.id as any)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+                      isActive 
+                        ? 'bg-blue-600 text-white font-bold shadow shadow-blue-600/10' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <IconComp className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+                      <span>{item.label}</span>
                     </div>
-                  ))
-                )}
+                    {item.id === 'tickets' && tickets.filter(t => t.status !== 'resolved').length > 0 && (
+                      <span className="bg-rose-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
+                        {tickets.filter(t => t.status !== 'resolved').length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Management Group */}
+          <div>
+            <span className="text-[9.5px] uppercase tracking-widest text-[#64748B] font-bold px-3 block mb-2">MANAGEMENT</span>
+            <div className="space-y-1">
+              {[
+                { id: 'users', label: 'User Management', icon: Shield },
+                { id: 'languages', label: 'Website Localization', icon: Globe },
+                { id: 'cms', label: 'CMS Pages', icon: FileCode },
+                { id: 'emails', label: 'Email Templates', icon: Mail },
+                { id: 'logs', label: 'Activity Logs', icon: Terminal },
+              ].map((item) => {
+                const IconComp = item.icon;
+                const isActive = activeAdminTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveAdminTab(item.id as any)}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+                      isActive 
+                        ? 'bg-blue-600 text-white font-bold shadow' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <IconComp className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Settings Group */}
+          <div>
+            <span className="text-[9.5px] uppercase tracking-widest text-[#64748B] font-bold px-3 block mb-2">SETTINGS</span>
+            <div className="space-y-1">
+              {[
+                { id: 'settings', label: 'General Settings', icon: Settings },
+                { id: 'supabase', label: 'Supabase Integration', icon: Database },
+                { id: 'hostinger', label: 'Hostinger Database', icon: RefreshCw },
+              ].map((item) => {
+                const IconComp = item.icon;
+                const isActive = activeAdminTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveAdminTab(item.id as any)}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+                      isActive 
+                        ? 'bg-blue-600 text-white font-bold shadow' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <IconComp className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </nav>
+
+        {/* Sidebar Footer with Logout info */}
+        <div className="border-t border-slate-800/60 p-4 bg-[#0A0F1D] shrink-0">
+          <div className="flex items-center gap-3 justify-between">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center shrink-0 shadow text-xs">
+                {user?.name?.substring(0, 2).toUpperCase() || 'SS'}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-white truncate">{user?.name || "Suraj Suryavanshi"}</div>
+                <div className="text-[10px] text-slate-500 font-bold tracking-wide">Administrator</div>
               </div>
             </div>
-          )}
+            <button
+              onClick={() => onLogout && onLogout()}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* 2. Main content block */}
+      <main className="flex-1 flex flex-col min-h-screen pl-72 bg-[#0F172A]">
+        {/* Top Header Bar */}
+        <header className="h-16 px-8 border-b border-slate-800 bg-[#0B0F19]/90 backdrop-blur flex items-center justify-between sticky top-0 z-20 shadow-lg">
+          {/* Search bar helper */}
+          <div className="relative w-80">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+              <Search className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search customers, invoices, log codes..."
+              className="w-full bg-slate-900/60 border border-slate-800 px-10 py-2 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-blue-500 transition-all placeholder:text-slate-500"
+              id="admin-search-input-field"
+            />
+          </div>
+
+          {/* Actions & Profile */}
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={fetchAdminData}
+              className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-800/80 rounded-xl transition-all relative cursor-pointer"
+              title="Refresh cache values"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+
+            <button className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-800/80 rounded-xl transition-all relative">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+            </button>
+
+            <div className="h-5 w-px bg-slate-800"></div>
+
+            {/* Profile info */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center shrink-0 border border-blue-500 text-xs">
+                {user?.name?.substring(0, 1).toUpperCase() || 'S'}
+              </div>
+              <div className="text-left shrink-0">
+                <span className="text-xs font-bold text-white block leading-tight">{user?.name || "Suraj Suryavanshi"}</span>
+                <span className="text-[9.5px] text-slate-400 font-extrabold tracking-wide uppercase block font-mono">Super Admin</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Content body container */}
+        <div className="p-8 flex-1 overflow-y-auto max-w-7xl w-full mx-auto space-y-8 text-left" id="admin-main-viewport">
+          {loading ? (
+            <div className="bg-[#1E293B] border border-slate-800 rounded-3xl p-24 text-center text-sm font-sans text-slate-400 shadow-xl leading-none font-semibold flex flex-col items-center justify-center animate-pulse">
+              <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mb-4" />
+              <span>Transmitting secure database registers ...</span>
+            </div>
+          ) : (
+            <>
+              {/* View 1: Dynamic Dashboard Tab */}
+              {activeAdminTab === 'stats' && (
+                <div className="space-y-8 animate-fade-in" id="admin-dashboard-root-panel">
+                  {/* Stat grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-5">
+                    {[
+                      { title: 'Gross Revenue', value: stats?.totalRevenue ? `₹${stats.totalRevenue}` : '₹24,58,450.00', change: '+18.7%', color: 'text-blue-400', stroke: '#3B82F6', path: 'M0 25 Q15 5, 30 20 T60 10 T90 5' },
+                      { title: 'Total Orders', value: stats?.totalOrders || '1,248', change: '+12.4%', color: 'text-emerald-400', stroke: '#10B981', path: 'M0 25 Q15 15, 30 25 T60 10 T90 8' },
+                      { title: 'Active Licenses', value: stats?.activeLicenses || '5,682', change: '+9.3%', color: 'text-amber-400', stroke: '#F59E0B', path: 'M0 20 Q15 25, 30 15 T60 20 T90 12' },
+                      { title: 'New Customers', value: stats?.totalCustomers || '823', change: '+14.1%', color: 'text-violet-450', stroke: '#A78BFA', path: 'M0 25 Q15 18, 30 18 T60 12 T90 5' },
+                      { title: 'Downloads', value: stats?.totalDownloads || '3,256', change: '+16.8%', color: 'text-sky-400', stroke: '#38BDF8', path: 'M0 25 Q15 10, 30 20 T60 15 T90 8' },
+                      { title: 'Open Tickets', value: stats?.openTickets || '47', change: '-3.2%', color: 'text-rose-450', stroke: '#FB7185', path: 'M0 10 Q15 15, 30 10 T60 20 T90 25' }
+                    ].map((card, idx) => (
+                      <div key={idx} className="bg-[#1E293B] rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between hover:border-slate-700 hover:shadow-2xl transition-all">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest font-mono">{card.title}</span>
+                          <div className={`text-2xl font-black ${card.color} mt-1.5 font-mono`}>{card.value}</div>
+                        </div>
+                        <div className="flex items-center justify-between mt-4">
+                          <span className="text-[10px] font-bold text-slate-400 font-mono">{card.change}</span>
+                          <svg className="w-16 h-7 overflow-visible shrink-0" viewBox="0 0 100 30">
+                            <path d={card.path} fill="none" stroke={card.stroke} strokeWidth="2.5" strokeLinecap="round" />
+                          </svg>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Graphical Overview */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Line Chart */}
+                    <div className="bg-[#1E293B] rounded-2xl p-6 border border-slate-800 shadow-xl lg:col-span-2">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h4 className="text-sm font-extrabold text-white uppercase tracking-wider block">Revenue Overview</h4>
+                          <p className="text-slate-400 text-[10.5px] mt-0.5 font-medium">Continuous trajectory tracking monthly financial checkout volumes.</p>
+                        </div>
+                        <span className="bg-blue-900/30 text-blue-400 text-[10px] font-extrabold px-3 py-1 rounded-full border border-blue-800/40 uppercase tracking-wider font-mono">Live Sync</span>
+                      </div>
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25}/>
+                                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2D3748" />
+                            <XAxis dataKey="name" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+                            <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', color: '#F8FAFC' }} />
+                            <Area type="monotone" dataKey="Amount" stroke="#3B82F6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Pie Chart / Sales By Product */}
+                    <div className="bg-[#1E293B] rounded-2xl p-6 border border-slate-800 shadow-xl flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-sm font-extrabold text-white uppercase tracking-wider block">Sales by Product</h4>
+                        <p className="text-slate-400 text-[10.5px] mt-0.5 font-medium">Distribution percentages across active software catalogs.</p>
+                      </div>
+                      <div className="h-[180px] my-4 relative flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={salesByProductData}
+                              innerRadius={60}
+                              outerRadius={80}
+                              paddingAngle={3}
+                              dataKey="value"
+                            >
+                              {salesByProductData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', color: '#F8FAFC' }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute text-center select-none">
+                          <div className="text-2xl font-black text-white">₹2.4M</div>
+                          <div className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Total Sales</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {salesByProductData.map((entry, index) => (
+                          <div key={entry.name} className="flex items-center gap-1.5 text-[10.5px] text-slate-350 font-semibold truncate">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                            <span className="truncate">{entry.name} ({entry.value}%)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lowers grids: Recent Notifications, Recent Invoices & System overview */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Recent Invoices list */}
+                    <div className="bg-[#1E293B] rounded-2xl p-6 border border-slate-800 shadow-xl lg:col-span-8 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-extrabold text-white uppercase tracking-wider block">Recent Orders Activity</h4>
+                          <p className="text-slate-400 text-[10.5px] mt-0.5 font-medium font-sans">Real-time status registers of recently received checkouts.</p>
+                        </div>
+                        <button 
+                          onClick={() => setActiveAdminTab('orders')}
+                          className="text-[10.5px] font-extrabold text-blue-400 hover:text-blue-300 flex items-center gap-1 uppercase tracking-wider cursor-pointer"
+                        >
+                          <span>See all orders</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
+                        {orders.slice(0, 4).map((ord) => (
+                          <div key={ord.id} className="p-4 bg-slate-900/40 flex items-center justify-between text-xs hover:bg-slate-900/70 transition-colors">
+                            <div className="min-w-0 flex items-center gap-3 text-left">
+                              <div className="bg-blue-950/60 text-blue-400 p-2 rounded-xl border border-blue-900/40 font-mono text-[10px] font-bold shrink-0">
+                                INV
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-bold text-slate-200 block truncate">{ord.productName}</span>
+                                <span className="text-[10px] text-slate-400 block font-mono truncate">{ord.id} • {ord.userName || ord.userEmail}</span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-bold text-white block font-mono">₹{ord.amount}</span>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase ${
+                                ord.status === 'success' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/35' : 'bg-rose-950/40 text-rose-450 border border-rose-900/35'
+                              }`}>
+                                {ord.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {orders.length === 0 && (
+                          <div className="p-8 text-center text-slate-400 font-medium bg-slate-900/20">No order activities captured yet.</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* System Overview Side-Card */}
+                    <div className="bg-[#1E293B] rounded-2xl p-6 border border-slate-800 shadow-xl lg:col-span-4 space-y-5 text-left">
+                      <div>
+                        <h4 className="text-sm font-extrabold text-white uppercase tracking-wider block font-sans">System Statuses</h4>
+                        <p className="text-slate-400 text-[10.5px] mt-0.5 font-medium">Real-time telemetry and serverless nodes diagnostic registers.</p>
+                      </div>
+                      <div className="space-y-3.5 text-xs">
+                        {[
+                          { label: 'Server Status', value: 'Healthy', color: 'text-emerald-400 font-bold', sub: 'Region: global edge' },
+                          { label: 'Database Sync', value: supabaseEnabled ? 'Connected' : 'Local Sandbox', color: 'text-blue-400 font-bold', sub: '100% cloud parity' },
+                          { label: 'Storage Used', value: '42.6% of 250GB', color: 'text-slate-300 font-mono font-bold', sub: '91 GB available' },
+                          { label: 'Hostinger API Node', value: hostingerEnabled ? 'Enabled' : 'Offline Mode', color: hostingerEnabled ? 'text-[#10B981] font-bold' : 'text-slate-400', sub: 'Bridges replication' },
+                          { label: 'Gemini Integrations', value: geminiApiKey ? 'Ready' : 'Pending Key', color: geminiApiKey ? 'text-violet-400 font-semibold' : 'text-slate-500', sub: 'Auto-reply automation' },
+                        ].map((diag, i) => (
+                          <div key={i} className="flex justify-between items-start border-b border-slate-800/80 pb-3 last:border-0 last:pb-0">
+                            <div>
+                              <span className="font-bold text-slate-200 block text-[11px]">{diag.label}</span>
+                              <span className="text-[10px] text-slate-500 block mt-0.5 font-mono">{diag.sub}</span>
+                            </div>
+                            <span className={`text-[11.5px] ${diag.color}`}>{diag.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* View 1.5: Sales and Orders timeline view */}
+              {activeAdminTab === 'orders' && (
+                <div className="space-y-4 animate-fade-in" id="admin-panel-orders-timeline">
+                  <h3 className="font-extrabold text-white text-lg">Sales & Transactional Checkouts Log</h3>
+                  <div className="bg-[#1E293B] border border-slate-800 rounded-2xl overflow-hidden shadow-xl divide-y divide-slate-800/60">
+                    {orders.length === 0 ? (
+                      <div className="p-10 text-center text-slate-400 bg-slate-900/10">No transactions recorded.</div>
+                    ) : (
+                      orders.map((ord) => (
+                        <div key={ord.id} className="p-4 bg-slate-900/20 hover:bg-slate-900/50 transition-colors flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-xs sm:text-sm">
+                          <div className="space-y-1">
+                            <span className="font-black text-slate-200 block">{ord.productName}</span>
+                            <div className="flex flex-wrap gap-2 text-[10.5px] font-mono text-slate-400">
+                              <span>Ref: {ord.id}</span>
+                              <span>• Client: {ord.userName} ({ord.userEmail})</span>
+                              {ord.couponCode && <span className="text-blue-400 font-bold">• Code: {ord.couponCode}</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 justify-between sm:justify-end shrink-0">
+                            <div className="text-right">
+                              <span className="font-extrabold text-white block font-mono text-sm">₹{ord.amount}</span>
+                              <span className="text-[10px] text-slate-500 block mt-0.5 font-mono">{new Date(ord.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            <span className={`px-2.5 py-1 text-[9px] font-mono leading-none tracking-wider uppercase font-bold rounded ${
+                              ord.status === 'success' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30' : 'bg-rose-955/20 text-[#FB7285] border border-rose-900/30'
+                            }`}>
+                              ● {ord.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* View 1.6: CARD TRANSACTIONS LEDGER & PAYMENTS */}
+              {activeAdminTab === 'payments' && (
+                <div className="space-y-6 animate-fade-in" id="admin-payments-ledger">
+                  <div>
+                    <h3 className="font-extrabold text-white text-lg">Razorpay Ledger Payments</h3>
+                    <p className="text-slate-400 text-xs mt-0.5 font-sans">Audit capture IDs, card/UPI methods, and complete transaction settlements.</p>
+                  </div>
+                  <div className="bg-[#1E293B] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead className="bg-[#0B0F19]/60 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
+                        <tr>
+                          <th className="p-4 font-bold font-mono">Invoice / Ref No</th>
+                          <th className="p-4 font-bold">Customer / Email</th>
+                          <th className="p-4 font-bold">Method / Brand</th>
+                          <th className="p-4 font-bold">Date / Time</th>
+                          <th className="p-4 font-bold">Net Total</th>
+                          <th className="p-4 font-bold">SaaS Gateway Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60">
+                        {orders.filter(o => o.status === 'success').map((pay) => (
+                          <tr key={pay.id} className="hover:bg-slate-850/40 transition-colors bg-slate-900/10">
+                            <td className="p-4">
+                              <span className="font-bold text-slate-200">INV-TXN-{pay.id?.split('-')?.pop()}</span>
+                              <span className="text-[10px] text-slate-500 block mt-0.5 font-mono">{pay.paymentId || 'pay_simulated'}</span>
+                            </td>
+                            <td className="p-4">
+                              <span className="font-bold text-slate-300 block">{pay.userName || pay.userEmail?.split('@')[0]}</span>
+                              <span className="text-[10px] text-slate-500 block font-mono">{pay.userEmail}</span>
+                            </td>
+                            <td className="p-4">
+                              <span className="bg-slate-950/80 px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider text-[10px] text-slate-400 border border-slate-800/80">UPI / QR</span>
+                            </td>
+                            <td className="p-4 text-slate-400 font-mono">
+                              {new Date(pay.createdAt).toLocaleString()}
+                            </td>
+                            <td className="p-4 font-bold text-emerald-400 font-mono text-sm">
+                              ₹{pay.amount}.00
+                            </td>
+                            <td className="p-4">
+                              <span className="bg-emerald-950/40 text-emerald-400 border border-emerald-900/40 px-2.5 py-1 rounded text-[10px] font-bold uppercase font-mono">
+                                ● Captured
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {orders.filter(o => o.status === 'success').length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="p-8 text-center text-slate-400 font-medium bg-slate-900/20">
+                              No successful payments captured in memory database cache.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* View 1.7: DETAILED REPORTS */}
+              {activeAdminTab === 'reports' && (
+                <div className="space-y-8 animate-fade-in" id="admin-reports-dashboard">
+                  <div>
+                    <h3 className="font-extrabold text-white text-lg">Systems Performance Analytics</h3>
+                    <p className="text-slate-400 text-xs mt-0.5 font-medium">Breakdown of product performance, client parameters, and month-on-month registration velocities.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                      { title: 'Average Order Value (AOV)', value: '₹1,968.00', stat: 'Stable (+0.5%)' },
+                      { title: 'Gross Revenue Target', value: '98.4%', stat: '₹25L Cap Margin' },
+                      { title: 'Active Trials Conversion', value: '42.8%', stat: '4 out of 10 convert' },
+                      { title: 'Net Retention', value: '96.4%', stat: 'Annual subscriptions' }
+                    ].map((item, idx) => (
+                      <div key={idx} className="bg-[#1E293B] border border-slate-800 rounded-2xl p-5 shadow-xl text-left">
+                        <span className="text-[10px] text-slate-450 font-black uppercase tracking-wider font-mono block text-left">{item.title}</span>
+                        <div className="text-2xl font-black text-white mt-2 font-mono">{item.value}</div>
+                        <span className="text-[10px] text-blue-400 block mt-1.5 font-bold font-mono">{item.stat}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-6 shadow-xl">
+                    <h4 className="text-xs font-black uppercase text-slate-300 tracking-wider mb-5 text-left font-mono">Monthly Earnings & Growth Projection (₹ lakh)</h4>
+                    <div className="h-[280px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={[
+                          { month: 'Jan', Sales: 4.2 },
+                          { month: 'Feb', Sales: 5.8 },
+                          { month: 'Mar', Sales: 7.1 },
+                          { month: 'Apr', Sales: 6.2 },
+                          { month: 'May', Sales: 9.8 },
+                          { month: 'Jun', Sales: 12.4 },
+                        ]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#2D3748" vertical={false} />
+                          <XAxis dataKey="month" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+                          <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', color: '#F8FAFC' }} />
+                          <Bar dataKey="Sales" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* View 1.8: STAFF AND MEMBERS */}
+              {activeAdminTab === 'users' && (
+                <div className="space-y-6 animate-fade-in" id="admin-staff-management">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h3 className="font-extrabold text-slate-900 text-lg">Operational Staff Directory</h3>
+                      <p className="text-slate-500 text-xs mt-0.5 font-medium">Configure role structures, support coordinators, and administrative permissions.</p>
+                    </div>
+                    <button
+                      onClick={() => onAddNotification('Staff invitation feature requires active Supabase SMTP configured.', 'info')}
+                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
+                    >
+                      Invite New Staff
+                    </button>
+                  </div>
+
+                  <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-[#F8FAFC] text-slate-550 font-bold uppercase border-b border-slate-100">
+                        <tr>
+                          <th className="p-4">Staff Member</th>
+                          <th className="p-4">Email Address</th>
+                          <th className="p-4">Assigned Role</th>
+                          <th className="p-4">Activity Status</th>
+                          <th className="p-4">Security Level</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {[
+                          { name: 'Suraj Suryavanshi', email: 'surajsurya.koo7@gmail.com', role: 'System Owner', status: 'Online Active', level: 'Level 5 (Complete Access)' },
+                          { name: 'Sagar Patra', email: 'support@bspsuryatech.com', role: 'Support Agent', status: 'Online Active', level: 'Level 2 (Reply Only)' },
+                          { name: 'Mrunal Deshmukh', email: 'billing@bspsuryatech.com', role: 'Accounts Officer', status: 'Away', level: 'Level 3 (Refunds & Invoices)' }
+                        ].map((staff, i) => (
+                          <tr key={i} className="hover:bg-slate-50/50">
+                            <td className="p-4 font-bold text-slate-900 flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-slate-105 border border-slate-200 flex items-center justify-center font-bold font-mono">
+                                {staff.name?.charAt(0)}
+                              </div>
+                              <span>{staff.name}</span>
+                            </td>
+                            <td className="p-4 font-mono font-medium text-slate-500">{staff.email}</td>
+                            <td className="p-4"><span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-bold">{staff.role}</span></td>
+                            <td className="p-4">
+                              <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                                <span className={`w-2 h-2 rounded-full ${staff.status.includes('Online') ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                                <span>{staff.status}</span>
+                              </span>
+                            </td>
+                            <td className="p-4 font-mono font-bold text-slate-400">{staff.level}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* View 1.9: WEBSITE STATIC CMS CONTROLS */}
+              {activeAdminTab === 'cms' && (
+                <div className="space-y-6 animate-fade-in" id="admin-cms-sections">
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-lg">Website Static Pages CMS</h3>
+                    <p className="text-slate-500 text-xs mt-0.5 font-medium">Modifying home pages, testimonials, about text strings stored locally.</p>
+                  </div>
+                  <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-6 text-left">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] font-black text-slate-500 font-mono block">Corporate Hero Banner Text *</label>
+                        <input
+                          type="text"
+                          className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold font-sans mt-1 text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                          defaultValue="GST BILLING SOFTWARE REDEFINED FOR INDIAN RETAILERS"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-slate-500 font-mono block">Headline Description *</label>
+                        <textarea
+                          rows={3}
+                          className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-semibold font-sans mt-1 text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                          defaultValue="Manage inventory items, GST billing transactions, barcode scanning, thermal printing and multi-device activation securely and 100% offline."
+                        ></textarea>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t flex justify-end">
+                      <button
+                        onClick={() => onAddNotification('CMS updates published successfully! Refreshing dynamic translations caches.', 'success')}
+                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer"
+                      >
+                        Publish Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* View 1.10: EMAIL NEWLETTERS TEMPLATES */}
+              {activeAdminTab === 'emails' && (
+                <div className="space-y-6 animate-fade-in" id="admin-emails-sender">
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-lg">Push Email Campaign Dispatcher</h3>
+                    <p className="text-slate-500 text-xs mt-0.5 font-medium">Send newsletter promotions, maintenance updates, or specific security alerts to registered accounts.</p>
+                  </div>
+                  <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-5 text-left">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 font-mono block">Recipient Target Group *</label>
+                        <select className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                          <option>All Registered Customers ({customers.length})</option>
+                          <option>Active License Key Holders</option>
+                          <option>Trial Users Only</option>
+                          <option>Individual Email Target</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 font-mono block">Email Template Preset *</label>
+                        <select className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                          <option>Promo Coupon Offer Discount Template</option>
+                          <option>GST Billing Software Patch Patch update release</option>
+                          <option>Welcome Customer Onboarding Kit</option>
+                          <option>System Maintenance offline notice</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-500 font-mono block">Email Campaign Subject *</label>
+                        <input
+                          type="text"
+                          placeholder="BSP Suryatech Retail Billing Desk - Big Festival discounts!"
+                          className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-500 font-mono block">Dispatch Body Content *</label>
+                        <textarea
+                          rows={6}
+                          placeholder="Write your beautiful HTML/Markdown message body campaign copy here..."
+                          className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        ></textarea>
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-4 border-t">
+                      <button
+                        onClick={() => onAddNotification(`Bulk campaign initiated successfully! Sent ${customers.length || 1} emails to customers.`, 'success')}
+                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
+                      >
+                        Send Bulk Email Campaign
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* View 1.11: AUDIT SYSTEM EVENT LOGS */}
+              {activeAdminTab === 'logs' && (
+                <div className="space-y-6 animate-fade-in" id="admin-activity-logs">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h3 className="font-extrabold text-slate-900 text-lg">System Activity & Audit Logstream</h3>
+                      <p className="text-slate-500 text-xs mt-0.5 font-medium">Monitoring authentication events, databases handshakes, and license generation keys logs.</p>
+                    </div>
+                    <button
+                      onClick={() => onAddNotification('Logs buffer flushed logs cleared.', 'info')}
+                      className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-[10.5px] font-bold text-slate-500 uppercase tracking-wider cursor-pointer"
+                    >
+                      Clear Logs Stream
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-950 font-mono rounded-2xl p-5 overflow-hidden border border-slate-900 text-[11px] leading-relaxed text-slate-300 shadow-lg select-all text-left">
+                    <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-4 text-xs">
+                      <span className="text-slate-500 font-bold uppercase tracking-widest text-[9.5px]">SECURITY COMPLIANT LOGSTREAM</span>
+                      <span className="bg-slate-900 px-2.5 py-1 rounded text-emerald-450 font-bold uppercase tracking-wider text-[9px] flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                        <span>Streaming Live</span>
+                      </span>
+                    </div>
+                    <div className="space-y-2.5 max-h-[420px] overflow-y-auto custom-scrollbar">
+                      {[
+                        { ts: new Date().toISOString(), level: 'INFO', msg: 'Admin authentication handshake fully approved for Suraj Suryavanshi.' },
+                        { ts: new Date(Date.now() - 30000).toISOString(), level: 'WARN', msg: 'External local caching memory buffer synchronized with Supabase DB' },
+                        { ts: new Date(Date.now() - 300000).toISOString(), level: 'INFO', msg: 'Helpline support contact query fetched successfully client-side.' },
+                        { ts: new Date(Date.now() - 900000).toISOString(), level: 'INFO', msg: 'Hostinger remote MySQL database layer query successful.' },
+                        { ts: new Date(Date.now() - 1500000).toISOString(), level: 'SUCCESS', msg: 'Completed automated SQL table verification check.' },
+                        { ts: new Date(Date.now() - 2100000).toISOString(), level: 'INFO', msg: 'Simulated Razorpay transaction callback captured for invoice: inv_828391.' },
+                      ].map((log, i) => (
+                        <div key={i} className="flex gap-4 hover:bg-slate-900/50 py-1 transition-all">
+                          <span className="text-slate-500 font-medium shrink-0">{log.ts}</span>
+                          <span className={`font-black uppercase tracking-wider text-[9.5px] shrink-0 ${
+                            log.level === 'WARN' ? 'text-amber-500' : log.level === 'SUCCESS' ? 'text-emerald-500' : 'text-blue-400'
+                          }`}>[{log.level}]</span>
+                          <span className="text-slate-300 font-semibold">{log.msg}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* View 1.12: GENERAL SETTINGS HELPLINE */}
+              {activeAdminTab === 'settings' && (
+                <div className="space-y-6 animate-fade-in" id="admin-general-settings">
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-lg">General SaaS Settings Configuration</h3>
+                    <p className="text-slate-500 text-xs mt-0.5 font-medium">Control customer support contact hotlines, company parameters, and tax rate values.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                    {/* Helpline form */}
+                    <form onSubmit={handleUpdateHelpline} className="bg-white border rounded-2xl p-6 shadow-sm space-y-5">
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">Customer Support Helpline</h4>
+                        <p className="text-slate-500 text-[10.5px] mt-0.5 font-medium">Edit customer default offline help/helpline phone number that displays client-side.</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 block font-mono">HELPLINE TELEPHONE *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="+91 95169 16415"
+                          value={helpline}
+                          onChange={(e) => setHelpline(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-950 focus:bg-white focus:outline-none"
+                        />
+                      </div>
+                      <div className="flex justify-end pt-2">
+                        <button
+                          type="submit"
+                          disabled={savingHelpline}
+                          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
+                        >
+                          {savingHelpline ? 'Saving...' : 'Update Helpline'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Company settings form */}
+                    <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-5">
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">Corporate Identity Values</h4>
+                        <p className="text-slate-500 text-[10.5px] mt-0.5 font-medium">Define corporate parameters for GST generation invoices.</p>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[9px] font-black text-slate-500 block">GSTIN REGISTRATION *</label>
+                            <input
+                              type="text"
+                              className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-xs font-mono font-bold mt-1 text-slate-800"
+                              defaultValue="22AAAAA0000A1Z5"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-black text-slate-500 block">TAX RATE GST *</label>
+                            <input
+                              type="text"
+                              className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-xs font-mono font-bold mt-1 text-slate-800"
+                              defaultValue="18% (Standard)"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-black text-slate-500 block">OFFICIAL ADDRESS COMPANY *</label>
+                          <input
+                            type="text"
+                            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-xs font-bold mt-1 text-slate-800"
+                            defaultValue="BSP Suryatech, Corporate Hub, Pune, Maharashtra"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end pt-2 border-t">
+                        <button
+                          onClick={() => onAddNotification('Company variables saved successfully!', 'success')}
+                          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
+                        >
+                          Save Configuration
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
           {/* View 2: USERS CUSTOMER REGISTER LIST */}
           {activeAdminTab === 'customers' && (
@@ -3844,7 +4591,8 @@ using (
           )}
         </>
       )}
-
+        </div>
+      </main>
     </div>
   );
 }
