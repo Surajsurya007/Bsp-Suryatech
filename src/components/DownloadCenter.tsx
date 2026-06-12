@@ -19,7 +19,8 @@ import {
   Bookmark,
   Share2,
   ShieldCheck,
-  ShoppingCart
+  ShoppingCart,
+  Zap
 } from 'lucide-react';
 
 interface DownloadCenterProps {
@@ -28,10 +29,201 @@ interface DownloadCenterProps {
   onTriggerTrialDownload: (prodId: string, isFull?: boolean) => void;
   onPageChange?: (page: string) => void;
   onAddToCart?: (planId: string) => void;
+  solutions?: SoftwareSolution[];
 }
 
-export default function DownloadCenter({ downloads, totalDownloads, onTriggerTrialDownload, onPageChange, onAddToCart }: DownloadCenterProps) {
+interface SoftwareSolution {
+  id: string;
+  mappedPlanId: string;
+  title: string;
+  category: string;
+  subtitle: string;
+  description: string;
+  price: string;
+  features: string[];
+  icon: string;
+  badge: string;
+  badgeColor: string;
+  exeUrl?: string;
+}
+
+const categories = [
+  'All Solutions',
+  'Billing Software',
+  'Transport Software',
+  'Hospital Software',
+  'School Software',
+  'ERP Software'
+];
+
+const solutions: SoftwareSolution[] = [
+  {
+    id: 'sol-retail',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Retail Billing Software',
+    category: 'Billing Software',
+    subtitle: 'BESTSELLER FOR SHOPS',
+    description: 'Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.',
+    price: 'INR 3,499',
+    features: ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State', 'Supplier & Client Ledgers'],
+    icon: '🛍️',
+    badge: 'Billing',
+    badgeColor: 'emerald'
+  },
+  {
+    id: 'sol-supermarket',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Supermarket POS Software',
+    category: 'Billing Software',
+    subtitle: 'COMPLETE POS PACK',
+    description: 'High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.',
+    price: 'INR 5,999',
+    features: ['High-Speed POS Checkout', 'Integrated Barcode Printing', 'Customer Loyalty Points', 'Multi-Terminal Syncing', 'Automatic Reorder Limits'],
+    icon: '🏪',
+    badge: 'Billing',
+    badgeColor: 'emerald'
+  },
+  {
+    id: 'sol-grocery',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Grocery Billing Software',
+    category: 'Billing Software',
+    subtitle: 'FAST GROCERY STORE SPECIAL',
+    description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
+    price: 'INR 4,499',
+    features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
+    icon: '🍎',
+    badge: 'Billing',
+    badgeColor: 'emerald'
+  },
+  {
+    id: 'sol-medical',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Medical Store Billing Software',
+    category: 'Billing Software',
+    subtitle: 'PHARMACY BATCH SPECIAL',
+    description: 'Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.',
+    price: 'INR 5,499',
+    features: ['Batch Code Expiry tracking', 'Drug License verification', 'Salt-wise generic lookup', 'Supplier Invoice Sync', 'Doctor referrals lists'],
+    icon: '💊',
+    badge: 'Billing',
+    badgeColor: 'emerald'
+  },
+  {
+    id: 'sol-restaurant',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Restaurant POS & KOT Software',
+    category: 'Billing Software',
+    subtitle: 'KITCHEN & HOTEL SPECIAL',
+    description: 'Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.',
+    price: 'INR 3,499',
+    features: ['Kitchen Order Tickets (KOT)', 'Table Mapping & Status', 'Recipe Ingredient Control', 'Split Bill Settlements', 'Waiter Android App link'],
+    icon: '🍽️',
+    badge: 'Billing',
+    badgeColor: 'emerald'
+  },
+  {
+    id: 'sol-mobile',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Mobile Shop Billing Software',
+    category: 'Billing Software',
+    subtitle: 'IMEI & SERIAL TRACKER',
+    description: 'Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.',
+    price: 'INR 4,999',
+    features: ['Unique IMEI/Serial logging', 'Dynamic Repairs Tracker', 'Warranty Status Records', 'Brand & Model Catalog', 'Customer AMC reminders'],
+    icon: '📱',
+    badge: 'Billing',
+    badgeColor: 'emerald'
+  },
+  {
+    id: 'sol-electronics',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Electronics Shop Billing Software',
+    category: 'Billing Software',
+    subtitle: 'APPLIANCE SPECIAL',
+    description: 'Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.',
+    price: 'INR 5,999',
+    features: ['Dual-Serial Code validation', 'Manufacturer Warranty link', 'Installations Scheduler', 'Commission Agent ledger', 'Multi-Godown Stock check'],
+    icon: '📺',
+    badge: 'Billing',
+    badgeColor: 'emerald'
+  },
+  {
+    id: 'sol-transport',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Transport Management Software',
+    category: 'Transport Software',
+    subtitle: 'LOGISTICS & FLEET STANDARD',
+    description: 'Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.',
+    price: 'INR 7,999',
+    features: ['Fleet Management', 'Vehicle Tracking', 'Trip Sheet expense logs', 'Driver Commission accounts', 'Client & Consignee Ledgers'],
+    icon: '🚚',
+    badge: 'Transport',
+    badgeColor: 'blue'
+  },
+  {
+    id: 'sol-hospital',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Hospital & Clinic Software',
+    category: 'Hospital Software',
+    subtitle: 'HEALTHCARE INTEGRATED',
+    price: 'INR 12,499',
+    icon: '🏥',
+    badge: 'Hospital',
+    badgeColor: 'red',
+    description: 'In-patient/Out-patient registration, modular appointments, doctor scheduling, prescription prints, and laboratory logs.',
+    features: ['OPD/IPD Patient Registry', 'Doctor Scheduler & Fees', 'EHR & Digital Prescriptions', 'Pharmacy & Lab Bilateral', 'Ward Bed Occupancy']
+  },
+  {
+    id: 'sol-diagnostic',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Diagnostic Lab Manager',
+    category: 'Hospital Software',
+    subtitle: 'PATHOLOGY LABORATORY',
+    price: 'INR 8,499',
+    icon: '🔬',
+    badge: 'Hospital',
+    badgeColor: 'red',
+    description: 'Streamlined report-making logs with custom layout sheets templates, sample collection workflows, and referral networks bookkeeping.',
+    features: ['Test Report Template Maker', 'Barcode Sample Tracker', 'Patient Bill & Due Receipts', 'B2B Lab Referral Account', 'Automated Analyzer Sync']
+  },
+  {
+    id: 'sol-school',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'School ERP Management Suite',
+    category: 'School Software',
+    subtitle: 'ACADEMIC INSTITUTIONS',
+    price: 'INR 11,499',
+    icon: '🏫',
+    badge: 'School',
+    badgeColor: 'indigo',
+    description: 'Robust student lifecycle bookkeeping. Integrated fee customizer modules, grades charts, schedule grids and bus tracking.',
+    features: ['Student Profile & Admissions', 'Dynamic Fee Structure Maker', 'Class Timetable Grid', 'Exam Marks & Report Cards', 'SMS & WhatsApp Notifications']
+  },
+  {
+    id: 'sol-erp-warehouse',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Enterprise ERP Suite',
+    category: 'ERP Software',
+    subtitle: 'SUPPLY CHAIN SUITE',
+    price: 'INR 14,999',
+    icon: '🏭',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    description: 'Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.',
+    features: ['Multi-Warehouse Transfer Logs', 'Manufacturing Bill of Materials', 'Advanced Batch/Lot Control', 'PO & SO Purchase Orders', 'Reorder Stock Estimations']
+  }
+];
+
+export default function DownloadCenter({ downloads, totalDownloads, onTriggerTrialDownload, onPageChange, onAddToCart, solutions: propSolutions = [] }: DownloadCenterProps) {
   const [downloadFilter, setDownloadFilter] = useState<'all' | 'stable' | 'manuals'>('all');
+  const [selectedSolutionCategory, setSelectedSolutionCategory] = useState<string>('All Solutions');
+
+  const activeSolutions = propSolutions && propSolutions.length > 0 ? propSolutions : solutions;
+  const activeCategories = [
+    'All Solutions',
+    ...Array.from(new Set(activeSolutions.map((sol) => sol.category))).filter((cat): cat is string => !!cat)
+  ];
 
   const systemRequirements = [
     { title: 'Operating State System', val: 'Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)' },
@@ -64,104 +256,195 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
         </div>
       </section>
 
-      {/* WINDOWS INSTALL EXES BINARIES LIST */}
+      {/* SOFTWARE PACKAGES AND SOLUTIONS ACTIONS CATALOG */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center md:text-left mb-8 max-w-lg">
-          <h2 className="font-black text-slate-800 text-xl">Active Binary Releases</h2>
-          <p className="text-slate-400 text-xs mt-1">Lightweight executable installers. Verified virus-free and signed by BSP Suryatech.</p>
+        <div className="text-center space-y-4 mb-12">
+          <h2 className="font-extrabold text-slate-900 text-3xl tracking-tight">Select Your Business Solution</h2>
+          <p className="text-slate-500 text-sm max-w-2xl mx-auto">
+            Explore industry-specific offline-first desktop systems. Select a layout filter category to instantly view and purchase tailored packages.
+          </p>
+
+          {/* Dynamic Tabs Pills with active state */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 pt-4">
+            {activeCategories.map((cat) => {
+              const isActive = selectedSolutionCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedSolutionCategory(cat)}
+                  className={`px-5 py-2 rounded-full text-xs font-bold leading-normal transition-all duration-200 cursor-pointer border ${
+                    isActive 
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20 scale-103'
+                      : 'bg-white border-slate-205 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                  }`}
+                  id={`cat-tab-button-${cat.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {downloads.map((dl) => {
-            const isEnterprise = dl.filename.toLowerCase().includes('enterprise');
-            return (
+        {/* Dynamic Solutions Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 select-none" id="solutions-interactive-grid">
+          {activeSolutions
+            .filter((sol) => selectedSolutionCategory === 'All Solutions' || sol.category === selectedSolutionCategory)
+            .map((sol) => (
               <div 
-                key={dl.id}
-                className="bg-white border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between hover:border-blue-400 transition-all"
-                id={`downloader-info-card-${dl.id}`}
+                key={sol.id} 
+                className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden border border-slate-100 hover:border-slate-250 group/card transform hover:-translate-y-1"
+                id={`sol-card-${sol.id}`}
               >
-                <div className="space-y-6">
-                  {/* Top Release details Header */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-mono font-bold uppercase border border-blue-150-100">
-                        {isEnterprise ? 'GST Enterprise Release' : 'Retail Standard Release'}
-                      </span>
-                      <h4 className="text-lg font-extrabold text-slate-800 mt-2">{dl.filename}</h4>
-                      <div className="flex gap-4 text-xs text-slate-450 font-mono">
-                        <span>Version: {dl.version}</span>
-                        <span>Size: {dl.fileSize}</span>
-                        <span className="text-emerald-600">Downloads: {dl.downloadCount}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <button
-                        onClick={() => {
-                          const mappedProdId = dl.id === 'dl-1' ? 'prod-billing-pro' : 'prod-billing-enterprise';
-                          onPageChange?.(`software-details:${mappedProdId}`);
-                        }}
-                        className="p-3 bg-blue-50 hover:bg-blue-105 text-blue-600 hover:text-blue-700 hover:scale-105 active:scale-95 rounded-xl cursor-pointer transition-all duration-200 border-0 flex items-center justify-center shadow-sm text-center"
-                        title="View Full Software Details"
-                        id={`view-software-details-btn-${dl.id}`}
-                      >
-                        <Terminal className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          onAddToCart?.(dl.id === 'dl-1' ? 'prod-billing-pro' : 'prod-billing-enterprise');
-                        }}
-                        className="p-3 bg-blue-50 hover:bg-blue-105 text-blue-600 hover:text-blue-700 hover:scale-105 active:scale-95 rounded-xl cursor-pointer transition-all duration-200 border-0 flex items-center justify-center shadow-sm text-center"
-                        title="Add to Cart"
-                        id={`add-to-cart-download-btn-${dl.id}`}
-                      >
-                        <ShoppingCart className="w-5 h-5" />
-                      </button>
-                    </div>
+                {/* Desktop App frame container header */}
+                <div className="bg-[#090D1A] px-4 py-3 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block opacity-90 animate-pulse" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block opacity-90" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block opacity-90" />
                   </div>
-
-                  {/* Release bullet log changes */}
-                  <div className="space-y-2">
-                    <span className="text-[10px] text-slate-450 uppercase font-bold tracking-widest font-mono">Release Notes / Changelog:</span>
-                    <ul className="space-y-2">
-                      {dl.releaseNotes.map((note: string, noteI: number) => (
-                        <li key={noteI} className="flex gap-2 text-xs text-slate-600" id={`changeline-item-${dl.id}-${noteI}`}>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                          <span className="leading-normal">{note}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="text-[9.5px] font-mono text-slate-500 font-bold tracking-widest uppercase">
+                    DESKTOP_WIN_V3.0
                   </div>
                 </div>
 
-                {/* Big download action buttons */}
-                <div className="pt-6 mt-6 border-t border-slate-100">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      onClick={() => onTriggerTrialDownload(dl.id, false)}
-                      className="w-full py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer text-xs"
-                      id={`trigger-exe-trial-download-${dl.id}`}
-                    >
-                      <Download className="w-4 h-4 text-slate-500" />
-                      <span>Download Free Trial (.EXE)</span>
-                    </button>
+                {/* Dark Blue patterned graphic icon header */}
+                <div 
+                  className="bg-slate-950 px-6 py-12 flex flex-col items-center justify-center relative overflow-hidden select-none"
+                  style={{
+                    backgroundImage: 'radial-gradient(circle at top, #0E1B32 0%, #040810 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 10px)'
+                  }}
+                >
+                  {/* Glowing light effect behind icon */}
+                  <div className="absolute inset-0 bg-blue-500/5 filter blur-2xl rounded-full scale-75" />
+                  
+                  {/* Huge software asset placeholder icon as emoji */}
+                  <span className="text-5xl drop-shadow-md transform group-hover/card:scale-110 transition-transform duration-300 relative z-10">
+                    {sol.icon}
+                  </span>
+
+                  {/* Emerald or Blue category badge */}
+                  <span 
+                    className={`px-3 py-1 text-[10px] font-bold uppercase rounded-full tracking-wider font-mono absolute bottom-4 border ${
+                      sol.badgeColor === 'emerald' 
+                        ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' 
+                        : sol.badgeColor === 'blue'
+                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                        : sol.badgeColor === 'red'
+                        ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                        : sol.badgeColor === 'purple'
+                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                        : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                    }`}
+                  >
+                    {sol.badge || sol.category}
+                  </span>
+                </div>
+
+                {/* Information contents block */}
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    {/* Bestseller/Special subtag */}
+                    <span className="text-[10px] font-black text-blue-600 font-sans tracking-wide uppercase bg-blue-50 px-2.5 py-1 rounded">
+                      {sol.subtitle || 'Business Solution'}
+                    </span>
+
+                    <h3 className="text-lg font-bold text-slate-900 leading-tight mt-2.5 tracking-tight group-hover/card:text-blue-600 transition-colors">
+                      {sol.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-500 leading-relaxed font-normal min-h-[40px]">
+                      {sol.description}
+                    </p>
+
+                    {/* Features checklist */}
+                    <div className="space-y-2 pt-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">KEY FEATURES:</span>
+                      <ul className="space-y-2">
+                        {sol.features.map((feat, fidx) => (
+                          <li key={fidx} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                            <span className="w-4 h-4 bg-emerald-50 text-emerald-600 font-bold font-mono rounded-full flex items-center justify-center text-[9px] border border-emerald-100 shrink-0">✓</span>
+                            <span className="truncate">{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Pricing and purchase buttons block */}
+                  <div className="pt-6 mt-6 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-400 font-bold font-mono tracking-tight uppercase">Lifetime License</span>
+                      <span className="text-lg font-black text-slate-900 tracking-tight font-sans">
+                        {sol.price}
+                      </span>
+                    </div>
 
                     <button
-                      onClick={() => onTriggerTrialDownload(dl.id, true)}
-                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer text-xs shadow-sm"
-                      id={`trigger-exe-full-download-${dl.id}`}
+                      onClick={() => {
+                        console.log(`DownloadCenter: Adding ${sol.title} Solution (${sol.mappedPlanId}) to cart...`);
+                        onAddToCart?.(sol.mappedPlanId);
+                      }}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 mt-4 transition-all duration-150 cursor-pointer shadow-md hover:shadow-blue-500/10 active:scale-97"
                     >
-                      <ShieldCheck className="w-4 h-4 text-blue-200" />
-                      <span>Download Full Version (.EXE)</span>
+                      <Zap className="w-3.5 h-3.5 fill-current text-white shrink-0" />
+                      <span>Buy Now</span>
+                    </button>
+
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <button
+                        onClick={() => {
+                          console.log(`DownloadCenter: Adding ${sol.title} Solution to cart...`);
+                          onAddToCart?.(sol.mappedPlanId);
+                        }}
+                        className="py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer text-center"
+                      >
+                        Add to Cart
+                      </button>
+                      <button
+                        onClick={() => {
+                          onPageChange?.(`software-details:${sol.mappedPlanId}`);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer text-center"
+                      >
+                        Learn More
+                      </button>
+                    </div>
+
+                    {/* Setup / EXE direct download button */}
+                    <button
+                      onClick={() => {
+                        if (sol.exeUrl) {
+                          // Direct setup download
+                          console.log(`DownloadCenter: Triggering direct setup download for ${sol.title}...`);
+                          const isBase64 = sol.exeUrl.startsWith('data:');
+                          const link = document.createElement('a');
+                          link.href = sol.exeUrl;
+                          link.download = `${sol.title.replace(/[^a-zA-Z0-9]/g, '_')}_Setup.exe`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        } else {
+                          // Simulator trial download fallback
+                          onTriggerTrialDownload?.(sol.mappedPlanId);
+                        }
+                      }}
+                      className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200/80 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 mt-3 transition-all duration-150 cursor-pointer"
+                      id={`dl-btn-exe-${sol.id}`}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{sol.exeUrl ? 'Download Setup (.EXE)' : 'Download Trial (.EXE)'}</span>
                     </button>
                   </div>
-                  <span className="text-[9.5px] text-center text-slate-400 block mt-2">Compatible with Windows 7/8/10/11 workstation terminals. Verification checks apply.</span>
                 </div>
 
               </div>
-            );
-          })}
+          ))}
         </div>
       </section>
+
+
 
       {/* SYSTEM HARDWARE REQUIREMENTS TABLE */}
       <section className="bg-slate-100 border-y border-slate-200/60 py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 rounded-3xl">

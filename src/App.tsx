@@ -46,6 +46,7 @@ export default function App() {
   const [products, setProducts] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [downloads, setDownloads] = useState<any[]>([]);
+  const [solutions, setSolutions] = useState<any[]>([]);
   const [totalDownloads, setTotalDownloads] = useState<number>(1420);
   const [videos, setVideos] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Array<{ id: string; text: string; type: 'success' | 'info' | 'error' }>>([]);
@@ -182,10 +183,12 @@ export default function App() {
     fetchTestimonials();
     fetchDownloads();
     fetchVideos();
+    fetchSolutions();
 
     const pollInterval = setInterval(() => {
       fetchProducts();
       fetchVideos();
+      fetchSolutions();
     }, 8000); // Polling index catalogs periodically
 
     return () => clearInterval(pollInterval);
@@ -195,6 +198,7 @@ export default function App() {
   useEffect(() => {
     if (currentPage === 'downloads') {
       fetchDownloads();
+      fetchSolutions();
     }
   }, [currentPage]);
 
@@ -343,6 +347,21 @@ export default function App() {
       console.warn('Downloads load exception. Using static defaults:', err);
       setDownloads(defaultDownloads);
       setTotalDownloads(1420);
+    }
+  };
+
+  const fetchSolutions = async () => {
+    try {
+      console.log("App: Fetching solutions dynamically from API...");
+      const res = await fetch('/api/solutions');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setSolutions(data);
+        }
+      }
+    } catch (err) {
+      console.warn("Solutions load exception:", err);
     }
   };
 
@@ -1000,6 +1019,7 @@ export default function App() {
               onTriggerTrialDownload={handleTriggerTrialDownload}
               onPageChange={handleNavigatePage}
               onAddToCart={handleAddToCartAndChoosePrice}
+              solutions={solutions}
             />
           )}
 

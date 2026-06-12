@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, RazorpayConfig } from '../src/types';
+import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, RazorpayConfig, SoftwareSolution } from '../src/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
@@ -87,6 +87,7 @@ interface DatabaseSchema {
   downloadCounter: number;
   languageConfigs: LanguageConfig[];
   videos: VideoTutorial[];
+  solutions: SoftwareSolution[];
   razorpayConfig?: RazorpayConfig;
   helpline?: string;
   geminiApiKey?: string;
@@ -125,6 +126,7 @@ export let db: DatabaseSchema = {
   downloadCounter: 1420,
   languageConfigs: [],
   videos: [],
+  solutions: [],
   helpline: '+91 95169 16415',
   hostingerConfig: {
     host: '',
@@ -341,6 +343,177 @@ const defaultVideos: VideoTutorial[] = [
   }
 ];
 
+export const defaultSolutions: SoftwareSolution[] = [
+  {
+    id: 'sol-retail',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Retail Billing Software',
+    category: 'Billing Software',
+    subtitle: 'BESTSELLER FOR SHOPS',
+    description: 'Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.',
+    price: 'INR 3,499',
+    features: ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State', 'Supplier & Client Ledgers'],
+    icon: '🛍️',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: ''
+  },
+  {
+    id: 'sol-supermarket',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Supermarket POS Software',
+    category: 'Billing Software',
+    subtitle: 'COMPLETE POS PACK',
+    description: 'High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.',
+    price: 'INR 5,999',
+    features: ['High-Speed POS Checkout', 'Integrated Barcode Printing', 'Customer Loyalty Points', 'Multi-Terminal Syncing', 'Automatic Reorder Limits'],
+    icon: '🏪',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: ''
+  },
+  {
+    id: 'sol-grocery',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Grocery Billing Software',
+    category: 'Billing Software',
+    subtitle: 'FAST GROCERY STORE SPECIAL',
+    description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
+    price: 'INR 4,499',
+    features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
+    icon: '🍎',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: ''
+  },
+  {
+    id: 'sol-medical',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Medical Store Billing Software',
+    category: 'Billing Software',
+    subtitle: 'PHARMACY BATCH SPECIAL',
+    description: 'Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.',
+    price: 'INR 5,499',
+    features: ['Batch Code Expiry tracking', 'Drug License verification', 'Salt-wise generic lookup', 'Supplier Invoice Sync', 'Doctor referrals lists'],
+    icon: '💊',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: ''
+  },
+  {
+    id: 'sol-restaurant',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Restaurant POS & KOT Software',
+    category: 'Billing Software',
+    subtitle: 'KITCHEN & HOTEL SPECIAL',
+    description: 'Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.',
+    price: 'INR 3,499',
+    features: ['Kitchen Order Tickets (KOT)', 'Table Mapping & Status', 'Recipe Ingredient Control', 'Split Bill Settlements', 'Waiter Android App link'],
+    icon: '🍽️',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: ''
+  },
+  {
+    id: 'sol-mobile',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Mobile Shop Billing Software',
+    category: 'Billing Software',
+    subtitle: 'IMEI & SERIAL TRACKER',
+    description: 'Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.',
+    price: 'INR 4,999',
+    features: ['Unique IMEI/Serial logging', 'Dynamic Repairs Tracker', 'Warranty Status Records', 'Brand & Model Catalog', 'Customer AMC reminders'],
+    icon: '📱',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: ''
+  },
+  {
+    id: 'sol-electronics',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Electronics Shop Billing Software',
+    category: 'Billing Software',
+    subtitle: 'APPLIANCE SPECIAL',
+    description: 'Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.',
+    price: 'INR 5,999',
+    features: ['Dual-Serial Code validation', 'Manufacturer Warranty link', 'Installations Scheduler', 'Commission Agent ledger', 'Multi-Godown Stock check'],
+    icon: '📺',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: ''
+  },
+  {
+    id: 'sol-transport',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Transport Management Software',
+    category: 'Transport Software',
+    subtitle: 'LOGISTICS & FLEET STANDARD',
+    description: 'Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.',
+    price: 'INR 7,999',
+    features: ['Fleet Management', 'Vehicle Tracking', 'Trip Sheet expense logs', 'Driver Commission accounts', 'Client & Consignee Ledgers'],
+    icon: '🚚',
+    badge: 'Transport',
+    badgeColor: 'blue',
+    exeUrl: ''
+  },
+  {
+    id: 'sol-hospital',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Hospital & Clinic Software',
+    category: 'Hospital Software',
+    subtitle: 'HEALTHCARE INTEGRATED',
+    price: 'INR 12,499',
+    icon: '🏥',
+    badge: 'Hospital',
+    badgeColor: 'red',
+    description: 'In-patient/Out-patient registration, modular appointments, doctor scheduling, prescription prints, and laboratory logs.',
+    features: ['OPD/IPD Patient Registry', 'Doctor Scheduler & Fees', 'EHR & Digital Prescriptions', 'Pharmacy & Lab Bilateral', 'Ward Bed Occupancy'],
+    exeUrl: ''
+  },
+  {
+    id: 'sol-diagnostic',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Diagnostic Lab Manager',
+    category: 'Hospital Software',
+    subtitle: 'PATHOLOGY LABORATORY',
+    price: 'INR 8,499',
+    icon: '🔬',
+    badge: 'Hospital',
+    badgeColor: 'red',
+    description: 'Streamlined report-making logs with custom layout sheets templates, sample collection workflows, and referral networks bookkeeping.',
+    features: ['Test Report Template Maker', 'Barcode Sample Tracker', 'Patient Bill & Due Receipts', 'B2B Lab Referral Account', 'Automated Analyzer Sync'],
+    exeUrl: ''
+  },
+  {
+    id: 'sol-school',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'School ERP Management Suite',
+    category: 'School Software',
+    subtitle: 'ACADEMIC INSTITUTIONS',
+    price: 'INR 11,499',
+    icon: '🏫',
+    badge: 'School',
+    badgeColor: 'indigo',
+    description: 'Robust student lifecycle bookkeeping. Integrated fee customizer modules, grades charts, schedule grids and bus tracking.',
+    features: ['Student Profile & Admissions', 'Dynamic Fee Structure Maker', 'Class Timetable Grid', 'Exam Marks & Report Cards', 'SMS & WhatsApp Notifications'],
+    exeUrl: ''
+  },
+  {
+    id: 'sol-erp-warehouse',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Enterprise ERP Suite',
+    category: 'ERP Software',
+    subtitle: 'SUPPLY CHAIN SUITE',
+    price: 'INR 14,999',
+    icon: '🏭',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    description: 'Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.',
+    features: ['Multi-Warehouse Transfer Logs', 'Manufacturing Bill of Materials', 'Advanced Batch/Lot Control', 'PO & SO Purchase Orders', 'Reorder Stock Estimations'],
+    exeUrl: ''
+  }
+];
+
 export const defaultRazorpayConfig: RazorpayConfig = {
   keyId: process.env.RAZORPAY_KEY_ID || 'YOUR_KEY_ID',
   keySecret: process.env.RAZORPAY_KEY_SECRET || 'YOUR_SECRET',
@@ -369,6 +542,7 @@ export function initDB() {
       if (!db.downloads || db.downloads.length === 0) db.downloads = defaultDownloads;
       if (!db.reviews || db.reviews.length === 0) db.reviews = defaultReviews;
       if (!db.videos || db.videos.length === 0) db.videos = [...defaultVideos];
+      if (!db.solutions || db.solutions.length === 0) db.solutions = [...defaultSolutions];
       if (!db.customerProfiles) db.customerProfiles = [];
       if (!db.payments) db.payments = [];
       if (!db.invoices) db.invoices = [];
@@ -431,7 +605,8 @@ function seedDB() {
     languageConfigs: [...defaultLanguageConfigs],
     videos: [...defaultVideos],
     razorpayConfig: { ...defaultRazorpayConfig },
-    helpline: '+91 95169 16415'
+    helpline: '+91 95169 16415',
+    solutions: defaultSolutions
   };
 
   // Seed default admin
@@ -1072,6 +1247,36 @@ export const dbActions = {
     };
     saveDB();
     return (db as any).hostingerConfig;
+  },
+
+  // Solutions actions
+  getSolutions: () => db.solutions || [],
+  createSolution: (sol: Omit<SoftwareSolution, 'id'>) => {
+    const id = 'sol-' + Math.random().toString(36).substr(2, 9);
+    const newSol: SoftwareSolution = {
+      ...sol,
+      id
+    };
+    if (!db.solutions) db.solutions = [];
+    db.solutions.push(newSol);
+    saveDB();
+    return newSol;
+  },
+  updateSolution: (id: string, updates: Partial<SoftwareSolution>) => {
+    if (!db.solutions) db.solutions = [];
+    const idx = db.solutions.findIndex(s => s.id === id);
+    if (idx > -1) {
+      db.solutions[idx] = { ...db.solutions[idx], ...updates };
+      saveDB();
+      return db.solutions[idx];
+    }
+    return null;
+  },
+  deleteSolution: (id: string) => {
+    if (!db.solutions) db.solutions = [];
+    db.solutions = db.solutions.filter(s => s.id !== id);
+    saveDB();
+    return true;
   }
 };
 

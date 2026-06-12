@@ -78,20 +78,62 @@ interface AdminPortalProps {
 }
 
 export default function AdminPortal({ onAddNotification, onPageChange, onRefreshDownloads, videos = [], onRefreshVideos, onLogout, user }: AdminPortalProps) {
-  // Navigation tabs: stats, orders, customers, products, licenses, downloads, payments, razorpay, tickets, coupons, languages, videos, reports, users, cms, emails, logs, settings, supabase, hostinger
-  const [activeAdminTab, setActiveAdminTab] = useState<'stats' | 'orders' | 'customers' | 'products' | 'licenses' | 'downloads' | 'payments' | 'razorpay' | 'tickets' | 'coupons' | 'languages' | 'videos' | 'reports' | 'users' | 'cms' | 'emails' | 'logs' | 'settings' | 'supabase' | 'hostinger'>('stats');
+  // Navigation tabs: stats, orders, customers, products, licenses, downloads, payments, razorpay, tickets, coupons, languages, videos, reports, users, cms, emails, logs, settings, supabase, hostinger, solutions
+  const [activeAdminTab, setActiveAdminTab] = useState<'stats' | 'orders' | 'customers' | 'products' | 'licenses' | 'downloads' | 'payments' | 'razorpay' | 'tickets' | 'coupons' | 'languages' | 'videos' | 'reports' | 'users' | 'cms' | 'emails' | 'logs' | 'settings' | 'supabase' | 'hostinger' | 'solutions'>('stats');
 
   // Unified Database Cache states
   const [stats, setStats] = useState<any>(null);
   const [customers, setCustomers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [solutions, setSolutions] = useState<any[]>([]);
   const [licenses, setLicenses] = useState<any[]>([]);
   const [downloads, setDownloads] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [langConfigs, setLangConfigs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Solutions creation form states
+  const [solTitle, setSolTitle] = useState('');
+  const [solCategory, setSolCategory] = useState('Billing Software');
+  const [solSubtitle, setSolSubtitle] = useState('');
+  const [solDesc, setSolDesc] = useState('');
+  const [solPrice, setSolPrice] = useState('INR 3,499');
+  const [solFeatures, setSolFeatures] = useState('');
+  const [solIcon, setSolIcon] = useState('🛍️');
+  const [solBadge, setSolBadge] = useState('');
+  const [solBadgeColor, setSolBadgeColor] = useState('emerald');
+  const [solMappedPlanId, setSolMappedPlanId] = useState('prod-billing-pro');
+  const [solExeUrl, setSolExeUrl] = useState('');
+  const [solDemoVideoUrl, setSolDemoVideoUrl] = useState('');
+  const [solGallery, setSolGallery] = useState<string[]>([]);
+  const [inputSolPhotoUrl, setInputSolPhotoUrl] = useState('');
+  const [addingSol, setAddingSol] = useState(false);
+
+  // Solutions edit states
+  const [editingSolId, setEditingSolId] = useState<string | null>(null);
+  const [editSolTitle, setEditSolTitle] = useState('');
+  const [editSolCategory, setEditSolCategory] = useState('');
+  const [editSolSubtitle, setEditSolSubtitle] = useState('');
+  const [editSolDesc, setEditSolDesc] = useState('');
+  const [editSolPrice, setEditSolPrice] = useState('');
+  const [editSolFeatures, setEditSolFeatures] = useState('');
+  const [editSolIcon, setEditSolIcon] = useState('');
+  const [editSolBadge, setEditSolBadge] = useState('');
+  const [editSolBadgeColor, setEditSolBadgeColor] = useState('');
+  const [editSolMappedPlanId, setEditSolMappedPlanId] = useState('');
+  const [editSolExeUrl, setEditSolExeUrl] = useState('');
+  const [editSolDemoVideoUrl, setEditSolDemoVideoUrl] = useState('');
+  const [editSolGallery, setEditSolGallery] = useState<string[]>([]);
+  const [updatingSol, setUpdatingSol] = useState(false);
+
+  // File upload state for Solutions
+  const [solExeFile, setSolExeFile] = useState<File | null>(null);
+  const [solUploadProgress, setSolUploadProgress] = useState<string | null>(null);
+  const [solUploading, setSolUploading] = useState(false);
+
+  const [productSubTab, setProductSubTab] = useState<'flagship' | 'solutions'>('flagship');
 
   const revenueData = React.useMemo(() => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -293,6 +335,10 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [prodLicenseInfo, setProdLicenseInfo] = useState('');
   const [prodDemoVideo, setProdDemoVideo] = useState('');
   const [prodGallery, setProdGallery] = useState<string[]>([]);
+  const [prodDownloadUrl, setProdDownloadUrl] = useState('');
+  const [prodExeFile, setProdExeFile] = useState<File | null>(null);
+  const [prodUploading, setProdUploading] = useState(false);
+  const [prodUploadProgress, setProdUploadProgress] = useState<string | null>(null);
   const [addingProd, setAddingProd] = useState(false);
 
   // Product Edit states
@@ -311,6 +357,7 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [editLicenseInfo, setEditLicenseInfo] = useState('');
   const [editDemoVideo, setEditDemoVideo] = useState('');
   const [editGallery, setEditGallery] = useState<string[]>([]);
+  const [editDownloadUrl, setEditDownloadUrl] = useState('');
   const [updatingProd, setUpdatingProd] = useState(false);
 
   // Interactive link entry helper
@@ -514,7 +561,7 @@ using (
     const token = localStorage.getItem('bsp_token');
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
-      const [statsRes, userRes, prodRes, licRes, dlRes, tkRes, cpRes, ordRes, langRes, rzpRes, helplineRes, geminiRes, supabaseRes, hostingerRes] = await Promise.all([
+      const [statsRes, userRes, prodRes, licRes, dlRes, tkRes, cpRes, ordRes, langRes, rzpRes, helplineRes, geminiRes, supabaseRes, hostingerRes, solRes] = await Promise.all([
         fetch('/api/admin/stats', { headers }),
         fetch('/api/admin/users', { headers }),
         fetch('/api/products'),
@@ -528,7 +575,8 @@ using (
         fetch('/api/helpline'),
         fetch('/api/admin/gemini-config', { headers }).catch(() => null),
         fetch('/api/admin/supabase-config', { headers }).catch(() => null),
-        fetch('/api/admin/hostinger-config', { headers }).catch(() => null)
+        fetch('/api/admin/hostinger-config', { headers }).catch(() => null),
+        fetch('/api/admin/solutions', { headers }).catch(() => null)
       ]);
 
       if (statsRes.ok && userRes.ok && prodRes.ok && licRes.ok && dlRes.ok && tkRes.ok && cpRes.ok && ordRes.ok && langRes.ok && rzpRes.ok) {
@@ -536,6 +584,10 @@ using (
         setCustomers(await userRes.json());
         setProducts(await prodRes.json());
         setLicenses(await licRes.json());
+        
+        if (solRes && solRes.ok) {
+          setSolutions(await solRes.json());
+        }
         
         const dlData = await dlRes.json();
         setDownloads(dlData.downloads);
@@ -671,6 +723,242 @@ using (
       onAddNotification('Network failure adding translation configuration options', 'error');
     } finally {
       setAddingLang(false);
+    }
+  };
+
+  // Solutions creation form actions
+  const handleCreateSolution = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!solTitle || !solCategory || !solDesc) {
+      onAddNotification('Title, category, and description are required', 'error');
+      return;
+    }
+    setAddingSol(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch('/api/admin/solutions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: solTitle,
+          category: solCategory,
+          subtitle: solSubtitle,
+          description: solDesc,
+          price: solPrice,
+          features: solFeatures.split('\n').map(x => x.trim()).filter(Boolean),
+          icon: solIcon,
+          badge: solBadge,
+          badgeColor: solBadgeColor,
+          mappedPlanId: solMappedPlanId,
+          exeUrl: solExeUrl,
+          demoVideoUrl: solDemoVideoUrl,
+          gallery: solGallery
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onAddNotification('Software Solution successfully published!', 'success');
+        setSolutions(prev => [...prev, data]);
+        // reset form
+        setSolTitle('');
+        setSolSubtitle('');
+        setSolDesc('');
+        setSolPrice('INR 3,499');
+        setSolFeatures('');
+        setSolIcon('🛍️');
+        setSolBadge('');
+        setSolBadgeColor('emerald');
+        setSolExeUrl('');
+        setSolDemoVideoUrl('');
+        setSolGallery([]);
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to create Software Solution', 'error');
+      }
+    } catch {
+      onAddNotification('Network error publishing Software Solution', 'error');
+    } finally {
+      setAddingSol(false);
+    }
+  };
+
+  // Update solution
+  const handleUpdateSolution = async (e: React.FormEvent, id: string) => {
+    e.preventDefault();
+    if (!editSolTitle || !editSolCategory || !editSolDesc) {
+      onAddNotification('Title, category, and description are required', 'error');
+      return;
+    }
+    setUpdatingSol(true);
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch(`/api/admin/solutions/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: editSolTitle,
+          category: editSolCategory,
+          subtitle: editSolSubtitle,
+          description: editSolDesc,
+          price: editSolPrice,
+          features: editSolFeatures.split('\n').map(x => x.trim()).filter(Boolean),
+          icon: editSolIcon,
+          badge: editSolBadge,
+          badgeColor: editSolBadgeColor,
+          mappedPlanId: editSolMappedPlanId,
+          exeUrl: editSolExeUrl,
+          demoVideoUrl: editSolDemoVideoUrl,
+          gallery: editSolGallery
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onAddNotification('Software Solution updated successfully!', 'success');
+        setSolutions(prev => prev.map(s => s.id === id ? data : s));
+        setEditingSolId(null);
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to update Software Solution', 'error');
+      }
+    } catch {
+      onAddNotification('Network error updating Software Solution', 'error');
+    } finally {
+      setUpdatingSol(false);
+    }
+  };
+
+  // Delete solution
+  const handleDeleteSolution = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this Software Solution permanently?')) return;
+    const token = localStorage.getItem('bsp_token');
+    try {
+      const res = await fetch(`/api/admin/solutions/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        onAddNotification('Software Solution deleted successfully', 'success');
+        setSolutions(prev => prev.filter(s => s.id !== id));
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Failed to delete Software Solution', 'error');
+      }
+    } catch {
+      onAddNotification('Network error deleting Software Solution', 'error');
+    }
+  };
+
+  // Start edit solution helper
+  const handleStartEditSolution = (s: any) => {
+    setEditingSolId(s.id);
+    setEditSolTitle(s.title);
+    setEditSolCategory(s.category);
+    setEditSolSubtitle(s.subtitle || '');
+    setEditSolDesc(s.description || '');
+    setEditSolPrice(s.price || '');
+    setEditSolFeatures(Array.isArray(s.features) ? s.features.join('\n') : '');
+    setEditSolIcon(s.icon || '🛍️');
+    setEditSolBadge(s.badge || '');
+    setEditSolBadgeColor(s.badgeColor || 'emerald');
+    setEditSolMappedPlanId(s.mappedPlanId || 'prod-billing-pro');
+    setEditSolExeUrl(s.exeUrl || '');
+    setEditSolDemoVideoUrl(s.demoVideoUrl || '');
+    setEditSolGallery(s.gallery || []);
+  };
+
+  // Upload Solution EXE Setup file helper
+  const handleUploadSolExe = async (isEditing: boolean) => {
+    if (!solExeFile) {
+      onAddNotification('Please select an EXE setup payload file first', 'error');
+      return;
+    }
+    setSolUploading(true);
+    setSolUploadProgress('Reading local setup file binary...');
+    try {
+      const b64 = await fileToBase64(solExeFile);
+      setSolUploadProgress('Uploading file setup to BSP Suryatech repository...');
+      const token = localStorage.getItem('bsp_token');
+      const res = await fetch('/api/admin/downloads/upload-exe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          filename: solExeFile.name,
+          base64Data: b64
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onAddNotification('EXE setup binary uploaded successfully!', 'success');
+        if (isEditing) {
+          setEditSolExeUrl(data.path);
+        } else {
+          setSolExeUrl(data.path);
+        }
+        setSolExeFile(null);
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'EXE setup binary upload failed', 'error');
+      }
+    } catch (err: any) {
+      onAddNotification('Network error during EXE setup binary upload: ' + err.message, 'error');
+    } finally {
+      setSolUploading(false);
+      setSolUploadProgress(null);
+    }
+  };
+
+  // Upload Product EXE Setup file helper
+  const handleUploadProdExe = async (isEditing: boolean) => {
+    if (!prodExeFile) {
+      onAddNotification('Please select an EXE setup payload file first', 'error');
+      return;
+    }
+    setProdUploading(true);
+    setProdUploadProgress('Reading local setup file binary...');
+    try {
+      const b64 = await fileToBase64(prodExeFile);
+      setProdUploadProgress('Uploading product file setup to BSP Suryatech repository...');
+      const token = localStorage.getItem('bsp_token');
+      const res = await fetch('/api/admin/downloads/upload-exe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          filename: prodExeFile.name,
+          base64Data: b64
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onAddNotification('Product EXE setup binary uploaded successfully!', 'success');
+        if (isEditing) {
+          setEditDownloadUrl(data.path);
+        } else {
+          setProdDownloadUrl(data.path);
+        }
+        setProdExeFile(null);
+      } else {
+        const err = await res.json();
+        onAddNotification(err.error || 'Product EXE setup binary upload failed', 'error');
+      }
+    } catch (err: any) {
+      onAddNotification('Network error during product EXE setup binary upload: ' + err.message, 'error');
+    } finally {
+      setProdUploading(false);
+      setProdUploadProgress(null);
     }
   };
 
@@ -1158,7 +1446,8 @@ using (
           systemRequirements: prodSysReqs,
           licenseInfo: prodLicenseInfo,
           demoVideoUrl: prodDemoVideo,
-          gallery: prodGallery
+          gallery: prodGallery,
+          downloadUrl: prodDownloadUrl || undefined
         })
       });
 
@@ -1176,6 +1465,7 @@ using (
         setProdLicenseInfo('');
         setProdDemoVideo('');
         setProdGallery([]);
+        setProdDownloadUrl('');
         fetchAdminData();
       } else {
         onAddNotification('Unable to upload catalog item', 'error');
@@ -1220,6 +1510,7 @@ using (
     setEditLicenseInfo(p.licenseInfo || '');
     setEditDemoVideo(p.demoVideoUrl || '');
     setEditGallery(p.gallery || []);
+    setEditDownloadUrl(p.downloadUrl || '');
   };
 
   const handleCancelEdit = () => {
@@ -1256,7 +1547,8 @@ using (
           systemRequirements: editSysReqs,
           licenseInfo: editLicenseInfo,
           demoVideoUrl: editDemoVideo,
-          gallery: editGallery
+          gallery: editGallery,
+          downloadUrl: editDownloadUrl
         })
       });
 
@@ -2625,7 +2917,40 @@ using (
           {/* View 3: PRODUCT CATALOG CRUD */}
           {activeAdminTab === 'products' && (
             <div className="space-y-8 animate-fade-in" id="admin-panel-products-crud">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Premium Subtab Controller */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 border border-slate-800 rounded-2xl p-4 gap-4 shadow-sm">
+                <div>
+                  <h3 className="font-extrabold text-[#F8FAFC] text-md tracking-tight">Software Products & Industry Solutions</h3>
+                  <p className="text-slate-400 text-xs mt-0.5 font-medium">Edit, delete, upload EXE setups, configure demo videos, and manage screenshots for flagship catalogs and industry solutions.</p>
+                </div>
+                <div className="flex bg-slate-800/85 p-1 rounded-xl border border-slate-700/60 shrink-0 select-none">
+                  <button
+                    type="button"
+                    onClick={() => setProductSubTab('flagship')}
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      productSubTab === 'flagship' 
+                        ? 'bg-blue-600 text-white shadow shadow-blue-500/20 font-extrabold' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Flagship Core Products ({products.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProductSubTab('solutions')}
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      productSubTab === 'solutions' 
+                        ? 'bg-blue-600 text-white shadow shadow-blue-500/20 font-extrabold' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Industry Specific Solutions ({solutions.length})
+                  </button>
+                </div>
+              </div>
+
+              {productSubTab === 'flagship' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
                 {/* Left product uploads creation form */}
                 <div className="lg:col-span-5 bg-white border p-5 rounded-2xl shadow-sm space-y-4 text-xs sm:text-sm">
@@ -3141,6 +3466,460 @@ using (
                         )}
                       </div>
                     ))}
+                  </div>
+                </div>
+
+              </div>
+              ) : null}
+            </div>
+          )}
+
+          {/* View: SOFTWARE SOLUTIONS MANAGEMENT */}
+          {((activeAdminTab === 'products' && productSubTab === 'solutions') || activeAdminTab === 'solutions') && (
+            <div className="space-y-6 animate-fade-in text-slate-900" id="admin-panel-solutions-hub">
+              {activeAdminTab !== 'products' && (
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-extrabold text-slate-100 text-xl tracking-tight">Software Solutions Catalog</h3>
+                    <p className="text-slate-400 text-xs">Manage industry-specific offline business platforms, set pricing ranges, assign icons, and upload custom .exe setup payloads.</p>
+                  </div>
+                  <div className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-1.5 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[11px] font-mono font-bold text-slate-300">Active Solutions: {solutions.length}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+                
+                {/* LEFT COLUMN: CRATE/EDIT FORM CONTAINER */}
+                <div className="xl:col-span-5 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+                  {editingSolId ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <h4 className="font-extrabold text-slate-900 text-sm">Edit Solution Details</h4>
+                        <button 
+                          onClick={() => setEditingSolId(null)}
+                          className="text-slate-400 hover:text-slate-600 font-bold text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <form onSubmit={(e) => handleUpdateSolution(e, editingSolId)} className="space-y-4 text-xs text-left">
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Solution Title *</label>
+                          <input 
+                            type="text" 
+                            value={editSolTitle} 
+                            onChange={(e) => setEditSolTitle(e.target.value)}
+                            className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Category *</label>
+                            <input 
+                              type="text" 
+                              value={editSolCategory} 
+                              onChange={(e) => setEditSolCategory(e.target.value)}
+                              className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                              placeholder="e.g. Billing Software"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Plan slug *</label>
+                            <input 
+                              type="text" 
+                              value={editSolMappedPlanId} 
+                              onChange={(e) => setEditSolMappedPlanId(e.target.value)}
+                              className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                              placeholder="e.g. prod-billing-pro"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Subtitle Tag</label>
+                            <input 
+                              type="text" 
+                              value={editSolSubtitle} 
+                              onChange={(e) => setEditSolSubtitle(e.target.value)}
+                              className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                              placeholder="e.g. BESTSELLER FOR SHOPS"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Price Display</label>
+                            <input 
+                              type="text" 
+                              value={editSolPrice} 
+                              onChange={(e) => setEditSolPrice(e.target.value)}
+                              className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                              placeholder="INR 3,499"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Short Description</label>
+                          <textarea 
+                            value={editSolDesc} 
+                            onChange={(e) => setEditSolDesc(e.target.value)}
+                            rows={3}
+                            className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Key Features (One feature per line)</label>
+                          <textarea 
+                            value={editSolFeatures} 
+                            onChange={(e) => setEditSolFeatures(e.target.value)}
+                            rows={4}
+                            className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500 font-mono" 
+                            placeholder="Multi-Warehouse Logs&#10;Inventory Scanners&#10;Invoicing GST Support"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Icon (Emoji)</label>
+                            <input 
+                              type="text" 
+                              value={editSolIcon} 
+                              onChange={(e) => setEditSolIcon(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-lg text-center"
+                            />
+                          </div>
+                          <div className="space-y-1 col-span-2">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Badge & Badge Color</label>
+                            <div className="flex gap-1.5">
+                              <input 
+                                type="text" 
+                                value={editSolBadge} 
+                                onChange={(e) => setEditSolBadge(e.target.value)}
+                                className="w-1/2 px-2.5 py-2 border rounded-lg"
+                                placeholder="e.g. Popular"
+                              />
+                              <select 
+                                value={editSolBadgeColor} 
+                                onChange={(e) => setEditSolBadgeColor(e.target.value)}
+                                className="w-1/2 px-2.5 py-2 border rounded-lg"
+                              >
+                                <option value="emerald">Green</option>
+                                <option value="blue">Blue</option>
+                                <option value="red">Red</option>
+                                <option value="purple">Purple</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 border-t pt-4">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Executable Setup Payload (.EXE URL)</label>
+                          <input 
+                            type="text" 
+                            value={editSolExeUrl} 
+                            onChange={(e) => setEditSolExeUrl(e.target.value)}
+                            placeholder="Direct URL or uploaded binary path..."
+                            className="w-full px-3 py-2 border rounded-lg text-xs font-mono"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={updatingSol}
+                          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs transition duration-150 cursor-pointer text-center block shadow shadow-blue-500/10"
+                        >
+                          {updatingSol ? 'Saving changes...' : 'Save Business Solution Updates'}
+                        </button>
+                      </form>
+
+                      {/* EXE Uploader block for editing */}
+                      <div className="space-y-2 bg-slate-50 p-4 border rounded-xl text-left border-dashed border-slate-250">
+                        <h5 className="font-black text-slate-800 text-[10.5px] uppercase tracking-wider">Fast Executable Setup Uploader</h5>
+                        <p className="text-slate-450 text-[10px]">Upload a fresh Windows binary (.exe) setup to live-update download targets.</p>
+                        <div className="flex flex-col gap-2 pt-2">
+                          <input 
+                            type="file" 
+                            accept=".exe"
+                            onChange={(e) => setSolExeFile(e.target.files ? e.target.files[0] : null)}
+                            className="text-[10px] text-slate-500 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-slate-200 file:font-semibold file:cursor-pointer"
+                          />
+                          {solUploadProgress && (
+                            <span className="text-[10px] text-blue-600 font-mono">{solUploadProgress}</span>
+                          )}
+                          <button
+                            type="button"
+                            disabled={solUploading || !solExeFile}
+                            onClick={() => handleUploadSolExe(true)}
+                            className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold rounded-lg text-[10px] flex items-center justify-center gap-1.5 transition-all self-end cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Upload and Link Setup EXE</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <h4 className="font-extrabold text-slate-900 text-sm border-b pb-3 text-left">Publish New Software Solution</h4>
+
+                      <form onSubmit={handleCreateSolution} className="space-y-4 text-xs text-left">
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Solution Title *</label>
+                          <input 
+                            type="text" 
+                            value={solTitle} 
+                            onChange={(e) => setSolTitle(e.target.value)}
+                            placeholder="e.g. Transport Management System"
+                            className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Category *</label>
+                            <input 
+                              type="text" 
+                              value={solCategory} 
+                              onChange={(e) => setSolCategory(e.target.value)}
+                              placeholder="e.g. Transport Software"
+                              className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Plan slug *</label>
+                            <input 
+                              type="text" 
+                              value={solMappedPlanId} 
+                              onChange={(e) => setSolMappedPlanId(e.target.value)}
+                              placeholder="e.g. prod-billing-pro"
+                              className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Subtitle Tag</label>
+                            <input 
+                              type="text" 
+                              value={solSubtitle} 
+                              onChange={(e) => setSolSubtitle(e.target.value)}
+                              placeholder="e.g. PREMIER FLEET LOGIC"
+                              className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Price Display</label>
+                            <input 
+                              type="text" 
+                              value={solPrice} 
+                              onChange={(e) => setSolPrice(e.target.value)}
+                              placeholder="INR 3,499"
+                              className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Short Description</label>
+                          <textarea 
+                            value={solDesc} 
+                            onChange={(e) => setSolDesc(e.target.value)}
+                            placeholder="Outline target business metrics, setup ease, or offline advantages..."
+                            rows={3}
+                            className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500" 
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Key Features (One feature per line)</label>
+                          <textarea 
+                            value={solFeatures} 
+                            onChange={(e) => setSolFeatures(e.target.value)}
+                            rows={4}
+                            className="w-full px-3.5 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500 font-mono" 
+                            placeholder="Feature 1&#10;Feature 2&#10;Feature 3"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Icon (Emoji)</label>
+                            <input 
+                              type="text" 
+                              value={solIcon} 
+                              onChange={(e) => setSolIcon(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-lg text-center"
+                            />
+                          </div>
+                          <div className="space-y-1 col-span-2">
+                            <label className="font-bold text-slate-700 uppercase tracking-wider block">Badge & Badge Color</label>
+                            <div className="flex gap-1.5">
+                              <input 
+                                type="text" 
+                                value={solBadge} 
+                                onChange={(e) => setSolBadge(e.target.value)}
+                                className="w-1/2 px-2.5 py-2 border rounded-lg"
+                                placeholder="e.g. Free Trial"
+                              />
+                              <select 
+                                value={solBadgeColor} 
+                                onChange={(e) => setSolBadgeColor(e.target.value)}
+                                className="w-1/2 px-2.5 py-2 border rounded-lg"
+                              >
+                                <option value="emerald">Green</option>
+                                <option value="blue">Blue</option>
+                                <option value="red">Red</option>
+                                <option value="purple">Purple</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 border-t pt-4">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Executable Setup Payload (.EXE URL)</label>
+                          <input 
+                            type="text" 
+                            value={solExeUrl} 
+                            onChange={(e) => setSolExeUrl(e.target.value)}
+                            placeholder="Direct URL or upload using the fast builder below..."
+                            className="w-full px-3 py-2 border rounded-lg text-xs font-mono"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={addingSol}
+                          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs transition duration-150 cursor-pointer text-center block shadow shadow-blue-500/10"
+                        >
+                          {addingSol ? 'Publishing solution...' : 'Deploy Software Solution Catalog'}
+                        </button>
+                      </form>
+
+                      {/* EXE Uploader block for creation */}
+                      <div className="space-y-2 bg-slate-50 p-4 border rounded-xl text-left border-dashed border-slate-250">
+                        <h5 className="font-black text-slate-800 text-[10.5px] uppercase tracking-wider">Fast Executable Setup Uploader</h5>
+                        <p className="text-slate-450 text-[10px]">Upload a Windows installer binary (.exe) to embed into this solution setup target.</p>
+                        <div className="flex flex-col gap-2 pt-2">
+                          <input 
+                            type="file" 
+                            accept=".exe"
+                            onChange={(e) => setSolExeFile(e.target.files ? e.target.files[0] : null)}
+                            className="text-[10px] text-slate-500 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-slate-200 file:font-semibold file:cursor-pointer"
+                          />
+                          {solUploadProgress && (
+                            <span className="text-[10px] text-blue-600 font-mono">{solUploadProgress}</span>
+                          )}
+                          <button
+                            type="button"
+                            disabled={solUploading || !solExeFile}
+                            onClick={() => handleUploadSolExe(false)}
+                            className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold rounded-lg text-[10px] flex items-center justify-center gap-1.5 transition-all self-end cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Upload and Link Setup EXE</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* RIGHT COLUMN: ACTIVE CATALOG SOLUTIONS LIST */}
+                <div className="xl:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+                  <h4 className="font-extrabold text-slate-100 bg-slate-900 border rounded-xl px-4 py-3 text-xs tracking-wider uppercase flex justify-between items-center select-none shrink-0 text-left">
+                    <span>ACTIVE PUBLISHED SOLUTIONS ({solutions.length})</span>
+                    <span className="text-[10px] text-slate-400 font-mono">Dynamic Category tabs available</span>
+                  </h4>
+
+                  <div className="space-y-4 max-h-[1200px] overflow-y-auto pr-1">
+                    {solutions.length === 0 ? (
+                      <div className="py-12 text-center text-slate-400 text-xs">
+                        No custom Software Solutions registered yet. Modify or add items to preview live setup downloads on the catalog page.
+                      </div>
+                    ) : (
+                      solutions.map((sol) => (
+                        <div key={sol.id} className="p-4 bg-slate-50 border rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition hover:bg-slate-100/60 text-left">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-2xl">{sol.icon}</span>
+                              <div>
+                                <h5 className="font-extrabold text-slate-900 text-sm leading-tight">{sol.title}</h5>
+                                <span className="text-[10px] font-mono text-slate-400 bg-slate-200/80 px-2 py-0.5 rounded-md mt-1 inline-block">
+                                  Category: <strong className="text-slate-700 font-extrabold">{sol.category}</strong>
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-slate-500 leading-normal max-w-xl">{sol.description}</p>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {sol.features.map((f: string, i: number) => (
+                                <span key={i} className="px-2 py-0.5 bg-white border text-slate-550 text-[9.5px] font-mono rounded font-semibold">{f}</span>
+                              ))}
+                            </div>
+                            {sol.exeUrl ? (
+                              <div className="flex items-center gap-1.5 pt-1 text-[10px] text-emerald-600 font-mono">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
+                                <span>Linked Setup Path: <strong className="font-black text-slate-800 break-all">{sol.exeUrl}</strong></span>
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-rose-500 font-mono">
+                                ⚠ No Setup payload linked. Setup will simulate a demo download wrapper.
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="text-right flex flex-col justify-between items-end sm:shrink-0 gap-3 border-t sm:border-0 pt-3 sm:pt-0">
+                            <div>
+                              <span className="text-xs text-slate-400 font-bold block">{sol.subtitle || 'Business Catalog'}</span>
+                              <span className="font-black text-slate-900 block text-sm">{sol.price}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingSolId(sol.id);
+                                  setEditSolTitle(sol.title);
+                                  setEditSolCategory(sol.category);
+                                  setEditSolSubtitle(sol.subtitle || '');
+                                  setEditSolDesc(sol.description);
+                                  setEditSolPrice(sol.price);
+                                  setEditSolFeatures(sol.features.join('\n'));
+                                  setEditSolIcon(sol.icon);
+                                  setEditSolBadge(sol.badge || '');
+                                  setEditSolBadgeColor(sol.badgeColor || 'emerald');
+                                  setEditSolMappedPlanId(sol.mappedPlanId);
+                                  setEditSolExeUrl(sol.exeUrl || '');
+                                }}
+                                className="p-2 border border-slate-205 hover:bg-white rounded-lg text-slate-650 hover:text-blue-600 cursor-pointer"
+                                title="Edit Solution details"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSolution(sol.id)}
+                                className="p-2 border border-slate-250 hover:bg-white rounded-lg text-slate-650 hover:text-rose-600 cursor-pointer"
+                                title="Delete Solution"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 

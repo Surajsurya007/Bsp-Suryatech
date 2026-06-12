@@ -215,3 +215,20 @@ export interface RazorpayConfig {
   webhookSecret: string;
 }
 
+export interface SoftwareSolution {
+  id: string;
+  mappedPlanId: string;
+  title: string;
+  category: string;
+  subtitle: string;
+  description: string;
+  price: string;
+  features: string[];
+  icon: string;
+  badge: string;
+  badgeColor: string;
+  exeUrl?: string;
+  demoVideoUrl?: string;
+  gallery?: string[];
+}
+

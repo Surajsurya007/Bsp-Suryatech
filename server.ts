@@ -1416,6 +1416,11 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json(dbActions.getProducts());
   });
 
+  // Solutions dynamic list
+  app.get('/api/solutions', (req, res) => {
+    res.json(dbActions.getSolutions());
+  });
+
   // Videos
   app.get('/api/videos', (req, res) => {
     res.json(dbActions.getVideoTutorials());
@@ -2459,7 +2464,10 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // Admin: Create Product
   app.post('/api/admin/products', requireAdmin, async (req, res) => {
-    const { name, version, size, price, originalPrice, features, description, connectedPlan } = req.body;
+    const { 
+      name, version, size, price, originalPrice, features, description, connectedPlan,
+      category, fullDescription, systemRequirements, licenseInfo, demoVideoUrl, gallery, downloadUrl
+    } = req.body;
     if (!name || !price || !version || !size) {
       return res.status(400).json({ error: 'Name, price, version, size required' });
     }
@@ -2471,8 +2479,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       originalPrice: originalPrice ? Number(originalPrice) : undefined,
       features: Array.isArray(features) ? features : [features],
       description: description || '',
-      downloadUrl: `/api/downloads/setup/prod-${Math.random().toString(36).substr(2, 4)}`,
-      connectedPlan: connectedPlan || ''
+      downloadUrl: downloadUrl || `/api/downloads/setup/prod-${Math.random().toString(36).substr(2, 4)}`,
+      connectedPlan: connectedPlan || '',
+      category: category || 'Retail & POS Billing',
+      fullDescription: fullDescription || description || '',
+      systemRequirements: systemRequirements || '',
+      licenseInfo: licenseInfo || '',
+      demoVideoUrl: demoVideoUrl || '',
+      gallery: Array.isArray(gallery) ? gallery : []
     });
 
     const supabase = getSupabaseClient();
@@ -2540,6 +2554,63 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     }
 
     res.json({ success: true });
+  });
+
+  // Admin: Solutions CRUD
+  app.get('/api/admin/solutions', requireAdmin, (req, res) => {
+    res.json(dbActions.getSolutions());
+  });
+
+  app.post('/api/admin/solutions', requireAdmin, (req, res) => {
+    const { title, category, subtitle, description, price, features, icon, badge, badgeColor, mappedPlanId, exeUrl, demoVideoUrl, gallery } = req.body;
+    if (!title || !category || !description) {
+      return res.status(400).json({ error: 'Title, category, and description are required' });
+    }
+    const newSol = dbActions.createSolution({
+      title,
+      category,
+      subtitle: subtitle || '',
+      description,
+      price: price || 'INR 0',
+      features: Array.isArray(features) ? features : (typeof features === 'string' ? features.split('\n').filter(Boolean) : []),
+      icon: icon || '🛍️',
+      badge: badge || '',
+      badgeColor: badgeColor || 'emerald',
+      mappedPlanId: mappedPlanId || 'prod-billing-pro',
+      exeUrl: exeUrl || '',
+      demoVideoUrl: demoVideoUrl || '',
+      gallery: Array.isArray(gallery) ? gallery : []
+    });
+    res.status(201).json(newSol);
+  });
+
+  app.put('/api/admin/solutions/:id', requireAdmin, (req, res) => {
+    const { title, category, subtitle, description, price, features, icon, badge, badgeColor, mappedPlanId, exeUrl, demoVideoUrl, gallery } = req.body;
+    const updates: any = {};
+    if (title !== undefined) updates.title = title;
+    if (category !== undefined) updates.category = category;
+    if (subtitle !== undefined) updates.subtitle = subtitle;
+    if (description !== undefined) updates.description = description;
+    if (price !== undefined) updates.price = price;
+    if (features !== undefined) {
+      updates.features = Array.isArray(features) ? features : (typeof features === 'string' ? features.split('\n').filter(Boolean) : []);
+    }
+    if (icon !== undefined) updates.icon = icon;
+    if (badge !== undefined) updates.badge = badge;
+    if (badgeColor !== undefined) updates.badgeColor = badgeColor;
+    if (mappedPlanId !== undefined) updates.mappedPlanId = mappedPlanId;
+    if (exeUrl !== undefined) updates.exeUrl = exeUrl;
+    if (demoVideoUrl !== undefined) updates.demoVideoUrl = demoVideoUrl;
+    if (gallery !== undefined) updates.gallery = gallery;
+
+    const updated = dbActions.updateSolution(req.params.id, updates);
+    if (!updated) return res.status(404).json({ error: 'Solution not found' });
+    res.json(updated);
+  });
+
+  app.delete('/api/admin/solutions/:id', requireAdmin, (req, res) => {
+    dbActions.deleteSolution(req.params.id);
+    res.json({ success: true, message: 'Solution deleted successfully' });
   });
 
   // Admin: Video Tutorials CRUD
