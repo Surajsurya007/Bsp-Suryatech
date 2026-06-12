@@ -449,7 +449,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       return res.status(400).json({ error: 'Please fill all fields' });
     }
     
-    // If Supabase is active, signup to Supabase Auth first
+    // If Supabase is active, signup to Supabase Auth first, but do not block local database registration if it fails (e.g. inactive or misconfigured project)
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
@@ -463,10 +463,10 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           }
         });
         if (sbError) {
-          return res.status(400).json({ error: `Supabase registration failed: ${sbError.message}` });
+          console.warn(`Supabase registration warning (skipped): ${sbError.message}`);
         }
       } catch (err: any) {
-        return res.status(500).json({ error: `Unable to access Supabase auth center: ${err.message}` });
+        console.warn(`Unable to access Supabase auth center: ${err.message}`);
       }
     }
 
@@ -505,8 +505,10 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    // If Supabase is active, verify password via Supabase Auth
+    // Try Supabase authentication
     const supabase = getSupabaseClient();
+    let sbSuccess = false;
+    let sbErrorMsg = '';
     if (supabase) {
       try {
         const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
@@ -514,16 +516,19 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           password
         });
         if (sbError) {
-          return res.status(401).json({ error: `Supabase Auth: ${sbError.message}` });
+          sbErrorMsg = sbError.message;
+        } else {
+          sbSuccess = true;
         }
       } catch (err: any) {
-        return res.status(500).json({ error: `Could not reach Supabase auth server: ${err.message}` });
+        sbErrorMsg = err.message;
       }
     }
 
     let user = dbActions.getUserByEmail(email);
-    if (!user) {
-      if (supabase) {
+    
+    if (sbSuccess) {
+      if (!user) {
         // Auto-sync Supabase user to local DB
         user = dbActions.createUser({
           name: email.split('@')[0],
@@ -541,14 +546,16 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           state: '',
           pincode: ''
         });
-      } else {
-        return res.status(401).json({ error: 'Invalid credentials' });
       }
-    }
-
-    const hash = dbActions.getUserPasswordHash(user.id);
-    if (!verifyPassword(password, hash) && !supabase) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    } else {
+      // If Supabase failed or was inactive, verify against local DB credentials hash
+      if (!user) {
+        return res.status(401).json({ error: sbErrorMsg ? `Supabase Auth failure: ${sbErrorMsg}` : 'Invalid credentials' });
+      }
+      const hash = dbActions.getUserPasswordHash(user.id);
+      if (!hash || !verifyPassword(password, hash)) {
+        return res.status(401).json({ error: sbErrorMsg ? `Auth fail: ${sbErrorMsg}` : 'Invalid credentials' });
+      }
     }
 
     const token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
@@ -2025,55 +2032,60 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // Admin: Update Razorpay gateway settings with mask protection (Supports PUT & POST fallback)
   const saveRazorpayConfigHandler = async (req: any, res: any) => {
-    const { keyId, keySecret, mode, currency, enabled, webhookSecret } = req.body;
-    const existingConfig = dbActions.getRazorpayConfig();
-    
-    let finalSecret = keySecret;
-    if (!keySecret || keySecret === '********' || /^[•\*]+$/.test(keySecret)) {
-      finalSecret = existingConfig.keySecret;
-    }
-    
-    let finalWebhookSecret = webhookSecret;
-    if (webhookSecret === '********' || (webhookSecret && /^[•\*]+$/.test(webhookSecret))) {
-      finalWebhookSecret = existingConfig.webhookSecret;
-    }
-
-    const config = dbActions.updateRazorpayConfig({ 
-      keyId, 
-      keySecret: finalSecret, 
-      mode, 
-      currency, 
-      enabled, 
-      webhookSecret: finalWebhookSecret 
-    });
-
-    // Write to Supabase system_settings table if active to keep backend persistent in cloudSQL/Postgres
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        const payloadString = JSON.stringify({ 
-          keyId, 
-          keySecret: finalSecret, 
-          mode, 
-          currency, 
-          enabled, 
-          webhookSecret: finalWebhookSecret 
-        });
-        
-        await supabase
-          .from('system_settings')
-          .upsert({ settings_key: 'razorpay_config', settings_val: payloadString }, { onConflict: 'settings_key' });
-        console.log("Supabase: Razorpay configuration successfully synchronized.");
-      } catch (sbErr: any) {
-        console.error("Supabase Sync Failed for Razorpay Config:", sbErr.message || sbErr);
+    try {
+      const { keyId, keySecret, mode, currency, enabled, webhookSecret } = req.body;
+      const existingConfig = dbActions.getRazorpayConfig();
+      
+      let finalSecret = keySecret;
+      if (!keySecret || keySecret === '********' || /^[•\*]+$/.test(keySecret)) {
+        finalSecret = existingConfig.keySecret;
       }
-    }
+      
+      let finalWebhookSecret = webhookSecret;
+      if (webhookSecret === '********' || (webhookSecret && /^[•\*]+$/.test(webhookSecret))) {
+        finalWebhookSecret = existingConfig.webhookSecret;
+      }
 
-    res.json({
-      ...config,
-      keySecret: config.keySecret ? '********' : '',
-      webhookSecret: config.webhookSecret ? '********' : ''
-    });
+      const config = dbActions.updateRazorpayConfig({ 
+        keyId, 
+        keySecret: finalSecret, 
+        mode, 
+        currency, 
+        enabled, 
+        webhookSecret: finalWebhookSecret 
+      });
+
+      // Write to Supabase system_settings table if active to keep backend persistent in cloudSQL/Postgres
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          const payloadString = JSON.stringify({ 
+            keyId, 
+            keySecret: finalSecret, 
+            mode, 
+            currency, 
+            enabled, 
+            webhookSecret: finalWebhookSecret 
+          });
+          
+          await supabase
+            .from('system_settings')
+            .upsert({ settings_key: 'razorpay_config', settings_val: payloadString }, { onConflict: 'settings_key' });
+          console.log("Supabase: Razorpay configuration successfully synchronized.");
+        } catch (sbErr: any) {
+          console.error("Supabase Sync Failed for Razorpay Config:", sbErr.message || sbErr);
+        }
+      }
+
+      res.json({
+        ...config,
+        keySecret: config.keySecret ? '********' : '',
+        webhookSecret: config.webhookSecret ? '********' : ''
+      });
+    } catch (err: any) {
+      console.error("Critical error in saveRazorpayConfigHandler:", err);
+      res.status(500).json({ error: `Internal server error handling config: ${err.message || err}` });
+    }
   };
   app.put('/api/admin/razorpay-config', requireAdmin, saveRazorpayConfigHandler);
   app.post('/api/admin/razorpay-config', requireAdmin, saveRazorpayConfigHandler);
@@ -2446,7 +2458,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   });
 
   // Admin: Create Product
-  app.post('/api/admin/products', requireAdmin, (req, res) => {
+  app.post('/api/admin/products', requireAdmin, async (req, res) => {
     const { name, version, size, price, originalPrice, features, description, connectedPlan } = req.body;
     if (!name || !price || !version || !size) {
       return res.status(400).json({ error: 'Name, price, version, size required' });
@@ -2462,19 +2474,71 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       downloadUrl: `/api/downloads/setup/prod-${Math.random().toString(36).substr(2, 4)}`,
       connectedPlan: connectedPlan || ''
     });
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('products').upsert({
+          id: newProd.id,
+          name: newProd.name,
+          version: newProd.version,
+          size: newProd.size,
+          price: newProd.price,
+          original_price: newProd.originalPrice,
+          features: JSON.stringify(newProd.features),
+          description: newProd.description,
+          download_url: newProd.downloadUrl,
+          connected_plan: newProd.connectedPlan
+        });
+      } catch (sbErr) {
+        console.warn("Background Supabase product write sync skipped:", sbErr);
+      }
+    }
+
     res.status(201).json(newProd);
   });
 
   // Admin: Update Product
-  app.put('/api/admin/products/:id', requireAdmin, (req, res) => {
+  app.put('/api/admin/products/:id', requireAdmin, async (req, res) => {
     const p = dbActions.updateProduct(req.params.id, req.body);
     if (!p) return res.status(404).json({ error: 'Product not found' });
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('products').upsert({
+          id: p.id,
+          name: p.name,
+          version: p.version,
+          size: p.size,
+          price: p.price,
+          original_price: p.originalPrice,
+          features: JSON.stringify(p.features),
+          description: p.description,
+          download_url: p.downloadUrl,
+          connected_plan: p.connectedPlan
+        });
+      } catch (sbErr) {
+        console.warn("Background Supabase product update sync skipped:", sbErr);
+      }
+    }
+
     res.json(p);
   });
 
   // Admin: Delete Product
-  app.delete('/api/admin/products/:id', requireAdmin, (req, res) => {
+  app.delete('/api/admin/products/:id', requireAdmin, async (req, res) => {
     dbActions.deleteProduct(req.params.id);
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('products').delete().eq('id', req.params.id);
+      } catch (sbErr) {
+        console.warn("Background Supabase product delete sync skipped:", sbErr);
+      }
+    }
+
     res.json({ success: true });
   });
 
@@ -2522,6 +2586,15 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   app.delete('/api/admin/testimonials/:id', requireAdmin, (req, res) => {
     dbActions.deleteTestimonial(req.params.id);
     res.json({ success: true });
+  });
+
+  // Global Express Error Handler for API endpoints to prevent HTML fallbacks on server-side exceptions
+  app.use('/api', (err: any, req: any, res: any, next: any) => {
+    console.error("Express API Pipeline Error Captured:", err.stack || err);
+    res.status(err.status || 500).json({
+      error: `API pipeline error captured: ${err.message || err}`,
+      success: false
+    });
   });
 
 

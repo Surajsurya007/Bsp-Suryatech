@@ -256,7 +256,17 @@ export default function App() {
 
   const fetchVideos = async () => {
     try {
-      console.log("App: Fetching videos direct from Supabase DB...");
+      console.log("App: Fetching videos dynamically from backend API...");
+      const res = await fetch('/api/videos');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setVideos(data);
+          return;
+        }
+      }
+
+      console.log("App: Fetching videos fallback direct from Supabase DB...");
       const { data, error } = await supabase.from('video_tutorials').select('*');
       if (data && !error && data.length > 0) {
         setVideos(data);
@@ -272,6 +282,16 @@ export default function App() {
 
   const fetchTestimonials = async () => {
     try {
+      console.log("App: Fetching testimonials dynamically from backend API...");
+      const res = await fetch('/api/testimonials');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setTestimonials(data);
+          return;
+        }
+      }
+
       console.log("App: Fetching testimonials direct from Supabase...");
       const { data, error } = await supabase.from('testimonials').select('*');
       if (data && !error && data.length > 0) {
@@ -288,7 +308,23 @@ export default function App() {
 
   const fetchDownloads = async () => {
     try {
-      console.log("App: Fetching release downloads info direct from Supabase...");
+      console.log("App: Fetching release downloads info from backend API...");
+      const res = await fetch('/api/downloads');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const formatted = data.map((item: any) => ({
+            ...item,
+            releaseNotes: typeof item.releaseNotes === 'string' ? JSON.parse(item.releaseNotes) : (item.releaseNotes || item.release_notes || [])
+          }));
+          setDownloads(formatted);
+          const counts = formatted.reduce((sum: number, item: any) => sum + (item.downloadCount || item.download_count || 0), 0);
+          setTotalDownloads(counts || 1420);
+          return;
+        }
+      }
+
+      console.log("App: Fetching release downloads info fallback direct from Supabase...");
       const { data, error } = await supabase.from('downloads_info').select('*');
       if (data && !error && data.length > 0) {
         const formatted = data.map(item => ({
@@ -319,7 +355,21 @@ export default function App() {
       return;
     }
     try {
-      console.log("App: Loading owner system licenses for user UUID:", user.id);
+      console.log("App: Loading owner system licenses for user...");
+      const token = localStorage.getItem('bsp_token');
+      
+      // 1. Try local Express API first
+      const res = await fetch('/api/customer/licenses', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserLicenses(data || []);
+        return;
+      }
+
+      // 2. Try Supabase fallback
+      console.log("App: Loading owner system licenses fallback direct from Supabase...");
       const { data, error } = await supabase
         .from('licenses')
         .select('*')
@@ -409,17 +459,26 @@ export default function App() {
       return;
     }
 
-    // Resolve product ID mapping
-    let productId = 'prod-billing-pro';
-    if (prodId.toLowerCase().includes('enterprise')) {
+    // Resolve product ID mapping dynamically
+    let productId = prodId;
+    if (prodId.toLowerCase().includes('enterprise') || prodId.toLowerCase().includes('plan-enterprise')) {
       productId = 'prod-billing-enterprise';
+    } else if (prodId.toLowerCase().includes('pro') || prodId.toLowerCase().includes('plan-retail-pro')) {
+      productId = 'prod-billing-pro';
     }
 
     if (isFull) {
       // Check if they own active license for this product
-      const ownsLicense = userLicenses.some(lic => lic.productId === productId);
+      const ownsLicense = userLicenses.some(lic => 
+        lic.productId === prodId || 
+        lic.productId === productId ||
+        lic.productId === 'prod-billing-pro' ||
+        lic.productId === 'prod-billing-enterprise' ||
+        (lic.productName && lic.productName.toLowerCase().includes(prodId.toLowerCase())) ||
+        (lic.productName && prodId.toLowerCase().includes(lic.productName.toLowerCase()))
+      );
       if (!ownsLicense) {
-        addNotification(`"${productId === 'prod-billing-enterprise' ? 'Suryatech GST Enterprise Suite' : 'Suryatech Retail Billing Pro'}" is a Paid Software. Redirecting to the Pricing / Purchase page...`, 'error');
+        addNotification(`"${productId.includes('enterprise') ? 'Suryatech GST Enterprise Suite' : 'Suryatech Retail Billing Pro'}" is a Paid Software. Redirecting to the Pricing / Purchase page...`, 'error');
         setCurrentPage('pricing');
         return;
       }
