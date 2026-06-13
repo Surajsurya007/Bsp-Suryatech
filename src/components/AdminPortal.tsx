@@ -126,6 +126,7 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [editSolExeUrl, setEditSolExeUrl] = useState('');
   const [editSolDemoVideoUrl, setEditSolDemoVideoUrl] = useState('');
   const [editSolGallery, setEditSolGallery] = useState<string[]>([]);
+  const [inputEditSolPhotoUrl, setInputEditSolPhotoUrl] = useState('');
   const [updatingSol, setUpdatingSol] = useState(false);
 
   // File upload state for Solutions
@@ -3622,7 +3623,7 @@ using (
                           </div>
                         </div>
 
-                        <div className="space-y-2 border-t pt-4">
+                         <div className="space-y-2 border-t pt-4">
                           <label className="font-bold text-slate-700 uppercase tracking-wider block">Executable Setup Payload (.EXE URL)</label>
                           <input 
                             type="text" 
@@ -3631,6 +3632,92 @@ using (
                             placeholder="Direct URL or uploaded binary path..."
                             className="w-full px-3 py-2 border rounded-lg text-xs font-mono"
                           />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Demo Video URL or ID</label>
+                          <input 
+                            type="text" 
+                            placeholder="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                            value={editSolDemoVideoUrl}
+                            onChange={(e) => setEditSolDemoVideoUrl(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg"
+                          />
+                        </div>
+
+                        {/* Edit Solution Image Gallery Manager */}
+                        <div className="space-y-2 border border-slate-205/65 p-3 rounded-2xl bg-slate-50/50">
+                          <label className="text-[10px] font-black text-slate-700 font-mono block uppercase">Screenshot Image Gallery Manager</label>
+                          
+                          <div className="flex gap-2">
+                            <input
+                              type="text" 
+                              placeholder="Paste image URL..." 
+                              value={inputEditSolPhotoUrl}
+                              onChange={(e) => setInputEditSolPhotoUrl(e.target.value)}
+                              className="flex-1 bg-white border border-slate-200.80 px-3 py-2 rounded-xl text-xs text-slate-900"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (inputEditSolPhotoUrl) {
+                                  setEditSolGallery([...editSolGallery, inputEditSolPhotoUrl]);
+                                  setInputEditSolPhotoUrl('');
+                                }
+                              }}
+                              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+                            >
+                              Add URL
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9.5px] text-slate-400">or</span>
+                            <input
+                              type="file" 
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleGalleryFileUpload(file, editSolGallery, setEditSolGallery);
+                                }
+                              }}
+                              className="text-[10px] text-slate-500 cursor-pointer"
+                            />
+                          </div>
+
+                          {editSolGallery.length > 0 && (
+                            <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200/50 mt-2">
+                              {editSolGallery.map((img, i) => (
+                                <div key={i} className="relative group border border-slate-200 bg-white p-1 rounded-lg">
+                                  <img src={img} className="w-full h-10 object-contain rounded" alt="" />
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 rounded">
+                                    <button
+                                      type="button" title="Move Left"
+                                      onClick={() => moveGalleryItem(editSolGallery, i, 'up', setEditSolGallery)}
+                                      className="p-0.5 bg-slate-800 text-white rounded hover:bg-slate-700"
+                                    >
+                                      <ChevronUp className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button" title="Move Right"
+                                      onClick={() => moveGalleryItem(editSolGallery, i, 'down', setEditSolGallery)}
+                                      className="p-0.5 bg-slate-800 text-white rounded hover:bg-slate-700"
+                                    >
+                                      <ChevronDown className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button" title="Delete Image"
+                                      onClick={() => deleteGalleryItem(editSolGallery, i, setEditSolGallery)}
+                                      className="p-0.5 bg-red-600 text-white rounded hover:bg-red-500"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <button
@@ -3801,6 +3888,92 @@ using (
                           />
                         </div>
 
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 uppercase tracking-wider block">Demo Video URL or ID</label>
+                          <input 
+                            type="text" 
+                            placeholder="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                            value={solDemoVideoUrl}
+                            onChange={(e) => setSolDemoVideoUrl(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg"
+                          />
+                        </div>
+
+                        {/* Solution Image Gallery Manager */}
+                        <div className="space-y-2 border border-slate-205/65 p-3 rounded-2xl bg-slate-50/50">
+                          <label className="text-[10px] font-black text-slate-700 font-mono block uppercase">Screenshot Image Gallery Manager</label>
+                          
+                          <div className="flex gap-2">
+                            <input
+                              type="text" 
+                              placeholder="Paste image URL..." 
+                              value={inputSolPhotoUrl}
+                              onChange={(e) => setInputSolPhotoUrl(e.target.value)}
+                              className="flex-1 bg-white border border-slate-200.80 px-3 py-2 rounded-xl text-xs text-slate-900"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (inputSolPhotoUrl) {
+                                  setSolGallery([...solGallery, inputSolPhotoUrl]);
+                                  setInputSolPhotoUrl('');
+                                }
+                              }}
+                              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+                            >
+                              Add URL
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9.5px] text-slate-400">or</span>
+                            <input
+                              type="file" 
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleGalleryFileUpload(file, solGallery, setSolGallery);
+                                }
+                              }}
+                              className="text-[10px] text-slate-500 cursor-pointer"
+                            />
+                          </div>
+
+                          {solGallery.length > 0 && (
+                            <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200/50 mt-2">
+                              {solGallery.map((img, i) => (
+                                <div key={i} className="relative group border border-slate-200 bg-white p-1 rounded-lg">
+                                  <img src={img} className="w-full h-10 object-contain rounded" alt="" />
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 rounded">
+                                    <button
+                                      type="button" title="Move Left"
+                                      onClick={() => moveGalleryItem(solGallery, i, 'up', setSolGallery)}
+                                      className="p-0.5 bg-slate-800 text-white rounded hover:bg-slate-700"
+                                    >
+                                      <ChevronUp className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button" title="Move Right"
+                                      onClick={() => moveGalleryItem(solGallery, i, 'down', setSolGallery)}
+                                      className="p-0.5 bg-slate-800 text-white rounded hover:bg-slate-700"
+                                    >
+                                      <ChevronDown className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button" title="Delete Image"
+                                      onClick={() => deleteGalleryItem(solGallery, i, setSolGallery)}
+                                      className="p-0.5 bg-red-600 text-white rounded hover:bg-red-500"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
                         <button
                           type="submit"
                           disabled={addingSol}
@@ -3889,20 +4062,7 @@ using (
                             </div>
                             <div className="flex gap-2">
                               <button
-                                onClick={() => {
-                                  setEditingSolId(sol.id);
-                                  setEditSolTitle(sol.title);
-                                  setEditSolCategory(sol.category);
-                                  setEditSolSubtitle(sol.subtitle || '');
-                                  setEditSolDesc(sol.description);
-                                  setEditSolPrice(sol.price);
-                                  setEditSolFeatures(sol.features.join('\n'));
-                                  setEditSolIcon(sol.icon);
-                                  setEditSolBadge(sol.badge || '');
-                                  setEditSolBadgeColor(sol.badgeColor || 'emerald');
-                                  setEditSolMappedPlanId(sol.mappedPlanId);
-                                  setEditSolExeUrl(sol.exeUrl || '');
-                                }}
+                                onClick={() => handleStartEditSolution(sol)}
                                 className="p-2 border border-slate-205 hover:bg-white rounded-lg text-slate-650 hover:text-blue-600 cursor-pointer"
                                 title="Edit Solution details"
                               >

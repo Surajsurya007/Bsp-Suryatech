@@ -36,6 +36,7 @@ import Contact from './components/Contact';
 import CustomerPortal from './components/CustomerPortal';
 import AdminPortal from './components/AdminPortal';
 import SoftwareDetails from './components/SoftwareDetails';
+import CheckoutModal from './components/CheckoutModal';
 import { TranslationProvider } from './components/TranslationContext';
 
 export default function App() {
@@ -740,9 +741,7 @@ export default function App() {
 
       setCheckoutData(orderInitData);
       setCheckoutActive(true);
-      
-      // Try to launch official live Razorpay Gateway UI popover
-      await launchOfficialRazorpaySDK(orderInitData);
+      addNotification('Please choose your payment option in the Secure Checkout Page.', 'info');
     } catch (e: any) {
       console.error(e);
       addNotification('Error initiating checkout transaction: ' + e.message, 'error');
@@ -846,55 +845,71 @@ export default function App() {
     }
 
     try {
+      const finalTotal = data.amount;
       console.log("Opening official Razorpay UI for Order:", data.razorpayOrderId || "Direct payment (no order id)");
       const options = {
-        key: data.keyId,
-        amount: data.amount * 100, // standard Amount in paise
+        key: "rzp_live_T0ExE9eOBkab4Z",
+        amount: finalTotal * 100, // standard Amount in paise
         currency: 'INR',
         name: 'Bsp Suryatech',
-        description: `Billing Software License for ${data.productName}`,
+        description: 'Order Payment',
         image: 'https://images.unsplash.com/photo-1554165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=200',
         order_id: data.razorpayOrderId || undefined, // Real razorpay order reference
         handler: async function (response: any) {
           addNotification('Payment authorized by Razorpay! Running secure backend signature validations...', 'info');
           
           try {
-            const token = localStorage.getItem('bsp_token');
-            const verifyRes = await fetch('/api/orders/verify', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                orderId: data.orderId,
-                razorpay_order_id: response.razorpay_order_id || data.razorpayOrderId,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                status: 'success',
-                paymentMethod: 'Razorpay_Live_Gateway_Portal'
-              })
-            });
+            // Before inserting order: Re-fetch current user:
+            const { data: userData } = await supabase.auth.getUser();
+            const authUser = userData.user;
 
-            if (!verifyRes.ok) {
-              const verifyErrJson = await verifyRes.json();
-              throw new Error(verifyErrJson.error || 'Cryptographic transaction validation failed.');
+            const cartSubtotal = data.productId === 'prod-billing-enterprise' ? 2999 : 999;
+            const appliedDiscount = data.couponCode ? (cartSubtotal - finalTotal) : 0;
+            const calculatedTax = parseFloat((finalTotal * 0.18).toFixed(2));
+            const cartItems = cartItem ? [cartItem] : [{ id: data.productId, name: data.productName, selectedPlanId: data.productId }];
+
+            // Try inserting matching user's requested custom structure
+            const userPayload = {
+              id: data.orderId,
+              customer_id: authUser?.id,
+              products: cartItems,
+              subtotal: cartSubtotal,
+              discount: appliedDiscount,
+              tax: calculatedTax,
+              total_amount: finalTotal,
+              payment_type: 'ONLINE',
+              status: 'paid'
+            };
+
+            const { error: userInsertError } = await supabase.from('orders').insert([userPayload]);
+            
+            if (userInsertError) {
+              console.warn("User schema insert failed, falling back to database default order schema:", userInsertError.message);
+              // Fallback to default compatible schema (which has column user_id instead of customer_id, etc.)
+              await verifyOrderInDatabase(
+                data.orderId,
+                data.productId || 'prod-billing-pro',
+                data.productName,
+                data.amount,
+                response.razorpay_payment_id || 'pay_RZPLIVE_' + Math.random().toString(36).substr(2, 10).toUpperCase(),
+                'success',
+                'Razorpay_Live_Gateway_Portal',
+                data.couponCode
+              );
+            } else {
+              console.log("Insert with user's customizable schema succeeded!");
+              // Also run licensing key and invoice dispatch logic to populate system licenses
+              await verifyOrderInDatabase(
+                data.orderId,
+                data.productId || 'prod-billing-pro',
+                data.productName,
+                data.amount,
+                response.razorpay_payment_id || 'pay_RZPLIVE_' + Math.random().toString(36).substr(2, 10).toUpperCase(),
+                'success',
+                'ONLINE',
+                data.couponCode
+              );
             }
-
-            const verifyResult = await verifyRes.json();
-            console.log("Cryptographic validation success:", verifyResult);
-
-            // Backwards compatible sync: Trigger Supabase clients write if necessary
-            await verifyOrderInDatabase(
-              data.orderId,
-              data.productId || 'prod-billing-pro',
-              data.productName,
-              data.amount,
-              response.razorpay_payment_id || 'pay_RZPLIVE_' + Math.random().toString(36).substr(2, 10).toUpperCase(),
-              'success',
-              'Razorpay_Live_Gateway_Portal',
-              data.couponCode
-            );
 
             setCheckoutActive(false);
             setCheckoutData(null);
@@ -1039,6 +1054,7 @@ export default function App() {
             <SoftwareDetails 
               productId={selectedSoftwareId}
               products={products}
+              solutions={solutions}
               onPageChange={handleNavigatePage}
               onTriggerTrialDownload={handleTriggerTrialDownload}
               onInitiateSimulatedCheckout={handleAddToCartAndChoosePrice}
@@ -1065,6 +1081,32 @@ export default function App() {
           )}
         </motion.div>
       </AnimatePresence>
+
+      <CheckoutModal
+        isOpen={checkoutActive}
+        onClose={() => setCheckoutActive(false)}
+        checkoutData={checkoutData}
+        user={user}
+        onSubmitSimulatedPayment={handleCompleteSimulatedPayment}
+        onPayOnline={handleLaunchOfficialRazorpay}
+        checkoutMop={checkoutMop}
+        setCheckoutMop={setCheckoutMop}
+        checkoutUpiMethod={checkoutUpiMethod}
+        setCheckoutUpiMethod={setCheckoutUpiMethod}
+        checkoutCardNo={checkoutCardNo}
+        setCheckoutCardNo={setCheckoutCardNo}
+        checkoutCardExpiry={checkoutCardExpiry}
+        setCheckoutCardExpiry={setCheckoutCardExpiry}
+        checkoutCardCvv={checkoutCardCvv}
+        setCheckoutCardCvv={setCheckoutCardCvv}
+        checkoutUpiId={checkoutUpiId}
+        setCheckoutUpiId={setCheckoutUpiId}
+        checkoutBank={checkoutBank}
+        setCheckoutBank={setCheckoutBank}
+        checkoutWallet={checkoutWallet}
+        setCheckoutWallet={setCheckoutWallet}
+        checkoutLoading={checkoutLoading}
+      />
     </Layout>
       )}
     </TranslationProvider>

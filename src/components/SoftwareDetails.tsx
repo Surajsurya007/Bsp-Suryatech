@@ -26,6 +26,7 @@ import { Product } from '../types';
 interface SoftwareDetailsProps {
   productId: string;
   products: Product[];
+  solutions?: any[];
   onPageChange: (page: string) => void;
   onTriggerTrialDownload: (id: string, fullVersion: boolean) => void;
   onInitiateSimulatedCheckout: (id: string) => void;
@@ -35,13 +36,39 @@ interface SoftwareDetailsProps {
 export default function SoftwareDetails({ 
   productId, 
   products, 
+  solutions = [],
   onPageChange, 
   onTriggerTrialDownload, 
   onInitiateSimulatedCheckout,
   user
 }: SoftwareDetailsProps) {
-  // Find current software product
-  const product = products.find(p => p.id === productId) || products[0];
+  // Find current software product or solution
+  const foundProduct = products.find(p => p.id === productId || (p as any).mappedPlanId === productId);
+  const foundSolution = !foundProduct && solutions && solutions.find(s => s.id === productId || s.mappedPlanId === productId);
+  
+  const product: any = foundProduct 
+    ? foundProduct 
+    : foundSolution 
+      ? {
+          id: foundSolution.id,
+          name: foundSolution.title,
+          category: foundSolution.category,
+          description: foundSolution.description,
+          fullDescription: foundSolution.description,
+          price: foundSolution.price,
+          mappedPlanId: foundSolution.mappedPlanId,
+          badge: foundSolution.badge,
+          icon: foundSolution.icon,
+          features: foundSolution.features,
+          demoVideoUrl: foundSolution.demoVideoUrl,
+          gallery: foundSolution.gallery,
+          licenseInfo: foundSolution.subtitle || 'Lifetime Single-workstation Software Solution activation.',
+          systemRequirements: 'Operating System: Windows 7, 8, 10, or 11\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space',
+          version: '1.0.0',
+          size: '8.4 MB',
+          originalPrice: foundSolution.price
+        }
+      : products[0];
 
   // State managers
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
