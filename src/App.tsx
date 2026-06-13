@@ -893,7 +893,7 @@ export default function App() {
       const finalTotal = data.amount;
       console.log("Opening official Razorpay UI for Order:", data.razorpayOrderId || "Direct payment (no order id)");
       const options = {
-        key: "rzp_live_T0ExE9eOBkab4Z",
+        key: data.keyId || "rzp_live_T0ExE9eOBkab4Z",
         amount: finalTotal * 100, // standard Amount in paise
         currency: 'INR',
         name: 'Bsp Suryatech',

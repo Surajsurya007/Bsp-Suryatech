@@ -243,10 +243,16 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
   function authenticateToken(req: any, res: any, next: any) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Access token required' });
+    if (!token) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      return res.status(401).json({ error: 'Access token required' });
+    }
     
     const decoded = verifyToken(token);
-    if (!decoded) return res.status(403).json({ error: 'Invalid or expired token' });
+    if (!decoded) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
     
     req.user = decoded;
     next();
@@ -254,7 +260,8 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
 
   function requireAdmin(req: any, res: any, next: any) {
     authenticateToken(req, res, () => {
-      if (req.user.role !== 'admin') {
+      if (!req.user || req.user.role !== 'admin') {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
         return res.status(403).json({ error: 'Admin access required' });
       }
       next();
@@ -1529,6 +1536,8 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // Public dynamic endpoint to load configured Razorpay Key ID securely without exposing secrets
   app.get('/api/orders/rzp-pubkey', async (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
     // Sync from Supabase first if active
     const supabase = getSupabaseClient();
     if (supabase) {
@@ -1559,16 +1568,27 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // Create Order (Razorpay Simulation Initializer / Real Razorpay live order)
   app.post('/api/orders/create', authenticateToken, async (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
+    const { productId, couponCode } = req.body;
+    console.log(`[PAYMENT LOG] Incoming Order Creation Request - Product: ${productId}, Coupon: ${couponCode || 'None'}`);
+    console.log(`[PAYMENT LOG] Authenticated User payload:`, req.user);
+
     try {
-      const { productId, couponCode } = req.body;
       const prod = dbActions.getProductById(productId);
-      if (!prod) return res.status(404).json({ error: 'Product not found' });
+      if (!prod) {
+        console.warn(`[PAYMENT LOG] Product with ID ${productId} not found.`);
+        return res.status(404).json({ error: 'Product not found' });
+      }
 
       let finalAmount = prod.price;
       if (couponCode) {
         const cp = dbActions.getCouponByCode(couponCode);
         if (cp) {
           finalAmount = Math.ceil(prod.price * (1 - cp.discountPercent / 100));
+          console.log(`[PAYMENT LOG] Coupon applied: ${couponCode}, reducing price from ${prod.price} to ${finalAmount}`);
+        } else {
+          console.warn(`[PAYMENT LOG] Coupon code ${couponCode} provided but invalid/expired.`);
         }
       }
 
@@ -1583,13 +1603,16 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         couponCode,
         status: 'pending'
       });
+      console.log(`[PAYMENT LOG] Internal Order registered in DB: ID ${newOrder.id}`);
 
       const rzpConfig = dbActions.getRazorpayConfig();
       let razorpayOrderId = '';
 
+      console.log(`[PAYMENT LOG] Loaded Razorpay Config - Key ID: ${rzpConfig.keyId || 'None'}, Mode: ${rzpConfig.mode || 'test'}, Enabled: ${rzpConfig.enabled}`);
+
       if (rzpConfig.keyId && rzpConfig.keySecret && rzpConfig.keyId !== 'YOUR_KEY_ID' && !rzpConfig.keyId.startsWith('rzp_test_SURYA')) {
         try {
-          console.log(`Initializing real Razorpay client with Key ID: ${rzpConfig.keyId}`);
+          console.log(`[PAYMENT LOG] Triggering real Razorpay Order creation for Key: ${rzpConfig.keyId}`);
           const razorpay = new Razorpay({
             key_id: rzpConfig.keyId,
             key_secret: rzpConfig.keySecret
@@ -1604,14 +1627,17 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           const rzpOrder = await razorpay.orders.create(orderOptions);
           razorpayOrderId = rzpOrder.id;
 
-          // Save the real Razorpay Order ID on the order (we maps it to paymentId for easy lookup)
+          // Save the real Razorpay Order ID on the order (we map it to paymentId for easy lookup)
           dbActions.updateOrder(newOrder.id, { paymentId: razorpayOrderId });
-          console.log("Real Razorpay Order created successfully:", razorpayOrderId);
+          console.log(`[PAYMENT LOG] Real Razorpay Order created successfully and mapped to internal DB: ${razorpayOrderId}`);
         } catch (rzpErr: any) {
-          console.error("Failed to generate real Razorpay Order. Falling back to simulated flow:", rzpErr.message || rzpErr);
+          console.error("[PAYMENT LOG] Error communicating with Razorpay API. Falling back to simulated flow:", rzpErr.message || rzpErr);
         }
+      } else {
+        console.log("[PAYMENT LOG] Using simulated checkout flow because real Razorpay client is not fully configured / test keys are set.");
       }
 
+      console.log(`[PAYMENT LOG] Returning 201 Response for internal order ID: ${newOrder.id}`);
       res.status(201).json({
         orderId: newOrder.id, // local database internal id
         razorpayOrderId: razorpayOrderId || undefined, // the real Razorpay order ID
@@ -1621,22 +1647,27 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         productName: prod.name
       });
     } catch (err: any) {
-      console.error("Create Order Server Failure:", err);
+      console.error("[PAYMENT LOG] Exception during /api/orders/create handler:", err);
       res.status(500).json({ error: 'Failed to initialize order.' });
     }
   });
 
   // Complete / Verify Razorpay Payment (Handles both Real Cryptographic Signature and Secure Fallbacks)
   app.post('/api/orders/verify', authenticateToken, async (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
+    const { 
+      orderId, 
+      razorpay_order_id, 
+      razorpay_payment_id, 
+      razorpay_signature, 
+      status, 
+      paymentMethod 
+    } = req.body;
+
+    console.log(`[PAYMENT LOG] Incoming Verification Request - Internal Order: ${orderId}, Rzp Order: ${razorpay_order_id}, Rzp Payment: ${razorpay_payment_id || 'None'}, Status: ${status}, Method: ${paymentMethod}`);
+
     try {
-      const { 
-        orderId, 
-        razorpay_order_id, 
-        razorpay_payment_id, 
-        razorpay_signature, 
-        status, 
-        paymentMethod 
-      } = req.body;
       
       console.log("Verifying payment registers for Order:", orderId || razorpay_order_id);
 
