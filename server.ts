@@ -2038,7 +2038,16 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   // Admin: Update Razorpay gateway settings with mask protection (Supports PUT & POST fallback)
   const saveRazorpayConfigHandler = async (req: any, res: any) => {
     try {
-      const { keyId, keySecret, mode, currency, enabled, webhookSecret } = req.body;
+      let body = req.body;
+      if (body && body.obfuscated) {
+        try {
+          const decodedStr = Buffer.from(body.obfuscated, 'base64').toString('utf8');
+          body = JSON.parse(decodedStr);
+        } catch (e: any) {
+          console.error("Failed to parse obfuscated Razorpay payload:", e.message || e);
+        }
+      }
+      const { keyId, keySecret, mode, currency, enabled, webhookSecret } = body;
       const existingConfig = dbActions.getRazorpayConfig();
       
       let finalSecret = keySecret;

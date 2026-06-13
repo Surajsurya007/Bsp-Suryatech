@@ -515,8 +515,8 @@ export const defaultSolutions: SoftwareSolution[] = [
 ];
 
 export const defaultRazorpayConfig: RazorpayConfig = {
-  keyId: process.env.RAZORPAY_KEY_ID || 'YOUR_KEY_ID',
-  keySecret: process.env.RAZORPAY_KEY_SECRET || 'YOUR_SECRET',
+  keyId: process.env.RAZORPAY_KEY_ID || 'rzp_live_T0ExE9eOBkab4Z',
+  keySecret: process.env.RAZORPAY_KEY_SECRET || 'hqIzJAAXiiTEtilVlFn8eDre',
   mode: 'live',
   currency: 'INR',
   enabled: true,
@@ -1187,11 +1187,11 @@ export const dbActions = {
     if (process.env.RAZORPAY_KEY_SECRET) {
       config.keySecret = process.env.RAZORPAY_KEY_SECRET;
     }
-    if (!config.keyId || config.keyId === '') {
-      config.keyId = 'YOUR_KEY_ID';
+    if (!config.keyId || config.keyId === '' || config.keyId === 'YOUR_KEY_ID') {
+      config.keyId = 'rzp_live_T0ExE9eOBkab4Z';
     }
-    if (!config.keySecret || config.keySecret === '') {
-      config.keySecret = 'YOUR_SECRET';
+    if (!config.keySecret || config.keySecret === '' || config.keySecret === 'YOUR_SECRET') {
+      config.keySecret = 'hqIzJAAXiiTEtilVlFn8eDre';
     }
     return config;
   },

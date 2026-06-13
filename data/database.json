@@ -31,7 +31,7 @@
     }
   ],
   "passwordHashes": {
-    "u-admin": "2818a971de954ad8168727169985a644:2cf5cf29460f7a7f7bdf3d2233acaaecd33e2bdcae74c0d012d1609a0edff1cb96b0a8bcc8ef79ac0f463c308936a022a2dd1e46fa2bcb8737d1d6774786c6a9",
+    "u-admin": "5abd116b3e61e30af06071fee520829a:17987bf9be84d0ebd73d93a4ffdb5b1c37305f63d456923c38f5911f3e6f8ef9ee850d7720fabe953de9cbdf152eda830b97fc0779414fbd5c47f8da5f2d0eab",
     "u-customer": "b9ccc2338bf8b5bd3bcd5dbea1001339:ea390073d180cee9336d82e4dc34eefd3e2a12a0ed27318662dac716f7a2d0ec5311db41f80a5520b0492eb1993b313ae1aa442adda7af46e3a8d0e32f3eedf9",
     "u-uj137orkt": "166fa432211355487677d46a637de1c1:d850c445d5fffb3469bffcdc5a7ab58a2dcf80815075d0674a560aa85773ebfa59d1693a94e41ba9aedd30d59777d8bbf9fe56c86ff9fdfb8b74d3ea1f135b6b",
     "u-f04fqbizv": "26b62f5e59666df8af89d9024e91dabe:6d4f83d3a83b04cef63c96639f4a726c61b943c9e5c72674db889bdd7184135440afbea1e25fdd8e8b97f71cfb61f49ab2841f48d4e24c8b548e021a4200cc1e"
@@ -479,12 +479,254 @@
     }
   ],
   "razorpayConfig": {
-    "keyId": "",
-    "keySecret": "",
+    "keyId": "rzp_live_T0ExE9eOBkab4Z",
+    "keySecret": "hqIzJAAXiiTEtilVlFn8eDre",
     "mode": "live",
     "currency": "INR",
     "enabled": true,
     "webhookSecret": ""
   },
-  "helpline": "+91 95169 16415"
+  "helpline": "+91 95169 16415",
+  "solutions": [
+    {
+      "id": "sol-retail",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Retail Billing Software",
+      "category": "Billing Software",
+      "subtitle": "BESTSELLER FOR SHOPS",
+      "description": "Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.",
+      "price": "INR 3,499",
+      "features": [
+        "GST Invoicing",
+        "Barcode Scanner Support",
+        "Thermal Printer Setup",
+        "Offline Database State",
+        "Supplier & Client Ledgers"
+      ],
+      "icon": "🛍️",
+      "badge": "Billing",
+      "badgeColor": "emerald",
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-supermarket",
+      "mappedPlanId": "prod-billing-enterprise",
+      "title": "Supermarket POS Software",
+      "category": "Billing Software",
+      "subtitle": "COMPLETE POS PACK",
+      "description": "High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.",
+      "price": "INR 5,999",
+      "features": [
+        "High-Speed POS Checkout",
+        "Integrated Barcode Printing",
+        "Customer Loyalty Points",
+        "Multi-Terminal Syncing",
+        "Automatic Reorder Limits"
+      ],
+      "icon": "🏪",
+      "badge": "Billing",
+      "badgeColor": "emerald",
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-grocery",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Grocery Billing Software",
+      "category": "Billing Software",
+      "subtitle": "FAST GROCERY STORE SPECIAL",
+      "description": "Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.",
+      "price": "INR 4,499",
+      "features": [
+        "Digital Weight Scale Link",
+        "Barcoding & Item Lookup",
+        "Short Expiry Tracking",
+        "Multiple Payment Options",
+        "Dynamic POS Checkout"
+      ],
+      "icon": "🍎",
+      "badge": "Billing",
+      "badgeColor": "emerald",
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-medical",
+      "mappedPlanId": "prod-billing-enterprise",
+      "title": "Medical Store Billing Software",
+      "category": "Billing Software",
+      "subtitle": "PHARMACY BATCH SPECIAL",
+      "description": "Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.",
+      "price": "INR 5,499",
+      "features": [
+        "Batch Code Expiry tracking",
+        "Drug License verification",
+        "Salt-wise generic lookup",
+        "Supplier Invoice Sync",
+        "Doctor referrals lists"
+      ],
+      "icon": "💊",
+      "badge": "Billing",
+      "badgeColor": "emerald",
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-restaurant",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Restaurant POS & KOT Software",
+      "category": "Billing Software",
+      "subtitle": "KITCHEN & HOTEL SPECIAL",
+      "description": "Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.",
+      "price": "INR 3,499",
+      "features": [
+        "Kitchen Order Tickets (KOT)",
+        "Table Mapping & Status",
+        "Recipe Ingredient Control",
+        "Split Bill Settlements",
+        "Waiter Android App link"
+      ],
+      "icon": "🍽️",
+      "badge": "Billing",
+      "badgeColor": "emerald",
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-mobile",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Mobile Shop Billing Software",
+      "category": "Billing Software",
+      "subtitle": "IMEI & SERIAL TRACKER",
+      "description": "Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.",
+      "price": "INR 4,999",
+      "features": [
+        "Unique IMEI/Serial logging",
+        "Dynamic Repairs Tracker",
+        "Warranty Status Records",
+        "Brand & Model Catalog",
+        "Customer AMC reminders"
+      ],
+      "icon": "📱",
+      "badge": "Billing",
+      "badgeColor": "emerald",
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-electronics",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Electronics Shop Billing Software",
+      "category": "Billing Software",
+      "subtitle": "APPLIANCE SPECIAL",
+      "description": "Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.",
+      "price": "INR 5,999",
+      "features": [
+        "Dual-Serial Code validation",
+        "Manufacturer Warranty link",
+        "Installations Scheduler",
+        "Commission Agent ledger",
+        "Multi-Godown Stock check"
+      ],
+      "icon": "📺",
+      "badge": "Billing",
+      "badgeColor": "emerald",
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-transport",
+      "mappedPlanId": "prod-billing-enterprise",
+      "title": "Transport Management Software",
+      "category": "Transport Software",
+      "subtitle": "LOGISTICS & FLEET STANDARD",
+      "description": "Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.",
+      "price": "INR 7,999",
+      "features": [
+        "Fleet Management",
+        "Vehicle Tracking",
+        "Trip Sheet expense logs",
+        "Driver Commission accounts",
+        "Client & Consignee Ledgers"
+      ],
+      "icon": "🚚",
+      "badge": "Transport",
+      "badgeColor": "blue",
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-hospital",
+      "mappedPlanId": "prod-billing-enterprise",
+      "title": "Hospital & Clinic Software",
+      "category": "Hospital Software",
+      "subtitle": "HEALTHCARE INTEGRATED",
+      "price": "INR 12,499",
+      "icon": "🏥",
+      "badge": "Hospital",
+      "badgeColor": "red",
+      "description": "In-patient/Out-patient registration, modular appointments, doctor scheduling, prescription prints, and laboratory logs.",
+      "features": [
+        "OPD/IPD Patient Registry",
+        "Doctor Scheduler & Fees",
+        "EHR & Digital Prescriptions",
+        "Pharmacy & Lab Bilateral",
+        "Ward Bed Occupancy"
+      ],
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-diagnostic",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Diagnostic Lab Manager",
+      "category": "Hospital Software",
+      "subtitle": "PATHOLOGY LABORATORY",
+      "price": "INR 8,499",
+      "icon": "🔬",
+      "badge": "Hospital",
+      "badgeColor": "red",
+      "description": "Streamlined report-making logs with custom layout sheets templates, sample collection workflows, and referral networks bookkeeping.",
+      "features": [
+        "Test Report Template Maker",
+        "Barcode Sample Tracker",
+        "Patient Bill & Due Receipts",
+        "B2B Lab Referral Account",
+        "Automated Analyzer Sync"
+      ],
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-school",
+      "mappedPlanId": "prod-billing-enterprise",
+      "title": "School ERP Management Suite",
+      "category": "School Software",
+      "subtitle": "ACADEMIC INSTITUTIONS",
+      "price": "INR 11,499",
+      "icon": "🏫",
+      "badge": "School",
+      "badgeColor": "indigo",
+      "description": "Robust student lifecycle bookkeeping. Integrated fee customizer modules, grades charts, schedule grids and bus tracking.",
+      "features": [
+        "Student Profile & Admissions",
+        "Dynamic Fee Structure Maker",
+        "Class Timetable Grid",
+        "Exam Marks & Report Cards",
+        "SMS & WhatsApp Notifications"
+      ],
+      "exeUrl": ""
+    },
+    {
+      "id": "sol-erp-warehouse",
+      "mappedPlanId": "prod-billing-enterprise",
+      "title": "Enterprise ERP Suite",
+      "category": "ERP Software",
+      "subtitle": "SUPPLY CHAIN SUITE",
+      "price": "INR 14,999",
+      "icon": "🏭",
+      "badge": "ERP",
+      "badgeColor": "purple",
+      "description": "Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.",
+      "features": [
+        "Multi-Warehouse Transfer Logs",
+        "Manufacturing Bill of Materials",
+        "Advanced Batch/Lot Control",
+        "PO & SO Purchase Orders",
+        "Reorder Stock Estimations"
+      ],
+      "exeUrl": ""
+    }
+  ]
 }
