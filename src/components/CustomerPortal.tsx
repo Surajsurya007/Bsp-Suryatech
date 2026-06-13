@@ -474,11 +474,57 @@ export default function CustomerPortal({
       });
 
       if (error) {
-        console.error("Supabase Login Error:", error.message);
-        setSupabaseErrorMsg(error.message);
-        onAddNotification(error.message, 'error');
-        setAuthLoading(false);
-        return;
+        console.warn("Supabase Login Error; falling back to Express API login:", error.message);
+        
+        // Try local Express backend login fallback
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: loginEmail, password: loginPassword })
+          });
+          
+          if (!response.ok) {
+            const errData = await response.json();
+            const finalError = errData.error || 'Invalid credentials';
+            console.error("Express Fallback Login Error:", finalError);
+            setSupabaseErrorMsg(error.message || finalError);
+            onAddNotification(finalError, 'error');
+            setAuthLoading(false);
+            return;
+          }
+
+          const localData = await response.json();
+          const userObj = {
+            id: localData.user.id,
+            email: localData.user.email,
+            name: localData.user.name,
+            role: localData.user.email === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer',
+            profile: localData.user.profile || null
+          };
+
+          // Save token for authenticated requests
+          localStorage.setItem('bsp_token', localData.token);
+
+          onLoginSuccess(localData.token, userObj);
+          onAddNotification(`Welcome back, ${userObj.name}!`, 'success');
+          
+          if (userObj.role === 'admin') {
+            onPageChange('admin');
+          } else {
+            onPageChange('home');
+            window.history.pushState({}, '', '/');
+          }
+          setAuthLoading(false);
+          return;
+          
+        } catch (fallbackErr: any) {
+          console.error("Express Fallback Authentication Exception:", fallbackErr);
+          setSupabaseErrorMsg(error.message);
+          onAddNotification(error.message, 'error');
+          setAuthLoading(false);
+          return;
+        }
       }
 
       if (data?.user) {
@@ -493,6 +539,40 @@ export default function CustomerPortal({
           loadedProfile = profile;
         } catch (profileLoadErr) {
           console.warn("Failed to retrieve profile, using mock/defaults during SSO sync:", profileLoadErr);
+        }
+
+        // Auto-create profile from metadata if not present in DB
+        if (!loadedProfile && data.user.user_metadata) {
+          const meta = data.user.user_metadata;
+          if (meta.full_name || meta.business_name || meta.contact_number) {
+            console.log("CustomerPortal: Auto-creating customer profile from user metadata after authenticated login...");
+            try {
+              const newProfile = {
+                user_id: data.user.id,
+                client_name: meta.full_name || meta.client_name || data.user.email?.split('@')[0],
+                business_name: meta.business_name || 'Business Profile Inc.',
+                contact_number: meta.contact_number || '9999999999',
+                email_address: data.user.email,
+                business_address: meta.business_address || 'Not Provided',
+                city: meta.city || 'Not Provided',
+                state: meta.state || 'Not Provided',
+                pincode: meta.pincode || '000000',
+                gst_number: meta.gst_number || '',
+                created_at: new Date().toISOString()
+              };
+              const { error: insErr } = await supabase
+                .from('customer_profiles')
+                .upsert(newProfile);
+              if (!insErr) {
+                console.log("CustomerPortal: Success creating profile after login authentication.");
+                loadedProfile = newProfile;
+              } else {
+                console.warn("CustomerPortal: Failed creating profile after login:", insErr.message);
+              }
+            } catch (err: any) {
+              console.warn("CustomerPortal: Exception auto-creating profile post-auth:", err.message);
+            }
+          }
         }
 
         const userObj = {
@@ -515,7 +595,7 @@ export default function CustomerPortal({
           window.history.pushState({}, '', '/');
         }
       } else {
-        setSupabaseErrorMsg('Authenication session missing');
+        setSupabaseErrorMsg('Authentication session missing');
         onAddNotification('Authentication completed but no user session was returned.', 'error');
       }
     } catch (err: any) {
@@ -577,14 +657,20 @@ export default function CustomerPortal({
     setSupabaseErrorMsg('');
     try {
       console.log("CustomerPortal: Initiating Supabase Auth sign-up for:", regEmail);
-      // 1) Initialize user register onboarding logic on Supabase Auth
+      // 1) Initialize user register onboarding logic on Supabase Auth with full metadata
       const { data, error } = await supabase.auth.signUp({
         email: regEmail,
         password: regPassword,
         options: {
           data: {
             full_name: regClientName,
-            business_name: regBusinessName
+            business_name: regBusinessName,
+            contact_number: regContactNumber,
+            business_address: regBusinessAddress,
+            city: regCity,
+            state: regState,
+            pincode: regPincode,
+            gst_number: regGstNumber
           }
         }
       });
@@ -598,32 +684,78 @@ export default function CustomerPortal({
       }
 
       if (data?.user) {
-        console.log("CustomerPortal: Supabase user created with ID:", data.user.id);
-        // 2) Save user profile details directly into the `customer_profiles` table
+        console.log("CustomerPortal: Supabase user registered with ID:", data.user.id);
+        
+        // 2) Synchronously register on local Express backend to ensure flawless local fallback & profile tracking
         try {
-          const { error: profileError } = await supabase
-            .from('customer_profiles')
-            .upsert({
-              user_id: data.user.id,
-              client_name: regClientName,
-              business_name: regBusinessName,
-              contact_number: regContactNumber,
-              email_address: regEmail,
-              business_address: regBusinessAddress,
-              city: regCity,
-              state: regState,
-              pincode: regPincode,
-              gst_number: regGstNumber,
-              created_at: new Date().toISOString()
-            });
+          console.log("CustomerPortal: Synchronizing register details with local Express database...");
+          const devRegRes = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: regClientName,
+              email: regEmail,
+              password: regPassword
+            })
+          });
 
-          if (profileError) {
-            console.error("CustomerPortal: Direct database profile upsert failed:", profileError.message);
-          } else {
-            console.log("CustomerPortal: Profile saved successfully to Supabase database!");
+          if (devRegRes.ok) {
+            const devRegData = await devRegRes.json();
+            console.log("CustomerPortal: Local Express user created, updating customer profile details...");
+            await fetch('/api/customer/profile', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${devRegData.token}`
+              },
+              body: JSON.stringify({
+                clientName: regClientName,
+                businessName: regBusinessName,
+                contactNumber: regContactNumber,
+                emailAddress: regEmail,
+                businessAddress: regBusinessAddress,
+                city: regCity,
+                state: regState,
+                pincode: regPincode,
+                gstNumber: regGstNumber
+              })
+            });
+            console.log("CustomerPortal: Local Express database profile details updated successfully.");
           }
-        } catch (dbErr: any) {
-          console.warn("CustomerPortal: Exception writing profile index directly:", dbErr.message);
+        } catch (localErr: any) {
+          console.warn("CustomerPortal: Background local Express registration sync deferred:", localErr.message || localErr);
+        }
+
+        // 3) Save details to Supabase `customer_profiles` table ONLY if an active authenticated session exists.
+        // If email confirmation is enabled, session is null/empty and direct write is deferred until login (under authenticated role context, protecting RLS).
+        if (data.session) {
+          try {
+            const { error: profileError } = await supabase
+              .from('customer_profiles')
+              .upsert({
+                user_id: data.user.id,
+                client_name: regClientName,
+                business_name: regBusinessName,
+                contact_number: regContactNumber,
+                email_address: regEmail,
+                business_address: regBusinessAddress,
+                city: regCity,
+                state: regState,
+                pincode: regPincode,
+                gst_number: regGstNumber,
+                created_at: new Date().toISOString()
+              });
+
+            if (profileError) {
+              console.warn("CustomerPortal: Direct database profile upsert failed (deferred):", profileError.message);
+            } else {
+              console.log("CustomerPortal: Profile saved successfully to Supabase database!");
+            }
+          } catch (dbErr: any) {
+            console.warn("CustomerPortal: Exception writing profile index directly:", dbErr.message);
+          }
+        } else {
+          console.log("CustomerPortal: Suppressing direct profile write during registration context (email confirmation / unauthenticated session). Profile will be dynamically initialized at first authenticated sign-in.");
         }
 
         // Keep user on the login screen, do not auto login
