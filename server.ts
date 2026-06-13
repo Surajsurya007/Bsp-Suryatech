@@ -2668,6 +2668,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     });
   });
 
+  // Catch-all 404 for any unhandled /api requests to prevent HTML/index.html fallbacks
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({
+      error: `API route not found: ${req.method} ${req.url}`,
+      success: false
+    });
+  });
+
 
   // --- VITE AND FE STATIC SERVICES INTEGRATION ---
 

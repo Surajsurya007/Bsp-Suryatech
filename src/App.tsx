@@ -229,14 +229,19 @@ export default function App() {
       console.log("App: Fetching products dynamically from API...");
       const res = await fetch('/api/products');
       if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          const parsedProducts = data.map((item: any) => ({
-            ...item,
-            features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || [])
-          }));
-          setProducts(parsedProducts);
-          return;
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            const parsedProducts = data.map((item: any) => ({
+              ...item,
+              features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || [])
+            }));
+            setProducts(parsedProducts);
+            return;
+          }
+        } else {
+          console.warn("App: /api/products response content-type is not JSON:", contentType);
         }
       }
       
@@ -264,10 +269,15 @@ export default function App() {
       console.log("App: Fetching videos dynamically from backend API...");
       const res = await fetch('/api/videos');
       if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          setVideos(data);
-          return;
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setVideos(data);
+            return;
+          }
+        } else {
+          console.warn("App: /api/videos response content-type is not JSON:", contentType);
         }
       }
 
@@ -290,10 +300,15 @@ export default function App() {
       console.log("App: Fetching testimonials dynamically from backend API...");
       const res = await fetch('/api/testimonials');
       if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          setTestimonials(data);
-          return;
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setTestimonials(data);
+            return;
+          }
+        } else {
+          console.warn("App: /api/testimonials response content-type is not JSON:", contentType);
         }
       }
 
@@ -316,16 +331,21 @@ export default function App() {
       console.log("App: Fetching release downloads info from backend API...");
       const res = await fetch('/api/downloads');
       if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          const formatted = data.map((item: any) => ({
-            ...item,
-            releaseNotes: typeof item.releaseNotes === 'string' ? JSON.parse(item.releaseNotes) : (item.releaseNotes || item.release_notes || [])
-          }));
-          setDownloads(formatted);
-          const counts = formatted.reduce((sum: number, item: any) => sum + (item.downloadCount || item.download_count || 0), 0);
-          setTotalDownloads(counts || 1420);
-          return;
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            const formatted = data.map((item: any) => ({
+              ...item,
+              releaseNotes: typeof item.releaseNotes === 'string' ? JSON.parse(item.releaseNotes) : (item.releaseNotes || item.release_notes || [])
+            }));
+            setDownloads(formatted);
+            const counts = formatted.reduce((sum: number, item: any) => sum + (item.downloadCount || item.download_count || 0), 0);
+            setTotalDownloads(counts || 1420);
+            return;
+          }
+        } else {
+          console.warn("App: /api/downloads response content-type is not JSON:", contentType);
         }
       }
 
@@ -356,9 +376,14 @@ export default function App() {
       console.log("App: Fetching solutions dynamically from API...");
       const res = await fetch('/api/solutions');
       if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          setSolutions(data);
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setSolutions(data);
+          }
+        } else {
+          console.warn("App: /api/solutions response content-type is not JSON:", contentType);
         }
       }
     } catch (err) {
@@ -383,9 +408,14 @@ export default function App() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        const data = await res.json();
-        setUserLicenses(data || []);
-        return;
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          setUserLicenses(data || []);
+          return;
+        } else {
+          console.warn("App: /api/customer/licenses response content-type is not JSON:", contentType);
+        }
       }
 
       // 2. Try Supabase fallback
@@ -723,7 +753,22 @@ export default function App() {
       });
 
       if (!orderCreateRes.ok) {
-        throw new Error('Failed to initialize transaction order on secure payments server.');
+        let errMsg = 'Failed to initialize transaction order on secure payments server.';
+        try {
+          const contentType = orderCreateRes.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errJson = await orderCreateRes.json();
+            if (errJson && errJson.error) {
+              errMsg = errJson.error;
+            }
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const contentType = orderCreateRes.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Payment server returned an invalid response format (HTML instead of JSON). This typically means a server-side route wildcard fallback or maintenance page was triggered. Please try again or contact support.');
       }
 
       const orderData = await orderCreateRes.json();

@@ -222,34 +222,50 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.language_configs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select language_configs" ON public.language_configs;
 CREATE POLICY "Public select language_configs" ON public.language_configs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage language_configs" ON public.language_configs;
+CREATE POLICY "Admin manage language_configs" ON public.language_configs FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select products" ON public.products;
 CREATE POLICY "Public select products" ON public.products FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage products" ON public.products;
+CREATE POLICY "Admin manage products" ON public.products FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.downloads_info ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select downloads_info" ON public.downloads_info;
 CREATE POLICY "Public select downloads_info" ON public.downloads_info FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage downloads_info" ON public.downloads_info;
+CREATE POLICY "Admin manage downloads_info" ON public.downloads_info FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select coupons" ON public.coupons;
 CREATE POLICY "Public select coupons" ON public.coupons FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage coupons" ON public.coupons;
+CREATE POLICY "Admin manage coupons" ON public.coupons FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select testimonials" ON public.testimonials;
 CREATE POLICY "Public select testimonials" ON public.testimonials FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage testimonials" ON public.testimonials;
+CREATE POLICY "Admin manage testimonials" ON public.testimonials FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.blogs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select blogs" ON public.blogs;
 CREATE POLICY "Public select blogs" ON public.blogs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage blogs" ON public.blogs;
+CREATE POLICY "Admin manage blogs" ON public.blogs FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select reviews" ON public.reviews;
 CREATE POLICY "Public select reviews" ON public.reviews FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage reviews" ON public.reviews;
+CREATE POLICY "Admin manage reviews" ON public.reviews FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.video_tutorials ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select video_tutorials" ON public.video_tutorials;
 CREATE POLICY "Public select video_tutorials" ON public.video_tutorials FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage video_tutorials" ON public.video_tutorials;
+CREATE POLICY "Admin manage video_tutorials" ON public.video_tutorials FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select system_settings" ON public.system_settings;
@@ -266,6 +282,9 @@ CREATE POLICY "Users can manage own customer_profile" ON public.customer_profile
     TO authenticated
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Server fallback manage customer_profiles" ON public.customer_profiles;
+CREATE POLICY "Server fallback manage customer_profiles" ON public.customer_profiles
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- 3. Orders RLS Policies
 DROP POLICY IF EXISTS "Users can view and create own orders" ON public.orders;
@@ -274,6 +293,9 @@ CREATE POLICY "Users can view and create own orders" ON public.orders
     TO authenticated
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Server fallback manage orders" ON public.orders;
+CREATE POLICY "Server fallback manage orders" ON public.orders
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- 4. Licenses RLS Policies
 DROP POLICY IF EXISTS "Users can view own licenses" ON public.licenses;
@@ -281,6 +303,9 @@ CREATE POLICY "Users can view own licenses" ON public.licenses
     FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Server fallback manage licenses" ON public.licenses;
+CREATE POLICY "Server fallback manage licenses" ON public.licenses
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- 5. Support Tickets RLS Policies
 DROP POLICY IF EXISTS "Users can view and manage own support_tickets" ON public.support_tickets;
@@ -289,6 +314,9 @@ CREATE POLICY "Users can view and manage own support_tickets" ON public.support_
     TO authenticated
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Server fallback manage support_tickets" ON public.support_tickets;
+CREATE POLICY "Server fallback manage support_tickets" ON public.support_tickets
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- 6. Payments RLS Policies
 DROP POLICY IF EXISTS "Users can view own payments" ON public.payments;
@@ -296,6 +324,9 @@ CREATE POLICY "Users can view own payments" ON public.payments
     FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Server fallback manage payments" ON public.payments;
+CREATE POLICY "Server fallback manage payments" ON public.payments
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- 7. Invoices RLS Policies
 DROP POLICY IF EXISTS "Users can view own invoices" ON public.invoices;
@@ -303,6 +334,9 @@ CREATE POLICY "Users can view own invoices" ON public.invoices
     FOR SELECT
     TO authenticated
     USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Server fallback manage invoices" ON public.invoices;
+CREATE POLICY "Server fallback manage invoices" ON public.invoices
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- 8. Notifications RLS Policies
 DROP POLICY IF EXISTS "Users can manage own notifications" ON public.notifications;
@@ -311,6 +345,9 @@ CREATE POLICY "Users can manage own notifications" ON public.notifications
     TO authenticated
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Server fallback manage notifications" ON public.notifications;
+CREATE POLICY "Server fallback manage notifications" ON public.notifications
+    FOR ALL USING (true) WITH CHECK (true);
 
 
 -- =========================================================================
