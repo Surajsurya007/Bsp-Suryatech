@@ -59,13 +59,17 @@ export default function App() {
   } | null>(null);
 
   const handleAddToCartAndChoosePrice = (planId: string) => {
+    const pId = planId || 'prod-billing-pro';
+    const foundProduct = products?.find((p: any) => p.id === pId);
+    const productName = foundProduct?.name || (pId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro');
+    
     setCartItem({
       id: 'suryatech-billing',
-      name: 'BSP Suryatech GST Billing Desk',
+      name: productName,
       category: 'Billing & POS Software',
-      selectedPlanId: planId || 'prod-billing-pro'
+      selectedPlanId: pId
     });
-    addNotification('Added BSP Suryatech Software to Cart! Select details in the Cart layout below.', 'success');
+    addNotification(`Added ${productName} to Cart! Select details in the Cart layout below.`, 'success');
     setCurrentPage('pricing');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -671,8 +675,8 @@ export default function App() {
       let orderData: any = null;
 
       try {
-        console.log("App: Requesting Razorpay order from Supabase Edge Function...");
-        const response = await fetch('https://wabhgsdzmptgxrggjjgm.supabase.co/functions/v1/create-razorpay-order', {
+        console.log("[PAYMENT LOG] Requesting Razorpay order from local Express API (/api/orders/create) first...");
+        const response = await fetch('/api/orders/create', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -682,21 +686,62 @@ export default function App() {
         });
 
         if (response.ok) {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            orderData = await response.json();
-            console.log("App: Razorpay order generated successfully via Supabase Edge Function!", orderData);
-          }
+          const resData = await response.json();
+          console.log("[PAYMENT LOG] Local Express API generated order successfully:", resData);
+          orderData = {
+            orderId: resData.orderId,
+            razorpayOrderId: resData.razorpayOrderId,
+            amount: resData.amount,
+            keyId: resData.keyId,
+            productName: resData.productName,
+            currency: resData.currency || 'INR'
+          };
         } else {
-          console.warn("App: Supabase Edge Function returned non-ok status:", response.status);
+          const errText = await response.text();
+          console.warn("[PAYMENT LOG] Local Express API returned non-ok status:", response.status, errText);
         }
-      } catch (err) {
-        console.warn("App: Supabase Edge Function creation failed, attempting direct Supabase billing fallback...", err);
+      } catch (err: any) {
+        console.warn("[PAYMENT LOG] Local Express API order creation failed, trying Supabase Edge Function fallback...", err.message || err);
+      }
+
+      if (!orderData) {
+        try {
+          console.log("[PAYMENT LOG] Requesting Razorpay order from Supabase Edge Function fallback...");
+          const response = await fetch('https://wabhgsdzmptgxrggjjgm.supabase.co/functions/v1/create-razorpay-order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ productId, couponCode })
+          });
+
+          if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const resData = await response.json();
+              console.log("[PAYMENT LOG] Razorpay order generated successfully via Supabase Edge Function!", resData);
+              orderData = {
+                orderId: resData.orderId || resData.id,
+                razorpayOrderId: resData.razorpayOrderId || resData.razorpay_order_id,
+                amount: resData.amount,
+                keyId: resData.keyId || resData.key_id,
+                productName: resData.productName || resData.product_name,
+                currency: resData.currency || 'INR'
+              };
+            }
+          } else {
+            const errText = await response.text();
+            console.warn("[PAYMENT LOG] Supabase Edge Function returned non-ok status:", response.status, errText);
+          }
+        } catch (err: any) {
+          console.warn("[PAYMENT LOG] Supabase Edge Function creation failed, attempting direct Supabase billing fallback...", err.message || err);
+        }
       }
 
       if (!orderData) {
         console.log("App: Running secure client-side Order generation (Supabase database configuration fallback)...");
-        let rzpKeyId = 'rzp_test_SURYA2026KEY';
+        let rzpKeyId = 'rzp_live_T1nYz3RnnW4FOo';
         
         try {
           // Fetch the live Razorpay configuration directly from Supabase settings table if backend is not responding with JSON
@@ -874,15 +919,40 @@ export default function App() {
 
     try {
       const finalTotal = data.amount;
-      console.log("Opening official Razorpay UI for Order:", data.razorpayOrderId || "Direct payment (no order id)");
+      const activeKey = data.keyId || "rzp_live_T1nYz3RnnW4FOo";
+      const activeOrderId = data.razorpayOrderId || undefined;
+
+      console.log("======================================= [RAZORPAY DIAGNOSTICS] =======================================");
+      console.log("[RAZORPAY] Initializing Official Razorpay Payment Gateway Options...");
+      console.log("[RAZORPAY] Frontend KEY ID used:", activeKey);
+      console.log("[RAZORPAY] Razorpay ORDER ID used (order_id):", activeOrderId ? activeOrderId : "None (Using direct transaction fallback)");
+      console.log("[RAZORPAY] Total amount charging (Paise):", finalTotal * 100);
+      console.log("[RAZORPAY] Currency:", "INR");
+      console.log("[RAZORPAY] Product Mapped:", data.productName);
+
+      // Key audit & diagnostic warnings:
+      if (activeKey === "rzp_live_T1nYz3RnnW4FOo") {
+        console.log("[RAZORPAY] INFO: Using default live key ID 'rzp_live_T1nYz3RnnW4FOo' which is active on the production Razorpay account.");
+      }
+      if (activeOrderId && activeOrderId.startsWith("order_local_")) {
+        console.warn("[RAZORPAY] WARNING: Provided order_id starts with 'order_local_'. This is a frontend simulation ID and MUST NOT be passed to Razorpay SDK order_id, otherwise Razorpay API will error out.");
+      }
+      if (activeKey.startsWith("rzp_test_") && activeOrderId && activeOrderId.startsWith("order_live_")) {
+        console.error("[RAZORPAY] ERROR: MIXED CREDENTIALS DETECTED. You are using a TEST Key ID with a LIVE Order ID. This is a fatal configuration error that causes HTTP 401 Unauthorized.");
+      }
+      if (activeKey.startsWith("rzp_live_") && activeOrderId && activeOrderId.startsWith("order_test_")) {
+        console.error("[RAZORPAY] ERROR: MIXED CREDENTIALS DETECTED. You are using a LIVE Key ID with a TEST Order ID. This is a fatal configuration error that causes HTTP 401 Unauthorized.");
+      }
+      console.log("======================================================================================================");
+
       const options = {
-        key: data.keyId || "rzp_live_T0ExE9eOBkab4Z",
+        key: activeKey,
         amount: finalTotal * 100, // standard Amount in paise
         currency: 'INR',
         name: 'Bsp Suryatech',
         description: 'Order Payment',
         image: 'https://images.unsplash.com/photo-1554165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=200',
-        order_id: data.razorpayOrderId || undefined, // Real razorpay order reference
+        order_id: activeOrderId, // Real razorpay order reference
         handler: async function (response: any) {
           addNotification('Payment authorized by Razorpay! Running secure backend signature validations...', 'info');
           

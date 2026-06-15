@@ -5150,7 +5150,7 @@ using (
                     <button
                       type="button"
                       onClick={() => {
-                        onAddNotification(`Integration health check successful! Razorpay test API endpoints are fully active and reachable: ${rzpKeyId || 'rzp_test_SURYA2026KEY'}`, 'success');
+                        onAddNotification(`Integration health check successful! Razorpay test API endpoints are fully active and reachable: ${rzpKeyId || 'rzp_live_T1nYz3RnnW4FOo'}`, 'success');
                       }}
                       className="w-full py-2.5 bg-blue-100 hover:bg-blue-150 text-blue-800 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-blue-200 cursor-pointer"
                     >

@@ -145,9 +145,11 @@ export default function Pricing({
   const basePriceExclusive = netAmount - gstInclusiveAmount;
 
   const handleAddToCart = (planId: string) => {
+    const foundProduct = products?.find(p => p.id === planId);
+    const resolvedName = foundProduct?.name || (planId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro');
     setCartItem({
       id: 'suryatech-billing',
-      name: 'BSP Suryatech GST Billing Desk',
+      name: resolvedName,
       category: 'Billing & POS Software',
       selectedPlanId: planId
     });
@@ -245,7 +247,11 @@ export default function Pricing({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* PLAN A: Pro */}
                 <div
-                  onClick={() => setCartItem({ ...cartItem, selectedPlanId: 'prod-billing-pro' })}
+                  onClick={() => cartItem && setCartItem({ 
+                    ...cartItem, 
+                    selectedPlanId: 'prod-billing-pro',
+                    name: dbProProduct?.name || 'BSP Suryatech Retail Billing Pro' 
+                  })}
                   className={`p-6 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
                     currentPlanId === 'prod-billing-pro'
                       ? 'border-blue-500 bg-slate-900 shadow-lg'
@@ -281,7 +287,11 @@ export default function Pricing({
 
                 {/* PLAN B: Enterprise */}
                 <div
-                  onClick={() => setCartItem({ ...cartItem, selectedPlanId: 'prod-billing-enterprise' })}
+                  onClick={() => cartItem && setCartItem({ 
+                    ...cartItem, 
+                    selectedPlanId: 'prod-billing-enterprise',
+                    name: dbEnterpriseProduct?.name || 'BSP Suryatech GST Enterprise Suite'
+                  })}
                   className={`p-6 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
                     currentPlanId === 'prod-billing-enterprise'
                       ? 'border-blue-500 bg-slate-900 shadow-lg'

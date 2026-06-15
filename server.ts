@@ -1576,10 +1576,10 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
     const rzpConfig = dbActions.getRazorpayConfig();
     res.json({
-      keyId: rzpConfig.enabled ? rzpConfig.keyId : 'rzp_test_SURYA2026KEY',
+      keyId: rzpConfig.keyId || 'rzp_live_T1nYz3RnnW4FOo',
       enabled: rzpConfig.enabled || false,
       currency: rzpConfig.currency || 'INR',
-      mode: rzpConfig.mode || 'test'
+      mode: rzpConfig.mode || 'live'
     });
   });
 
@@ -1622,6 +1622,31 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       });
       console.log(`[PAYMENT LOG] Internal Order registered in DB: ID ${newOrder.id}`);
 
+      // Sync active Razorpay setup dynamically from Supabase system_settings before executing API transactions
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          console.log("[PAYMENT LOG] Pulling active Razorpay gateway setup from Supabase system_settings...");
+          const { data, error } = await supabase
+            .from('system_settings')
+            .select('settings_val')
+            .eq('settings_key', 'razorpay_config')
+            .maybeSingle();
+          
+          if (data && data.settings_val) {
+            const parsed = typeof data.settings_val === 'string' ? JSON.parse(data.settings_val) : data.settings_val;
+            dbActions.updateRazorpayConfig(parsed);
+            console.log("[PAYMENT LOG] Active Razorpay configurations successfully synchronized from Supabase settings key.");
+          } else if (error) {
+            console.warn("[PAYMENT LOG] Supabase Config query returned a DB error:", error.message);
+          } else {
+            console.log("[PAYMENT LOG] No custom 'razorpay_config' found in Supabase settings table. Using default environment configuration.");
+          }
+        } catch (sbErr: any) {
+          console.warn("[PAYMENT LOG] Supabase synchronized lookup failed (falling back to saved memory definitions):", sbErr.message || sbErr);
+        }
+      }
+
       const rzpConfig = dbActions.getRazorpayConfig();
       let razorpayOrderId = '';
 
@@ -1629,7 +1654,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
       if (rzpConfig.keyId && rzpConfig.keySecret && rzpConfig.keyId !== 'YOUR_KEY_ID' && !rzpConfig.keyId.startsWith('rzp_test_SURYA')) {
         try {
-          console.log(`[PAYMENT LOG] Triggering real Razorpay Order creation for Key: ${rzpConfig.keyId}`);
+          console.log(`[PAYMENT LOG] Triggering real Razorpay Order creation for Key ID: ${rzpConfig.keyId}`);
           const razorpay = new Razorpay({
             key_id: rzpConfig.keyId,
             key_secret: rzpConfig.keySecret
@@ -1646,20 +1671,29 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
           // Save the real Razorpay Order ID on the order (we map it to paymentId for easy lookup)
           dbActions.updateOrder(newOrder.id, { paymentId: razorpayOrderId });
-          console.log(`[PAYMENT LOG] Real Razorpay Order created successfully and mapped to internal DB: ${razorpayOrderId}`);
+          console.log(`[PAYMENT LOG] Real Razorpay Order created successfully. Order ID: ${razorpayOrderId}, Merchant Key ID: ${rzpConfig.keyId}`);
         } catch (rzpErr: any) {
-          console.error("[PAYMENT LOG] Error communicating with Razorpay API. Falling back to simulated flow:", rzpErr.message || rzpErr);
+          console.error("[PAYMENT LOG] CRITICAL: communication with Razorpay API failed!", rzpErr);
+          if (rzpErr && rzpErr.statusCode) {
+            console.error(`[PAYMENT LOG] Razorpay API Status Code: ${rzpErr.statusCode}, Help Description: ${rzpErr.error?.description || 'None'}`);
+          }
         }
       } else {
-        console.log("[PAYMENT LOG] Using simulated checkout flow because real Razorpay client is not fully configured / test keys are set.");
+        console.log("[PAYMENT LOG] Using simulated checkout flow because real Razorpay client is not fully configured (e.g. keyId starts with mock prefix 'rzp_test_SURYA' or matches placeholders).");
       }
 
-      console.log(`[PAYMENT LOG] Returning 201 Response for internal order ID: ${newOrder.id}`);
+      // Safeguard: If we created a real Razorpay Order, we MUST match it with the exact keyId used to create it,
+      // otherwise passing the mismatch to Razorpay checkout options object causes 401 Unauthorized during standard_checkout/preferences lookup.
+      const returnedKeyId = razorpayOrderId 
+        ? rzpConfig.keyId 
+        : (rzpConfig.keyId || 'rzp_live_T1nYz3RnnW4FOo');
+
+      console.log(`[PAYMENT LOG] Returning 201 Response. Local Ref ID: ${newOrder.id}, Razorpay Order ID: ${razorpayOrderId || 'None'}, Returned Key ID to frontend: ${returnedKeyId}`);
       res.status(201).json({
         orderId: newOrder.id, // local database internal id
         razorpayOrderId: razorpayOrderId || undefined, // the real Razorpay order ID
         amount: finalAmount,
-        keyId: rzpConfig.enabled ? rzpConfig.keyId : 'rzp_test_SURYA2026KEY',
+        keyId: returnedKeyId,
         currency: rzpConfig.currency || 'INR',
         productName: prod.name
       });
