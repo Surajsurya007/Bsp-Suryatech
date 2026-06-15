@@ -675,7 +675,7 @@ export default function App() {
       let orderData: any = null;
 
       try {
-        console.log("[PAYMENT LOG] Requesting Razorpay order from local Express API (/api/orders/create) first...");
+        console.log("[PAYMENT LOG] Requesting Razorpay order from local Express API (/api/orders/create)...");
         const response = await fetch('/api/orders/create', {
           method: 'POST',
           headers: {
@@ -687,7 +687,7 @@ export default function App() {
 
         if (response.ok) {
           const resData = await response.json();
-          console.log("[PAYMENT LOG] Local Express API generated order successfully:", resData);
+          console.log("[PAYMENT LOG] Local Express API generated order successfully. Order Result:", resData);
           orderData = {
             orderId: resData.orderId,
             razorpayOrderId: resData.razorpayOrderId,
@@ -701,42 +701,7 @@ export default function App() {
           console.warn("[PAYMENT LOG] Local Express API returned non-ok status:", response.status, errText);
         }
       } catch (err: any) {
-        console.warn("[PAYMENT LOG] Local Express API order creation failed, trying Supabase Edge Function fallback...", err.message || err);
-      }
-
-      if (!orderData) {
-        try {
-          console.log("[PAYMENT LOG] Requesting Razorpay order from Supabase Edge Function fallback...");
-          const response = await fetch('https://wabhgsdzmptgxrggjjgm.supabase.co/functions/v1/create-razorpay-order', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ productId, couponCode })
-          });
-
-          if (response.ok) {
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-              const resData = await response.json();
-              console.log("[PAYMENT LOG] Razorpay order generated successfully via Supabase Edge Function!", resData);
-              orderData = {
-                orderId: resData.orderId || resData.id,
-                razorpayOrderId: resData.razorpayOrderId || resData.razorpay_order_id,
-                amount: resData.amount,
-                keyId: resData.keyId || resData.key_id,
-                productName: resData.productName || resData.product_name,
-                currency: resData.currency || 'INR'
-              };
-            }
-          } else {
-            const errText = await response.text();
-            console.warn("[PAYMENT LOG] Supabase Edge Function returned non-ok status:", response.status, errText);
-          }
-        } catch (err: any) {
-          console.warn("[PAYMENT LOG] Supabase Edge Function creation failed, attempting direct Supabase billing fallback...", err.message || err);
-        }
+        console.warn("[PAYMENT LOG] Local Express API order creation failed, executing cloud database key query fallback...", err.message || err);
       }
 
       if (!orderData) {
@@ -839,11 +804,13 @@ export default function App() {
     }
 
     try {
-      // Notify secure backend verification of manual status simulation
+      // Notify secure local Express API verification of manual status simulation
       const token = localStorage.getItem('bsp_token');
+      let backendSuccess = false;
+
       try {
-        console.log("App: Triggering payment verification via Supabase Edge Function...");
-        await fetch('https://wabhgsdzmptgxrggjjgm.supabase.co/functions/v1/verify-razorpay-payment', {
+        console.log("[PAYMENT LOG] Instantly verifying simulated payment via local Express API (/api/orders/verify)...");
+        const response = await fetch('/api/orders/verify', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -851,33 +818,48 @@ export default function App() {
           },
           body: JSON.stringify({
             orderId: checkoutData.orderId,
-            paymentId: paymentId,
             status,
             paymentMethod: selectedPaymentMethod
           })
         });
-      } catch (eVer) {
-        console.warn("App: Edge function verification unreachable/errored. Relying on local client db synchronization:", eVer);
+
+        if (response.ok) {
+          const resData = await response.json();
+          console.log("[PAYMENT LOG] Local Express API verified simulated payment successfully. Verification Result:", resData);
+          addNotification('Payment verified by secure local engine successfully!', 'success');
+          backendSuccess = true;
+        } else {
+          const errText = await response.text();
+          console.warn("[PAYMENT LOG] Local Express API returned non-ok status for verification:", response.status, errText);
+        }
+      } catch (eVer: any) {
+        console.warn("[PAYMENT LOG] Local Express API verification unreachable/errored. Parsing offline-first safety sync:", eVer.message || eVer);
       }
 
-      // Maintain direct Supabase write fallback
-      await verifyOrderInDatabase(
-        checkoutData.orderId,
-        checkoutData.productId || 'prod-billing-pro',
-        checkoutData.productName,
-        checkoutData.amount,
-        paymentId,
-        status,
-        selectedPaymentMethod,
-        checkoutData.couponCode
-      );
+      // If backend verification didn't process successfully, invoke client-side direct Supabase fallback sync
+      if (!backendSuccess) {
+        console.log("[PAYMENT LOG] Invoking client-side direct database write fallback to ensure serial generation...");
+        await verifyOrderInDatabase(
+          checkoutData.orderId,
+          checkoutData.productId || 'prod-billing-pro',
+          checkoutData.productName,
+          checkoutData.amount,
+          paymentId,
+          status,
+          selectedPaymentMethod,
+          checkoutData.couponCode
+        );
+      } else {
+        // Explicitly trigger client-side license reload if backend successfully synchronized
+        await fetchUserLicenses();
+      }
 
       setCheckoutActive(false);
       setCheckoutData(null);
       setCurrentPage('portal');
     } catch (err: any) {
       console.error(err);
-      addNotification('Serverless payment verification error', 'error');
+      addNotification('Payment verification encounter error: ' + err.message, 'error');
     } finally {
       setCheckoutLoading(false);
     }
@@ -957,56 +939,97 @@ export default function App() {
           addNotification('Payment authorized by Razorpay! Running secure backend signature validations...', 'info');
           
           try {
-            // Before inserting order: Re-fetch current user:
-            const { data: userData } = await supabase.auth.getUser();
-            const authUser = userData.user;
+            const token = localStorage.getItem('bsp_token');
+            let backendSuccess = false;
 
-            const cartSubtotal = data.productId === 'prod-billing-enterprise' ? 2999 : 999;
-            const appliedDiscount = data.couponCode ? (cartSubtotal - finalTotal) : 0;
-            const calculatedTax = parseFloat((finalTotal * 0.18).toFixed(2));
-            const cartItems = cartItem ? [cartItem] : [{ id: data.productId, name: data.productName, selectedPlanId: data.productId }];
+            try {
+              console.log("[PAYMENT LOG] Verifying real Razorpay cryptographic signature via local Express API (/api/orders/verify)...");
+              const verifyResponse = await fetch('/api/orders/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  orderId: data.orderId,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  status: 'success',
+                  paymentMethod: 'ONLINE_Razorpay'
+                })
+              });
 
-            // Try inserting matching user's requested custom structure
-            const userPayload = {
-              id: data.orderId,
-              customer_id: authUser?.id,
-              products: cartItems,
-              subtotal: cartSubtotal,
-              discount: appliedDiscount,
-              tax: calculatedTax,
-              total_amount: finalTotal,
-              payment_type: 'ONLINE',
-              status: 'paid'
-            };
+              if (verifyResponse.ok) {
+                const verifyResData = await verifyResponse.json();
+                console.log("[PAYMENT LOG] Local Express API payment verification successful:", verifyResData);
+                addNotification('Secure signature verified! License serial generated successfully.', 'success');
+                backendSuccess = true;
+              } else {
+                const errText = await verifyResponse.text();
+                console.warn("[PAYMENT LOG] Local Express API verification returned an error:", verifyResponse.status, errText);
+              }
+            } catch (errVer: any) {
+              console.warn("[PAYMENT LOG] Local Express API verification unreachable, resorting to direct Supabase write backup:", errVer.message || errVer);
+            }
 
-            const { error: userInsertError } = await supabase.from('orders').insert([userPayload]);
-            
-            if (userInsertError) {
-              console.warn("User schema insert failed, falling back to database default order schema:", userInsertError.message);
-              // Fallback to default compatible schema (which has column user_id instead of customer_id, etc.)
-              await verifyOrderInDatabase(
-                data.orderId,
-                data.productId || 'prod-billing-pro',
-                data.productName,
-                data.amount,
-                response.razorpay_payment_id || 'pay_RZPLIVE_' + Math.random().toString(36).substr(2, 10).toUpperCase(),
-                'success',
-                'Razorpay_Live_Gateway_Portal',
-                data.couponCode
-              );
+            // Sync database fallbacks in case backend is offline or missed updating the Supabase engine
+            if (!backendSuccess) {
+              console.log("[PAYMENT LOG] Backend verification skipped or incomplete. Initiating client-side direct database write fallback...");
+              // Before inserting order: Re-fetch current user:
+              const { data: userData } = await supabase.auth.getUser();
+              const authUser = userData.user;
+
+              const cartSubtotal = data.productId === 'prod-billing-enterprise' ? 2999 : 999;
+              const appliedDiscount = data.couponCode ? (cartSubtotal - finalTotal) : 0;
+              const calculatedTax = parseFloat((finalTotal * 0.18).toFixed(2));
+              const cartItems = cartItem ? [cartItem] : [{ id: data.productId, name: data.productName, selectedPlanId: data.productId }];
+
+              // Try inserting matching user's requested custom structure
+              const userPayload = {
+                id: data.orderId,
+                customer_id: authUser?.id,
+                products: cartItems,
+                subtotal: cartSubtotal,
+                discount: appliedDiscount,
+                tax: calculatedTax,
+                total_amount: finalTotal,
+                payment_type: 'ONLINE',
+                status: 'paid'
+              };
+
+              const { error: userInsertError } = await supabase.from('orders').insert([userPayload]);
+              
+              if (userInsertError) {
+                console.warn("User schema insert failed, falling back to database default order schema:", userInsertError.message);
+                // Fallback to default compatible schema (which has column user_id instead of customer_id, etc.)
+                await verifyOrderInDatabase(
+                  data.orderId,
+                  data.productId || 'prod-billing-pro',
+                  data.productName,
+                  data.amount,
+                  response.razorpay_payment_id || 'pay_RZPLIVE_' + Math.random().toString(36).substr(2, 10).toUpperCase(),
+                  'success',
+                  'Razorpay_Live_Gateway_Portal',
+                  data.couponCode
+                );
+              } else {
+                console.log("Insert with user's customizable schema succeeded!");
+                // Also run licensing key and invoice dispatch logic to populate system licenses
+                await verifyOrderInDatabase(
+                  data.orderId,
+                  data.productId || 'prod-billing-pro',
+                  data.productName,
+                  data.amount,
+                  response.razorpay_payment_id || 'pay_RZPLIVE_' + Math.random().toString(36).substr(2, 10).toUpperCase(),
+                  'success',
+                  'ONLINE',
+                  data.couponCode
+                );
+              }
             } else {
-              console.log("Insert with user's customizable schema succeeded!");
-              // Also run licensing key and invoice dispatch logic to populate system licenses
-              await verifyOrderInDatabase(
-                data.orderId,
-                data.productId || 'prod-billing-pro',
-                data.productName,
-                data.amount,
-                response.razorpay_payment_id || 'pay_RZPLIVE_' + Math.random().toString(36).substr(2, 10).toUpperCase(),
-                'success',
-                'ONLINE',
-                data.couponCode
-              );
+              // Standard client-side reload of active licenses from synchronized database tables
+              await fetchUserLicenses();
             }
 
             setCheckoutActive(false);
