@@ -31,7 +31,7 @@
     }
   ],
   "passwordHashes": {
-    "u-admin": "e00437e7b64aab27e893cc8b5478850a:8809f1ff872678ccbe58a5ac62ba8fc9ee223753c1797b6fbcbd04080ed61099ba99c27e8f112da7578da658230dbc4eab9c540dfa198dbb477990a518c5de4a",
+    "u-admin": "d45255d33e3dd22f4bc82b5ff82da535:4767200520a0b3ad79b7867bfb9dd6c7f7e4a594d4070b8a98a5e6c3c42fa8e7ce1c0ba0be9e667748d0e4602a76d464b2278c20fda47ad8f06ea13e49afac28",
     "u-customer": "b9ccc2338bf8b5bd3bcd5dbea1001339:ea390073d180cee9336d82e4dc34eefd3e2a12a0ed27318662dac716f7a2d0ec5311db41f80a5520b0492eb1993b313ae1aa442adda7af46e3a8d0e32f3eedf9",
     "u-uj137orkt": "166fa432211355487677d46a637de1c1:d850c445d5fffb3469bffcdc5a7ab58a2dcf80815075d0674a560aa85773ebfa59d1693a94e41ba9aedd30d59777d8bbf9fe56c86ff9fdfb8b74d3ea1f135b6b",
     "u-f04fqbizv": "26b62f5e59666df8af89d9024e91dabe:6d4f83d3a83b04cef63c96639f4a726c61b943c9e5c72674db889bdd7184135440afbea1e25fdd8e8b97f71cfb61f49ab2841f48d4e24c8b548e021a4200cc1e"
@@ -479,8 +479,8 @@
     }
   ],
   "razorpayConfig": {
-    "keyId": "rzp_live_T1nYz3RnnW4FOo",
-    "keySecret": "hqIzJAAXiiTEtilVlFn8eDre",
+    "keyId": "",
+    "keySecret": "",
     "mode": "live",
     "currency": "INR",
     "enabled": true,

@@ -1576,7 +1576,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
     const rzpConfig = dbActions.getRazorpayConfig();
     res.json({
-      keyId: rzpConfig.keyId || 'rzp_live_T1nYz3RnnW4FOo',
+      keyId: rzpConfig.keyId || '',
       enabled: rzpConfig.enabled || false,
       currency: rzpConfig.currency || 'INR',
       mode: rzpConfig.mode || 'live'
@@ -1684,9 +1684,13 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
       // Safeguard: If we created a real Razorpay Order, we MUST match it with the exact keyId used to create it,
       // otherwise passing the mismatch to Razorpay checkout options object causes 401 Unauthorized during standard_checkout/preferences lookup.
-      const returnedKeyId = razorpayOrderId 
-        ? rzpConfig.keyId 
-        : (rzpConfig.keyId || 'rzp_live_T1nYz3RnnW4FOo');
+      const returnedKeyId = rzpConfig.keyId || '';
+
+      console.log("======================================= [BACKEND RAZORPAY DIAGNOSTICS] =======================================");
+      console.log("[RAZORPAY DIAGNOSTICS - VALUE 1] Exact Razorpay Key ID used to generate order: ", rzpConfig.keyId || "None (Using empty/unconfigured fallback)");
+      console.log("[RAZORPAY DIAGNOSTICS - VALUE 2] Exact Razorpay Key ID returned and sent to Checkout.js: ", returnedKeyId || "None");
+      console.log("[RAZORPAY DIAGNOSTICS - VALUE 3] Razorpay Order ID returned from order creation: ", razorpayOrderId || "None (Simulation flow)");
+      console.log("==============================================================================================================");
 
       console.log(`[PAYMENT LOG] Returning 201 Response. Local Ref ID: ${newOrder.id}, Razorpay Order ID: ${razorpayOrderId || 'None'}, Returned Key ID to frontend: ${returnedKeyId}`);
       res.status(201).json({

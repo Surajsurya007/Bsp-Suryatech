@@ -706,7 +706,7 @@ export default function App() {
 
       if (!orderData) {
         console.log("App: Running secure client-side Order generation (Supabase database configuration fallback)...");
-        let rzpKeyId = 'rzp_live_T1nYz3RnnW4FOo';
+        let rzpKeyId = '';
         
         try {
           // Fetch the live Razorpay configuration directly from Supabase settings table if backend is not responding with JSON
@@ -901,20 +901,19 @@ export default function App() {
 
     try {
       const finalTotal = data.amount;
-      const activeKey = data.keyId || "rzp_live_T1nYz3RnnW4FOo";
+      const activeKey = data.keyId || "";
       const activeOrderId = data.razorpayOrderId || undefined;
 
       console.log("======================================= [RAZORPAY DIAGNOSTICS] =======================================");
-      console.log("[RAZORPAY] Initializing Official Razorpay Payment Gateway Options...");
-      console.log("[RAZORPAY] Frontend KEY ID used:", activeKey);
-      console.log("[RAZORPAY] Razorpay ORDER ID used (order_id):", activeOrderId ? activeOrderId : "None (Using direct transaction fallback)");
+      console.log("[RAZORPAY DIAGNOSTICS - VALUE 1] Exact Razorpay Key ID used on backend creation: ", data.keyId || "None");
+      console.log("[RAZORPAY DIAGNOSTICS - VALUE 2] Exact Razorpay Key ID passed to Checkout.js: ", activeKey || "None (Fails unless key is set in backend or env)");
+      console.log("[RAZORPAY DIAGNOSTICS - VALUE 3] Razorpay Order ID returned from backend/fallback: ", activeOrderId || "None (Direct transaction / Simulation flow)");
       console.log("[RAZORPAY] Total amount charging (Paise):", finalTotal * 100);
       console.log("[RAZORPAY] Currency:", "INR");
       console.log("[RAZORPAY] Product Mapped:", data.productName);
 
-      // Key audit & diagnostic warnings:
-      if (activeKey === "rzp_live_T1nYz3RnnW4FOo") {
-        console.log("[RAZORPAY] INFO: Using default live key ID 'rzp_live_T1nYz3RnnW4FOo' which is active on the production Razorpay account.");
+      if (!activeKey) {
+        console.warn("[RAZORPAY] WARNING: No active Razorpay Key ID was detected or sent to the checkout frontend. Initialize with empty credentials or populate in Admin / System Settings.");
       }
       if (activeOrderId && activeOrderId.startsWith("order_local_")) {
         console.warn("[RAZORPAY] WARNING: Provided order_id starts with 'order_local_'. This is a frontend simulation ID and MUST NOT be passed to Razorpay SDK order_id, otherwise Razorpay API will error out.");
