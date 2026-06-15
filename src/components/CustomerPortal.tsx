@@ -199,8 +199,7 @@ export default function CustomerPortal({
   const fetchCustomerData = async () => {
     if (!user) return;
     setDataLoading(true);
-    console.log("CustomerPortal: Fetching user workspace records first via secure local backend APIs...");
-    const token = localStorage.getItem('bsp_token');
+    console.log("CustomerPortal: Fetching user workspace records directly from Supabase DB...");
     
     // Initialize defaults
     let licData: any[] = [];
@@ -211,91 +210,70 @@ export default function CustomerPortal({
     let notifData: any[] = [];
 
     try {
-      // 1. Primary: Use local express server endpoints which are always stable
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-      
-      const [licRes, ordRes, tkRes, payRes, invRes, notifRes] = await Promise.all([
-        fetch('/api/customer/licenses', { headers }),
-        fetch('/api/customer/orders', { headers }),
-        fetch('/api/tickets', { headers }),
-        fetch('/api/customer/payment-history', { headers }),
-        fetch('/api/customer/invoices', { headers }),
-        fetch('/api/customer/notifications', { headers })
-      ]);
-
-      if (licRes.ok) licData = await licRes.json();
-      if (ordRes.ok) ordData = await ordRes.json();
-      if (tkRes.ok) tkData = await tkRes.json();
-      if (payRes.ok) payData = await payRes.json();
-      if (invRes.ok) invData = await invRes.json();
-      if (notifRes.ok) notifData = await notifRes.json();
-
-      // If we got empty lists, let's attempt to sync/query Supabase as a background backup if available
-      if (licData.length === 0 || ordData.length === 0) {
-        try {
-          const { data: sL } = await supabase.from('licenses').select('*').eq('user_id', user.id);
-          if (sL && sL.length > 0) {
-            licData = sL.map(item => ({
-              id: item.id,
-              userId: item.user_id,
-              userEmail: item.user_email,
-              orderId: item.order_id,
-              productId: item.product_id,
-              productName: item.product_name,
-              licenseKey: item.license_key,
-              status: item.status,
-              expiresAt: item.expires_at,
-              createdAt: item.created_at
-            }));
-          }
-          const { data: sO } = await supabase.from('orders').select('*').eq('user_id', user.id);
-          if (sO && sO.length > 0) {
-            ordData = sO.map(item => ({
-              id: item.id,
-              userId: item.user_id,
-              userEmail: item.user_email,
-              userName: item.user_name,
-              productId: item.product_id,
-              productName: item.product_name,
-              amount: item.amount,
-              couponCode: item.coupon_code,
-              status: item.status,
-              paymentId: item.payment_id,
-              createdAt: item.created_at
-            }));
-          }
-        } catch (sbErr) {
-          console.warn("Background Supabase sync deferred:", sbErr);
-        }
+      const { data: sL } = await supabase.from('licenses').select('*').eq('user_id', user.id);
+      if (sL) {
+        licData = sL.map(item => ({
+          id: item.id,
+          userId: item.user_id,
+          userEmail: item.user_email,
+          orderId: item.order_id,
+          productId: item.product_id,
+          productName: item.product_name,
+          licenseKey: item.license_key,
+          status: item.status,
+          expiresAt: item.expires_at,
+          createdAt: item.created_at
+        }));
       }
+
+      const { data: sO } = await supabase.from('orders').select('*').eq('user_id', user.id);
+      if (sO) {
+        ordData = sO.map(item => ({
+          id: item.id,
+          userId: item.user_id,
+          userEmail: item.user_email,
+          userName: item.user_name,
+          productId: item.product_id,
+          productName: item.product_name,
+          amount: item.amount,
+          couponCode: item.coupon_code,
+          status: item.status,
+          paymentId: item.payment_id,
+          createdAt: item.created_at
+        }));
+      }
+
+      const { data: sT } = await supabase.from('support_tickets').select('*').eq('user_id', user.id);
+      if (sT) tkData = sT;
+
+      const { data: sP } = await supabase.from('payments').select('*').eq('user_id', user.id);
+      if (sP) payData = sP;
+
+      const { data: sI } = await supabase.from('invoices').select('*').eq('user_id', user.id);
+      if (sI) {
+        invData = sI.map(item => ({
+          id: item.id,
+          invoiceNumber: item.invoice_number,
+          orderId: item.order_id,
+          userId: item.user_id,
+          clientName: item.client_name,
+          businessName: item.business_name,
+          emailAddress: item.email_address,
+          contactNumber: item.contact_number,
+          amount: item.amount,
+          gstAmount: item.gst_amount,
+          netAmount: item.net_amount,
+          productName: item.product_name,
+          licenseKey: item.license_key,
+          createdAt: item.created_at
+        }));
+      }
+
+      const { data: sN } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      if (sN) notifData = sN;
 
     } catch (err: any) {
-      console.warn("CustomerPortal: Primary API loading failure, trying static fallback:", err);
-      // Fallback: direct Supabase querying if backend is somehow down
-      try {
-        const { data: sL } = await supabase.from('licenses').select('*').eq('user_id', user.id);
-        if (sL) licData = sL.map(item => ({ id: item.id, userId: item.user_id, licenseKey: item.license_key, expiresAt: item.expires_at, productId: item.product_id, productName: item.product_name, createdAt: item.created_at, orderId: item.order_id }));
-        
-        const { data: sO } = await supabase.from('orders').select('*').eq('user_id', user.id);
-        if (sO) ordData = sO.map(item => ({ id: item.id, userId: item.user_id, userEmail: item.user_email, userName: item.user_name, productId: item.product_id, productName: item.product_name, amount: item.amount, couponCode: item.coupon_code, status: item.status, paymentId: item.payment_id, createdAt: item.created_at }));
-
-        const { data: sT } = await supabase.from('support_tickets').select('*').eq('user_id', user.id);
-        if (sT) tkData = sT;
-
-        const { data: sP } = await supabase.from('payments').select('*').eq('user_id', user.id);
-        if (sP) payData = sP;
-
-        const { data: sI } = await supabase.from('invoices').select('*').eq('user_id', user.id);
-        if (sI) invData = sI.map(item => ({ id: item.id, invoiceNumber: item.invoice_number, orderId: item.order_id, userId: item.user_id, clientName: item.client_name, businessName: item.business_name, emailAddress: item.email_address, contactNumber: item.contact_number, amount: item.amount, gstAmount: item.gst_amount, netAmount: item.net_amount, productName: item.product_name, licenseKey: item.license_key, createdAt: item.created_at }));
-
-        const { data: sN } = await supabase.from('notifications').select('*').eq('user_id', user.id);
-        if (sN) notifData = sN;
-      } catch (errB) {
-        console.error("Critical: Fallback database fetch failed too:", errB);
-      }
+      console.warn("CustomerPortal: Direct Supabase loading failure:", err);
     } finally {
       // Format support ticket replies string/JSON
       const formattedTickets = (tkData || []).map((ticket: any) => ({
@@ -317,37 +295,27 @@ export default function CustomerPortal({
   // Fetch target customer profile data
   const fetchCustomerProfile = async () => {
     if (!user) return;
-    console.log("CustomerPortal: Fetching customer profile details using backend-first hybrid API...");
-    const token = localStorage.getItem('bsp_token');
+    console.log("CustomerPortal: Fetching customer profile details directly from Supabase...");
     try {
       let profileData = null;
-      // 1. Try local Express API first
-      const res = await fetch('/api/customer/profile', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        profileData = await res.json();
-      } else {
-        // 2. Try direct Supabase fallback
-        const { data, error } = await supabase
-          .from('customer_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-        if (data && !error) {
-          profileData = {
-            userId: data.user_id,
-            clientName: data.client_name,
-            businessName: data.business_name,
-            contactNumber: data.contact_number,
-            emailAddress: data.email_address,
-            businessAddress: data.business_address,
-            city: data.city,
-            state: data.state,
-            pincode: data.pincode,
-            gstNumber: data.gst_number
-          };
-        }
+      const { data, error } = await supabase
+        .from('customer_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      if (data && !error) {
+        profileData = {
+          userId: data.user_id,
+          clientName: data.client_name,
+          businessName: data.business_name,
+          contactNumber: data.contact_number,
+          emailAddress: data.email_address,
+          businessAddress: data.business_address,
+          city: data.city,
+          state: data.state,
+          pincode: data.pincode,
+          gstNumber: data.gst_number
+        };
       }
 
       if (profileData) {
@@ -474,57 +442,11 @@ export default function CustomerPortal({
       });
 
       if (error) {
-        console.warn("Supabase Login Error; falling back to Express API login:", error.message);
-        
-        // Try local Express backend login fallback
-        try {
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: loginEmail, password: loginPassword })
-          });
-          
-          if (!response.ok) {
-            const errData = await response.json();
-            const finalError = errData.error || 'Invalid credentials';
-            console.error("Express Fallback Login Error:", finalError);
-            setSupabaseErrorMsg(error.message || finalError);
-            onAddNotification(finalError, 'error');
-            setAuthLoading(false);
-            return;
-          }
-
-          const localData = await response.json();
-          const userObj = {
-            id: localData.user.id,
-            email: localData.user.email,
-            name: localData.user.name,
-            role: localData.user.email === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer',
-            profile: localData.user.profile || null
-          };
-
-          // Save token for authenticated requests
-          localStorage.setItem('bsp_token', localData.token);
-
-          onLoginSuccess(localData.token, userObj);
-          onAddNotification(`Welcome back, ${userObj.name}!`, 'success');
-          
-          if (userObj.role === 'admin') {
-            onPageChange('admin');
-          } else {
-            onPageChange('home');
-            window.history.pushState({}, '', '/');
-          }
-          setAuthLoading(false);
-          return;
-          
-        } catch (fallbackErr: any) {
-          console.error("Express Fallback Authentication Exception:", fallbackErr);
-          setSupabaseErrorMsg(error.message);
-          onAddNotification(error.message, 'error');
-          setAuthLoading(false);
-          return;
-        }
+        console.warn("Supabase Login Error:", error.message);
+        setSupabaseErrorMsg(error.message);
+        onAddNotification(error.message, 'error');
+        setAuthLoading(false);
+        return;
       }
 
       if (data?.user) {
@@ -686,47 +608,7 @@ export default function CustomerPortal({
       if (data?.user) {
         console.log("CustomerPortal: Supabase user registered with ID:", data.user.id);
         
-        // 2) Synchronously register on local Express backend to ensure flawless local fallback & profile tracking
-        try {
-          console.log("CustomerPortal: Synchronizing register details with local Express database...");
-          const devRegRes = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: regClientName,
-              email: regEmail,
-              password: regPassword
-            })
-          });
-
-          if (devRegRes.ok) {
-            const devRegData = await devRegRes.json();
-            console.log("CustomerPortal: Local Express user created, updating customer profile details...");
-            await fetch('/api/customer/profile', {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${devRegData.token}`
-              },
-              body: JSON.stringify({
-                clientName: regClientName,
-                businessName: regBusinessName,
-                contactNumber: regContactNumber,
-                emailAddress: regEmail,
-                businessAddress: regBusinessAddress,
-                city: regCity,
-                state: regState,
-                pincode: regPincode,
-                gstNumber: regGstNumber
-              })
-            });
-            console.log("CustomerPortal: Local Express database profile details updated successfully.");
-          }
-        } catch (localErr: any) {
-          console.warn("CustomerPortal: Background local Express registration sync deferred:", localErr.message || localErr);
-        }
-
-        // 3) Save details to Supabase `customer_profiles` table ONLY if an active authenticated session exists.
+        // Save details to Supabase `customer_profiles` table ONLY if an active authenticated session exists.
         // If email confirmation is enabled, session is null/empty and direct write is deferred until login (under authenticated role context, protecting RLS).
         if (data.session) {
           try {
@@ -830,48 +712,27 @@ export default function CustomerPortal({
     }
 
     setProfileSaving(true);
-    console.log("CustomerPortal: Writing updated profile details across dual database servers...");
-    const token = localStorage.getItem('bsp_token');
+    console.log("CustomerPortal: Writing updated profile details directly to Supabase...");
     try {
-      // 1. Primary: Save to local Express persistent storage system
-      const apiRes = await fetch('/api/customer/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          clientName: profileClientName,
-          businessName: profileBusinessName,
-          contactNumber: profileContactNumber,
-          emailAddress: profileEmailAddress,
-          businessAddress: profileBusinessAddress,
+      // 1. Direct secure upsert to Supabase database profiles table
+      const { error: sbWriteErr } = await supabase
+        .from('customer_profiles')
+        .upsert({
+          user_id: user.id,
+          client_name: profileClientName,
+          business_name: profileBusinessName,
+          contact_number: profileContactNumber,
+          email_address: profileEmailAddress,
+          business_address: profileBusinessAddress,
           city: profileCity,
           state: profileStateValue,
           pincode: profilePincode,
-          gstNumber: profileGstNumber
-        })
-      });
+          gst_number: profileGstNumber,
+          created_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
 
-      // 2. Secondary: Parallel try-catch upsert to Supabase database if active
-      try {
-        await supabase
-          .from('customer_profiles')
-          .upsert({
-            user_id: user.id,
-            client_name: profileClientName,
-            business_name: profileBusinessName,
-            contact_number: profileContactNumber,
-            email_address: profileEmailAddress,
-            business_address: profileBusinessAddress,
-            city: profileCity,
-            state: profileStateValue,
-            pincode: profilePincode,
-            gst_number: profileGstNumber,
-            created_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
-      } catch (sbWriteErr: any) {
-        console.warn("Background Supabase customer profile write deferred:", sbWriteErr.message || sbWriteErr);
+      if (sbWriteErr) {
+        throw new Error(sbWriteErr.message);
       }
 
       onAddNotification('Customer Profile details updated successfully!', 'success');
@@ -879,7 +740,7 @@ export default function CustomerPortal({
       await fetchCustomerData();
     } catch (err: any) {
       console.error(err);
-      onAddNotification('Server communication failure updating profile details', 'error');
+      onAddNotification('Failure updating profile details: ' + err.message, 'error');
     } finally {
       setProfileSaving(false);
     }
@@ -887,23 +748,15 @@ export default function CustomerPortal({
 
   // Mark notification read handler
   const handleMarkNotificationRead = async (id: string) => {
-    console.log("CustomerPortal: Marking notification as read securely...");
-    const token = localStorage.getItem('bsp_token');
+    console.log("CustomerPortal: Marking notification as read securely directly in Supabase...");
     try {
-      // 1. Express API call
-      await fetch(`/api/customer/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
 
-      // 2. Try Supabase parallel
-      try {
-        await supabase
-          .from('notifications')
-          .update({ read: true })
-          .eq('id', id);
-      } catch (sbErr) {
-        console.warn("Supabase notification read update deferred:", sbErr);
+      if (error) {
+        throw new Error(error.message);
       }
 
       // Incrementally update UI state local list safely
@@ -922,55 +775,34 @@ export default function CustomerPortal({
     }
 
     setTicketSubmitting(true);
-    console.log("CustomerPortal: Creating support ticket via backend API...");
-    const token = localStorage.getItem('bsp_token');
+    console.log("CustomerPortal: Creating support ticket directly in Supabase...");
     try {
-      // 1. Primary: Save to Express backend
-      const res = await fetch('/api/tickets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title: ticketTitle,
-          description: ticketDescription,
-          category: ticketCategory
-        })
+      const ticketId = 'tic_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      const { error: sbWriteErr } = await supabase.from('support_tickets').insert({
+        id: ticketId,
+        user_id: user.id,
+        user_email: user.email,
+        user_name: user.name || user.email.split('@')[0],
+        title: ticketTitle,
+        description: ticketDescription,
+        category: ticketCategory,
+        status: 'open',
+        created_at: new Date().toISOString(),
+        replies: JSON.stringify([])
       });
 
-      const newTicketPayload = res.ok ? await res.json() : null;
-
-      // 2. Secondary: Parallel try-catch insert to Supabase database if active
-      if (newTicketPayload) {
-        try {
-          await supabase.from('support_tickets').insert({
-            id: newTicketPayload.id,
-            user_id: user.id,
-            user_email: user.email,
-            user_name: user.name || user.email.split('@')[0],
-            title: ticketTitle,
-            description: ticketDescription,
-            category: ticketCategory,
-            status: 'open',
-            created_at: new Date().toISOString(),
-            replies: JSON.stringify([])
-          });
-        } catch (sbWriteErr: any) {
-          console.warn("Background Supabase support ticket insert deferred:", sbWriteErr.message || sbWriteErr);
-        }
-
-        onAddNotification('Support ticket opened successfully!', 'success');
-        setTicketTitle('');
-        setTicketDescription('');
-        setActivePortalView('tickets');
-        await fetchCustomerData();
-      } else {
-        throw new Error('Backend failed to create support ticket payload');
+      if (sbWriteErr) {
+        throw new Error(sbWriteErr.message);
       }
+
+      onAddNotification('Support ticket opened successfully!', 'success');
+      setTicketTitle('');
+      setTicketDescription('');
+      setActivePortalView('tickets');
+      await fetchCustomerData();
     } catch (err: any) {
       console.error(err);
-      onAddNotification('Network error posting support ticket: ' + err.message, 'error');
+      onAddNotification('Error posting support ticket: ' + err.message, 'error');
     } finally {
       setTicketSubmitting(false);
     }
@@ -982,60 +814,45 @@ export default function CustomerPortal({
     if (!replyMsg.trim() || !activeTicketId) return;
 
     setReplySubmitting(true);
-    console.log("CustomerPortal: Adding reply message via backend API...");
-    const token = localStorage.getItem('bsp_token');
+    console.log("CustomerPortal: Adding reply message directly in Supabase...");
     try {
-      // 1. Primary: Save to local Express backend
-      const res = await fetch(`/api/tickets/${activeTicketId}/reply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ message: replyMsg })
-      });
+      const { data: currentTicket, error: getErr } = await supabase
+        .from('support_tickets')
+        .select('replies')
+        .eq('id', activeTicketId)
+        .single();
 
-      if (!res.ok) {
-        throw new Error('Backend ticket reply posting failed');
+      if (getErr || !currentTicket) {
+        throw new Error(getErr?.message || 'Support ticket not found');
       }
 
-      const updatedTicketPayload = await res.json();
+      const newReply = {
+        id: 'rep_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+        authorName: user.name || user.email.split('@')[0],
+        authorRole: 'customer',
+        message: replyMsg,
+        createdAt: new Date().toISOString()
+      };
+      
+      let currentReplies = typeof currentTicket.replies === 'string' 
+        ? JSON.parse(currentTicket.replies) 
+        : currentTicket.replies || [];
+      const updatedReplies = [...currentReplies, newReply];
 
-      // 2. Secondary: Parallel sync to Supabase if active
-      try {
-        const { data: currentTicket, error: getErr } = await supabase
-          .from('support_tickets')
-          .select('replies')
-          .eq('id', activeTicketId)
-          .single();
+      const { error: updErr } = await supabase
+        .from('support_tickets')
+        .update({ replies: JSON.stringify(updatedReplies) })
+        .eq('id', activeTicketId);
 
-        if (!getErr && currentTicket) {
-          const newReply = {
-            id: 'rep_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-            authorName: user.name || user.email.split('@')[0],
-            authorRole: 'customer',
-            message: replyMsg,
-            createdAt: new Date().toISOString()
-          };
-          let currentReplies = typeof currentTicket.replies === 'string' 
-            ? JSON.parse(currentTicket.replies) 
-            : currentTicket.replies || [];
-          const updatedReplies = [...currentReplies, newReply];
-
-          await supabase
-            .from('support_tickets')
-            .update({ replies: JSON.stringify(updatedReplies) })
-            .eq('id', activeTicketId);
-        }
-      } catch (sbErr: any) {
-        console.warn("Background Supabase ticket reply update deferred:", sbErr.message || sbErr);
+      if (updErr) {
+        throw new Error(updErr.message);
       }
 
       setReplyMsg('');
       await fetchCustomerData();
     } catch (err: any) {
       console.error(err);
-      onAddNotification('Network error posting reply message', 'error');
+      onAddNotification('Error posting reply message: ' + err.message, 'error');
     } finally {
       setReplySubmitting(false);
     }

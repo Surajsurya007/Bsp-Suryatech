@@ -239,6 +239,23 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
+  // Ensure Hostinger Production File Storage directories exist in current working directory
+  const hostingerDirs = [
+    path.join(process.cwd(), 'uploads', 'images'),
+    path.join(process.cwd(), 'uploads', 'pdfs'),
+    path.join(process.cwd(), 'uploads', 'videos'),
+    path.join(process.cwd(), 'downloads', 'software')
+  ];
+  hostingerDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+
+  // Hostinger Static Media Asset Static Serving Middlewares
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  app.use('/downloads', express.static(path.join(process.cwd(), 'downloads')));
+
   // API Authentication Middlewares
   function authenticateToken(req: any, res: any, next: any) {
     const authHeader = req.headers['authorization'];
@@ -2371,6 +2388,83 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     }
   });
 
+  // Dedicated Production Upload Handlers for Hostinger File Storage
+  app.post('/api/admin/uploads/image', requireAdmin, (req, res) => {
+    const { filename, base64Data } = req.body;
+    if (!filename || !base64Data) {
+      return res.status(400).json({ error: 'Filename and base64Data are required' });
+    }
+    try {
+      const buffer = Buffer.from(base64Data, 'base64');
+      const targetDir = path.join(process.cwd(), 'uploads', 'images');
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      const filePath = path.join(targetDir, filename);
+      fs.writeFileSync(filePath, buffer);
+      res.json({ success: true, path: `/uploads/images/${filename}` });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed saving image: ' + err.message });
+    }
+  });
+
+  app.post('/api/admin/uploads/pdf', requireAdmin, (req, res) => {
+    const { filename, base64Data } = req.body;
+    if (!filename || !base64Data) {
+      return res.status(400).json({ error: 'Filename and base64Data are required' });
+    }
+    try {
+      const buffer = Buffer.from(base64Data, 'base64');
+      const targetDir = path.join(process.cwd(), 'uploads', 'pdfs');
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      const filePath = path.join(targetDir, filename);
+      fs.writeFileSync(filePath, buffer);
+      res.json({ success: true, path: `/uploads/pdfs/${filename}` });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed saving PDF: ' + err.message });
+    }
+  });
+
+  app.post('/api/admin/uploads/video', requireAdmin, (req, res) => {
+    const { filename, base64Data } = req.body;
+    if (!filename || !base64Data) {
+      return res.status(400).json({ error: 'Filename and base64Data are required' });
+    }
+    try {
+      const buffer = Buffer.from(base64Data, 'base64');
+      const targetDir = path.join(process.cwd(), 'uploads', 'videos');
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      const filePath = path.join(targetDir, filename);
+      fs.writeFileSync(filePath, buffer);
+      res.json({ success: true, path: `/uploads/videos/${filename}` });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed saving video: ' + err.message });
+    }
+  });
+
+  app.post('/api/admin/downloads/software', requireAdmin, (req, res) => {
+    const { filename, base64Data } = req.body;
+    if (!filename || !base64Data) {
+      return res.status(400).json({ error: 'Filename and base64Data are required' });
+    }
+    try {
+      const buffer = Buffer.from(base64Data, 'base64');
+      const targetDir = path.join(process.cwd(), 'downloads', 'software');
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      const filePath = path.join(targetDir, filename);
+      fs.writeFileSync(filePath, buffer);
+      res.json({ success: true, path: `/downloads/software/${filename}` });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed saving software installer: ' + err.message });
+    }
+  });
+
   app.post('/api/admin/downloads/upload-pdf', requireAdmin, (req, res) => {
     const { filename, base64Data } = req.body;
     if (!filename || !base64Data) {
@@ -2542,7 +2636,15 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           features: JSON.stringify(newProd.features),
           description: newProd.description,
           download_url: newProd.downloadUrl,
-          connected_plan: newProd.connectedPlan
+          connected_plan: newProd.connectedPlan,
+          category: newProd.category,
+          full_description: newProd.fullDescription,
+          system_requirements: newProd.systemRequirements,
+          license_info: newProd.licenseInfo,
+          demo_video_url: newProd.demoVideoUrl,
+          gallery: JSON.stringify(newProd.gallery),
+          manual_url: newProd.manualUrl,
+          status: newProd.status || 'active'
         });
       } catch (sbErr) {
         console.warn("Background Supabase product write sync skipped:", sbErr);
@@ -2570,7 +2672,15 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           features: JSON.stringify(p.features),
           description: p.description,
           download_url: p.downloadUrl,
-          connected_plan: p.connectedPlan
+          connected_plan: p.connectedPlan,
+          category: p.category,
+          full_description: p.fullDescription,
+          system_requirements: p.systemRequirements,
+          license_info: p.licenseInfo,
+          demo_video_url: p.demoVideoUrl,
+          gallery: JSON.stringify(p.gallery),
+          manual_url: p.manualUrl,
+          status: p.status || 'active'
         });
       } catch (sbErr) {
         console.warn("Background Supabase product update sync skipped:", sbErr);
@@ -2654,7 +2764,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   });
 
   // Admin: Video Tutorials CRUD
-  app.post('/api/admin/videos', requireAdmin, (req, res) => {
+  app.post('/api/admin/videos', requireAdmin, async (req, res) => {
     const { title, duration, youtubeId, thumbnail, description } = req.body;
     if (!title || !youtubeId) {
       return res.status(400).json({ error: 'Title and YouTube ID/URL are required' });
@@ -2666,17 +2776,61 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       thumbnail: thumbnail || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
       description: description || ''
     });
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('video_tutorials').upsert({
+          id: newVid.id,
+          title: newVid.title,
+          duration: newVid.duration,
+          youtube_id: newVid.youtubeId,
+          thumbnail: newVid.thumbnail,
+          description: newVid.description
+        });
+      } catch (sbErr) {
+        console.warn("Background Supabase video write sync skipped:", sbErr);
+      }
+    }
+
     res.status(201).json(newVid);
   });
 
-  app.put('/api/admin/videos/:id', requireAdmin, (req, res) => {
+  app.put('/api/admin/videos/:id', requireAdmin, async (req, res) => {
     const v = dbActions.updateVideoTutorial(req.params.id, req.body);
     if (!v) return res.status(404).json({ error: 'Video not found' });
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('video_tutorials').upsert({
+          id: v.id,
+          title: v.title,
+          duration: v.duration,
+          youtube_id: v.youtubeId,
+          thumbnail: v.thumbnail,
+          description: v.description
+        });
+      } catch (sbErr) {
+        console.warn("Background Supabase video update sync skipped:", sbErr);
+      }
+    }
+
     res.json(v);
   });
 
-  app.delete('/api/admin/videos/:id', requireAdmin, (req, res) => {
+  app.delete('/api/admin/videos/:id', requireAdmin, async (req, res) => {
     dbActions.deleteVideoTutorial(req.params.id);
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('video_tutorials').delete().eq('id', req.params.id);
+      } catch (sbErr) {
+        console.warn("Background Supabase video delete sync skipped:", sbErr);
+      }
+    }
+
     res.json({ success: true });
   });
 

@@ -45,12 +45,8 @@ export default function Contact({ onAddNotification }: ContactProps) {
           if (error) {
             console.error("Contact Component: Supabase helpline query returned error:", error.message);
           }
-          const res = await fetch('/api/helpline');
-          const fallbackData = await res.json();
-          if (fallbackData && fallbackData.helpline) {
-            console.log("Contact Component: loaded helpline via API fallback:", fallbackData.helpline);
-            setHelpline(fallbackData.helpline);
-          }
+          console.log("Contact Component: using default helpline:", "+91 9958742200");
+          setHelpline("+91 9958742200");
         }
       } catch (err: any) {
         console.error('helpline load error:', err);

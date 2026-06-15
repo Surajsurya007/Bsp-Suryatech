@@ -90,6 +90,8 @@ export interface Product {
   licenseInfo?: string;
   demoVideoUrl?: string;
   gallery?: string[];
+  manualUrl?: string;
+  status?: 'active' | 'inactive';
 }
 
 export interface Order {

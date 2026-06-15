@@ -62,11 +62,7 @@ export default function Layout({
         if (data && !error && data.settings_val) {
           setHelpline(data.settings_val);
         } else {
-          const res = await fetch('/api/helpline');
-          const fallbackData = await res.json();
-          if (fallbackData && fallbackData.helpline) {
-            setHelpline(fallbackData.helpline);
-          }
+          setHelpline('+91 9958742200');
         }
       } catch (err: any) {
         console.warn('Layout helpline loading issue:', err);

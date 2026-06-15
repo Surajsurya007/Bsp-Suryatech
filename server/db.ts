@@ -172,7 +172,9 @@ const defaultProducts: Product[] = [
       'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
       'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
       'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800'
-    ]
+    ],
+    manualUrl: '',
+    status: 'active'
   },
   {
     id: 'prod-billing-enterprise',
@@ -204,7 +206,9 @@ const defaultProducts: Product[] = [
       'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
       'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
       'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800'
-    ]
+    ],
+    manualUrl: '',
+    status: 'active'
   }
 ];
 

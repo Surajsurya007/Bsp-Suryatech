@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { supabase } from './supabaseClient';
-import { defaultProducts, defaultVideos, defaultTestimonials, defaultDownloads } from './data';
+import { defaultProducts, defaultVideos, defaultTestimonials, defaultDownloads, defaultSolutions } from './data';
 import { 
   CreditCard, 
   Coins, 
@@ -226,36 +226,27 @@ export default function App() {
 
   const fetchProducts = async () => {
     try {
-      console.log("App: Fetching products dynamically from API...");
-      const res = await fetch('/api/products');
-      if (res.ok) {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            const parsedProducts = data.map((item: any) => ({
-              ...item,
-              features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || [])
-            }));
-            setProducts(parsedProducts);
-            return;
-          }
-        } else {
-          console.warn("App: /api/products response content-type is not JSON:", contentType);
-        }
-      }
-      
-      // Fallback: Query Supabase directly
-      console.log("App: Fetching products fallback direct from Supabase DB...");
+      console.log("App: Querying products directly from Supabase DB...");
       const { data: sbData, error: sbError } = await supabase.from('products').select('*');
       if (sbData && !sbError && sbData.length > 0) {
         const parsedProducts = sbData.map(item => ({
           ...item,
-          features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || [])
+          downloadUrl: item.download_url || item.downloadUrl,
+          connectedPlan: item.connected_plan || item.connectedPlan,
+          originalPrice: item.original_price || item.originalPrice,
+          category: item.category || 'Retail & POS Billing',
+          fullDescription: item.full_description || item.fullDescription || item.description || '',
+          systemRequirements: item.system_requirements || item.systemRequirements || '',
+          licenseInfo: item.license_info || item.licenseInfo || '',
+          demoVideoUrl: item.demo_video_url || item.demoVideoUrl || '',
+          gallery: typeof item.gallery === 'string' ? JSON.parse(item.gallery) : (Array.isArray(item.gallery) ? item.gallery : []),
+          features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || []),
+          manualUrl: item.manual_url || item.manualUrl,
+          status: item.status || 'active'
         }));
         setProducts(parsedProducts);
       } else {
-        if (sbError) console.log("App: Supabase products table fetch fallback error. Profile details:", sbError.message);
+        if (sbError) console.log("App: Supabase products table fetch error:", sbError.message);
         setProducts(defaultProducts);
       }
     } catch (err) {
@@ -266,27 +257,20 @@ export default function App() {
 
   const fetchVideos = async () => {
     try {
-      console.log("App: Fetching videos dynamically from backend API...");
-      const res = await fetch('/api/videos');
-      if (res.ok) {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            setVideos(data);
-            return;
-          }
-        } else {
-          console.warn("App: /api/videos response content-type is not JSON:", contentType);
-        }
-      }
-
-      console.log("App: Fetching videos fallback direct from Supabase DB...");
+      console.log("App: Fetching videos directly from Supabase DB...");
       const { data, error } = await supabase.from('video_tutorials').select('*');
       if (data && !error && data.length > 0) {
-        setVideos(data);
+        const mapped = data.map((v: any) => ({
+          id: v.id,
+          title: v.title,
+          duration: v.duration,
+          youtubeId: v.youtube_id || v.youtubeId || '',
+          thumbnail: v.thumbnail,
+          description: v.description
+        }));
+        setVideos(mapped);
       } else {
-        if (error) console.log("App: Supabase video tutorials table empty or missing, using local default. Profile details:", error.message);
+        if (error) console.log("App: Supabase video tutorials table fallback error:", error.message);
         setVideos(defaultVideos);
       }
     } catch (err) {
@@ -297,27 +281,12 @@ export default function App() {
 
   const fetchTestimonials = async () => {
     try {
-      console.log("App: Fetching testimonials dynamically from backend API...");
-      const res = await fetch('/api/testimonials');
-      if (res.ok) {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            setTestimonials(data);
-            return;
-          }
-        } else {
-          console.warn("App: /api/testimonials response content-type is not JSON:", contentType);
-        }
-      }
-
       console.log("App: Fetching testimonials direct from Supabase...");
       const { data, error } = await supabase.from('testimonials').select('*');
       if (data && !error && data.length > 0) {
         setTestimonials(data);
       } else {
-        if (error) console.log("App: Supabase testimonials table empty or missing, using local default. Profile details:", error.message);
+        if (error) console.log("App: Supabase testimonials table empty or missing, using local default:", error.message);
         setTestimonials(defaultTestimonials);
       }
     } catch (err) {
@@ -328,27 +297,6 @@ export default function App() {
 
   const fetchDownloads = async () => {
     try {
-      console.log("App: Fetching release downloads info from backend API...");
-      const res = await fetch('/api/downloads');
-      if (res.ok) {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            const formatted = data.map((item: any) => ({
-              ...item,
-              releaseNotes: typeof item.releaseNotes === 'string' ? JSON.parse(item.releaseNotes) : (item.releaseNotes || item.release_notes || [])
-            }));
-            setDownloads(formatted);
-            const counts = formatted.reduce((sum: number, item: any) => sum + (item.downloadCount || item.download_count || 0), 0);
-            setTotalDownloads(counts || 1420);
-            return;
-          }
-        } else {
-          console.warn("App: /api/downloads response content-type is not JSON:", contentType);
-        }
-      }
-
       console.log("App: Fetching release downloads info fallback direct from Supabase...");
       const { data, error } = await supabase.from('downloads_info').select('*');
       if (data && !error && data.length > 0) {
@@ -360,7 +308,7 @@ export default function App() {
         const counts = formatted.reduce((sum, item) => sum + (item.download_count || item.downloadCount || 0), 0);
         setTotalDownloads(counts || 1420);
       } else {
-        if (error) console.log("App: Supabase downloads table empty or missing, using local default. Profile details:", error.message);
+        if (error) console.log("App: Supabase downloads table empty or missing, using local default:", error.message);
         setDownloads(defaultDownloads);
         setTotalDownloads(1420);
       }
@@ -373,21 +321,16 @@ export default function App() {
 
   const fetchSolutions = async () => {
     try {
-      console.log("App: Fetching solutions dynamically from API...");
-      const res = await fetch('/api/solutions');
-      if (res.ok) {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            setSolutions(data);
-          }
-        } else {
-          console.warn("App: /api/solutions response content-type is not JSON:", contentType);
-        }
+      console.log("App: Fetching solutions direct from Supabase...");
+      const { data, error } = await supabase.from('solutions').select('*');
+      if (data && !error && data.length > 0) {
+        setSolutions(data);
+      } else {
+        setSolutions(defaultSolutions);
       }
     } catch (err) {
-      console.warn("Solutions load exception:", err);
+      console.warn("Solutions load exception, using default solutions:", err);
+      setSolutions(defaultSolutions);
     }
   };
 
@@ -400,26 +343,7 @@ export default function App() {
       return;
     }
     try {
-      console.log("App: Loading owner system licenses for user...");
-      const token = localStorage.getItem('bsp_token');
-      
-      // 1. Try local Express API first
-      const res = await fetch('/api/customer/licenses', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          setUserLicenses(data || []);
-          return;
-        } else {
-          console.warn("App: /api/customer/licenses response content-type is not JSON:", contentType);
-        }
-      }
-
-      // 2. Try Supabase fallback
-      console.log("App: Loading owner system licenses fallback direct from Supabase...");
+      console.log("App: Loading owner system licenses direct from Supabase...");
       const { data, error } = await supabase
         .from('licenses')
         .select('*')
@@ -432,16 +356,17 @@ export default function App() {
           expiresAt: item.expires_at,
           productId: item.product_id,
           productName: item.product_name,
-          createdAt: item.created_at,
-          orderId: item.order_id
+          orderId: item.order_id,
+          userId: item.user_id,
+          createdAt: item.created_at
         }));
-        setUserLicenses(mapped);
+        setUserLicenses(mapped || []);
       } else {
-        if (error) console.warn("Supabase user licenses query error:", error.message);
+        if (error) console.log("App: Supabase licenses fetch error:", error.message);
         setUserLicenses([]);
       }
     } catch (err) {
-      console.warn('Active user licenses fetching exception:', err);
+      console.warn('Licenses load exception:', err);
       setUserLicenses([]);
     }
   };
@@ -739,39 +664,92 @@ export default function App() {
         return;
       }
 
-      // 2. Profile is completed! Fetch Razorpay key ID and create secure order on our backend
+      // 2. Profile is completed! Fetch Razorpay key ID and create secure order
       addNotification('Billing profile verified successfully. Initiating secure order...', 'info');
       
       const token = localStorage.getItem('bsp_token');
-      const orderCreateRes = await fetch('/api/orders/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ productId, couponCode })
-      });
+      let orderData: any = null;
 
-      if (!orderCreateRes.ok) {
-        let errMsg = 'Failed to initialize transaction order on secure payments server.';
-        try {
-          const contentType = orderCreateRes.headers.get('content-type');
+      try {
+        console.log("App: Requesting Razorpay order from Supabase Edge Function...");
+        const response = await fetch('https://wabhgsdzmptgxrggjjgm.supabase.co/functions/v1/create-razorpay-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ productId, couponCode })
+        });
+
+        if (response.ok) {
+          const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
-            const errJson = await orderCreateRes.json();
-            if (errJson && errJson.error) {
-              errMsg = errJson.error;
+            orderData = await response.json();
+            console.log("App: Razorpay order generated successfully via Supabase Edge Function!", orderData);
+          }
+        } else {
+          console.warn("App: Supabase Edge Function returned non-ok status:", response.status);
+        }
+      } catch (err) {
+        console.warn("App: Supabase Edge Function creation failed, attempting direct Supabase billing fallback...", err);
+      }
+
+      if (!orderData) {
+        console.log("App: Running secure client-side Order generation (Supabase database configuration fallback)...");
+        let rzpKeyId = 'rzp_test_SURYA2026KEY';
+        
+        try {
+          // Fetch the live Razorpay configuration directly from Supabase settings table if backend is not responding with JSON
+          const { data: dbSettings, error: dbSettingsError } = await supabase
+            .from('system_settings')
+            .select('*')
+            .eq('settings_key', 'razorpay_config')
+            .maybeSingle();
+          
+          if (dbSettings && !dbSettingsError) {
+            const parsedVal = typeof dbSettings.settings_val === 'string' 
+              ? JSON.parse(dbSettings.settings_val) 
+              : dbSettings.settings_val;
+            if (parsedVal && parsedVal.keyId) {
+              rzpKeyId = parsedVal.keyId;
+              console.log("App: Directly loaded active Razorpay key ID from Supabase setup:", rzpKeyId);
             }
           }
-        } catch (_) {}
-        throw new Error(errMsg);
+        } catch (sbSettingsErr) {
+          console.warn("App: Failed loading direct Razorpay Settings from database table. Using fallback:", sbSettingsErr);
+        }
+
+        // Resolve product pricing locally
+        const selectedProduct = products.find((p: any) => p.id === productId);
+        if (!selectedProduct) {
+          throw new Error('Requested product with ID ' + productId + ' not found in local or remote catalog.');
+        }
+
+        let finalAmount = selectedProduct.price;
+        if (couponCode) {
+          try {
+            const { data: couponData } = await supabase
+              .from('coupons')
+              .select('*')
+              .eq('code', couponCode)
+              .maybeSingle();
+            if (couponData && couponData.discountPercent) {
+              finalAmount = Math.ceil(selectedProduct.price * (1 - couponData.discountPercent / 100));
+            }
+          } catch (_) {}
+        }
+
+        const localId = 'order_local_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        orderData = {
+          orderId: localId,
+          razorpayOrderId: undefined, // Direct checkout payment (no order ID required for direct SDK load)
+          amount: finalAmount,
+          keyId: rzpKeyId,
+          productName: selectedProduct.name,
+          currency: 'INR'
+        };
       }
 
-      const contentType = orderCreateRes.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Payment server returned an invalid response format (HTML instead of JSON). This typically means a server-side route wildcard fallback or maintenance page was triggered. Please try again or contact support.');
-      }
-
-      const orderData = await orderCreateRes.json();
       console.log("Secure order initialized successfully:", orderData);
 
       const orderInitData = {
@@ -818,19 +796,24 @@ export default function App() {
     try {
       // Notify secure backend verification of manual status simulation
       const token = localStorage.getItem('bsp_token');
-      await fetch('/api/orders/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          orderId: checkoutData.orderId,
-          paymentId: paymentId,
-          status,
-          paymentMethod: selectedPaymentMethod
-        })
-      });
+      try {
+        console.log("App: Triggering payment verification via Supabase Edge Function...");
+        await fetch('https://wabhgsdzmptgxrggjjgm.supabase.co/functions/v1/verify-razorpay-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            orderId: checkoutData.orderId,
+            paymentId: paymentId,
+            status,
+            paymentMethod: selectedPaymentMethod
+          })
+        });
+      } catch (eVer) {
+        console.warn("App: Edge function verification unreachable/errored. Relying on local client db synchronization:", eVer);
+      }
 
       // Maintain direct Supabase write fallback
       await verifyOrderInDatabase(

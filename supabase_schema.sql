@@ -44,7 +44,15 @@ CREATE TABLE IF NOT EXISTS public.products (
     description TEXT NOT NULL,
     download_url VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    connected_plan VARCHAR(255) NULL
+    connected_plan VARCHAR(255) NULL,
+    category VARCHAR(255) NULL DEFAULT 'Retail & POS Billing',
+    full_description TEXT NULL,
+    system_requirements TEXT NULL,
+    license_info TEXT NULL,
+    demo_video_url VARCHAR(255) NULL,
+    gallery JSONB NOT NULL DEFAULT '[]'::jsonb,
+    manual_url VARCHAR(255) NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'active'
 );
 
 -- 4. Orders Table

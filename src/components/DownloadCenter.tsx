@@ -411,31 +411,6 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                         Learn More
                       </button>
                     </div>
-
-                    {/* Setup / EXE direct download button */}
-                    <button
-                      onClick={() => {
-                        if (sol.exeUrl) {
-                          // Direct setup download
-                          console.log(`DownloadCenter: Triggering direct setup download for ${sol.title}...`);
-                          const isBase64 = sol.exeUrl.startsWith('data:');
-                          const link = document.createElement('a');
-                          link.href = sol.exeUrl;
-                          link.download = `${sol.title.replace(/[^a-zA-Z0-9]/g, '_')}_Setup.exe`;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                        } else {
-                          // Simulator trial download fallback
-                          onTriggerTrialDownload?.(sol.mappedPlanId);
-                        }
-                      }}
-                      className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200/80 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 mt-3 transition-all duration-150 cursor-pointer"
-                      id={`dl-btn-exe-${sol.id}`}
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>{sol.exeUrl ? 'Download Setup (.EXE)' : 'Download Trial (.EXE)'}</span>
-                    </button>
                   </div>
                 </div>
 

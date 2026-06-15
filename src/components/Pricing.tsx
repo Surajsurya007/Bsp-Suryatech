@@ -190,47 +190,25 @@ export default function Pricing({
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#2563EB]/5 rounded-full blur-3xl -z-10 pointer-events-none" />
             
             <div className="mx-auto w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center border border-slate-750 text-slate-400">
-              <ShoppingCart className="w-8 h-8" />
+              <ShoppingCart className="w-8 h-8 text-[#2563EB]" />
             </div>
 
             <div className="space-y-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-450 bg-blue-500/10 px-3 py-1 rounded-full">
-                Interactive Checkout Flow
-              </span>
               <h2 className="text-2xl font-black text-white">Your Shopping Cart is Empty</h2>
-              <p className="text-slate-400 text-xs sm:text-sm max-w-lg mx-auto">
-                In BSP Suryatech, licensing is custom-mapped. Please first add the desktop software to your shopping cart to choose and review active price plans.
+              <p className="text-slate-450 text-xs sm:text-sm max-w-lg mx-auto">
+                Please add the BSP Suryatech software solution to your cart to customize your price plan, unlock discounts, and download the registered offline desktop platform.
               </p>
             </div>
 
-            {/* PRODUCT ADD CARD BAR */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between text-left gap-6 max-w-2xl mx-auto">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-[#2563EB]/10 border border-blue-500/20 text-[#2563EB] text-[9.5px] rounded font-mono font-bold">
-                    DESKTOP BUILD
-                  </span>
-                  <span className="text-xs text-slate-400 font-extrabold font-mono">v4.2.1 • Windows Setup</span>
-                </div>
-                <h3 className="text-lg font-black text-white">BSP Suryatech GST Billing Desk</h3>
-                <p className="text-slate-400 text-xs leading-normal max-w-md">
-                  Lightweight and robust POS bookkeeping solution. Fully compliant with modern tax regimes, barcode scanners, and printer layouts. Runs 100% offline.
-                </p>
-              </div>
-
+            <div className="pt-4 flex justify-center">
               <button
-                onClick={() => handleAddToCart('prod-billing-pro')}
-                className="w-full md:w-auto px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg active:scale-97 cursor-pointer shrink-0 flex items-center justify-center gap-2"
+                onClick={() => onPageChange('downloads')}
+                className="px-8 py-4 bg-[#2563EB] hover:bg-blue-750 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg active:scale-97 cursor-pointer flex items-center justify-center gap-2"
                 id="add-software-to-cart-btn"
               >
-                <ShoppingCart className="w-4 h-4" />
-                <span>Add to Cart</span>
+                <Download className="w-4 h-4" />
+                <span>Go to Download Center</span>
               </button>
-            </div>
-
-            <div className="pt-2 text-xs text-slate-500 flex items-center justify-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-              <span>Full 15-Days Evaluation Free Trial is also enabled inside the Download Center</span>
             </div>
           </div>
         ) : (

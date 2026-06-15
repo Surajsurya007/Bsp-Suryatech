@@ -337,6 +337,8 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [prodDemoVideo, setProdDemoVideo] = useState('');
   const [prodGallery, setProdGallery] = useState<string[]>([]);
   const [prodDownloadUrl, setProdDownloadUrl] = useState('');
+  const [prodManualUrl, setProdManualUrl] = useState('');
+  const [prodStatus, setProdStatus] = useState<'active' | 'inactive'>('active');
   const [prodExeFile, setProdExeFile] = useState<File | null>(null);
   const [prodUploading, setProdUploading] = useState(false);
   const [prodUploadProgress, setProdUploadProgress] = useState<string | null>(null);
@@ -359,6 +361,8 @@ export default function AdminPortal({ onAddNotification, onPageChange, onRefresh
   const [editDemoVideo, setEditDemoVideo] = useState('');
   const [editGallery, setEditGallery] = useState<string[]>([]);
   const [editDownloadUrl, setEditDownloadUrl] = useState('');
+  const [editManualUrl, setEditManualUrl] = useState('');
+  const [editStatus, setEditStatus] = useState<'active' | 'inactive'>('active');
   const [updatingProd, setUpdatingProd] = useState(false);
 
   // Interactive link entry helper
@@ -1448,7 +1452,9 @@ using (
           licenseInfo: prodLicenseInfo,
           demoVideoUrl: prodDemoVideo,
           gallery: prodGallery,
-          downloadUrl: prodDownloadUrl || undefined
+          downloadUrl: prodDownloadUrl,
+          manualUrl: prodManualUrl,
+          status: prodStatus
         })
       });
 
@@ -1467,6 +1473,8 @@ using (
         setProdDemoVideo('');
         setProdGallery([]);
         setProdDownloadUrl('');
+        setProdManualUrl('');
+        setProdStatus('active');
         fetchAdminData();
       } else {
         onAddNotification('Unable to upload catalog item', 'error');
@@ -1512,6 +1520,8 @@ using (
     setEditDemoVideo(p.demoVideoUrl || '');
     setEditGallery(p.gallery || []);
     setEditDownloadUrl(p.downloadUrl || '');
+    setEditManualUrl(p.manualUrl || '');
+    setEditStatus(p.status || 'active');
   };
 
   const handleCancelEdit = () => {
@@ -1549,7 +1559,9 @@ using (
           licenseInfo: editLicenseInfo,
           demoVideoUrl: editDemoVideo,
           gallery: editGallery,
-          downloadUrl: editDownloadUrl
+          downloadUrl: editDownloadUrl,
+          manualUrl: editManualUrl,
+          status: editStatus
         })
       });
 
@@ -3098,6 +3110,36 @@ using (
                       />
                     </div>
 
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">EXE Download URL *</label>
+                      <input
+                        type="text" required placeholder="/api/downloads/setup/setup-retail.exe" value={prodDownloadUrl}
+                        onChange={(e) => setProdDownloadUrl(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs text-slate-900 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">PDF Manual URL</label>
+                      <input
+                        type="text" placeholder="/api/downloads/setup/usr-manual-retail.pdf" value={prodManualUrl}
+                        onChange={(e) => setProdManualUrl(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3.5 py-2.5 rounded-xl text-xs text-slate-900 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-650 font-mono block">Software Status</label>
+                      <select
+                        value={prodStatus}
+                        onChange={(e) => setProdStatus(e.target.value as 'active' | 'inactive')}
+                        className="w-full bg-slate-50 border border-slate-200.80 px-3 py-2.5 rounded-xl text-xs text-slate-900 focus:bg-white"
+                      >
+                        <option value="active">Active (On Catalog)</option>
+                        <option value="inactive">Inactive / Disabled (Off Catalog)</option>
+                      </select>
+                    </div>
+
                     {/* Screenshot Gallery Manager */}
                     <div className="space-y-2 border border-slate-205/65 p-3 rounded-2xl bg-slate-50/50">
                       <label className="text-[10px] font-black text-slate-700 font-mono block uppercase">Screenshot Image Gallery Manager</label>
@@ -3336,6 +3378,38 @@ using (
                                   onChange={(e) => setEditDemoVideo(e.target.value)}
                                   className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:bg-white"
                                 />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block font-mono">EXE Download URL *</label>
+                                <input
+                                  type="text" required
+                                  value={editDownloadUrl}
+                                  onChange={(e) => setEditDownloadUrl(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 font-mono focus:bg-white"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block font-mono">PDF Manual URL</label>
+                                <input
+                                  type="text"
+                                  value={editManualUrl}
+                                  onChange={(e) => setEditManualUrl(e.target.value)}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 font-mono focus:bg-white"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-600 block font-mono">Software Status *</label>
+                                <select
+                                  value={editStatus}
+                                  onChange={(e) => setEditStatus(e.target.value as 'active' | 'inactive')}
+                                  className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-xs text-slate-800 focus:bg-white"
+                                >
+                                  <option value="active">Active (On Catalog)</option>
+                                  <option value="inactive">Inactive / Disabled (Off Catalog)</option>
+                                </select>
                               </div>
 
                               {/* Screenshot Gallery Manager */}
