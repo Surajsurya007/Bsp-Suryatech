@@ -212,6 +212,25 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
     settings_val TEXT NOT NULL
 );
 
+-- 17. Solutions Table
+CREATE TABLE IF NOT EXISTS public.solutions (
+    id VARCHAR(255) PRIMARY KEY,
+    "mappedPlanId" VARCHAR(255) NOT NULL DEFAULT 'prod-billing-pro',
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(255) NOT NULL,
+    subtitle VARCHAR(255) NULL,
+    description TEXT NOT NULL,
+    price VARCHAR(255) NOT NULL DEFAULT 'INR 0',
+    features JSONB NOT NULL DEFAULT '[]'::jsonb,
+    icon VARCHAR(255) NOT NULL DEFAULT '🛍️',
+    badge VARCHAR(255) NULL,
+    "badgeColor" VARCHAR(255) NOT NULL DEFAULT 'emerald',
+    "exeUrl" VARCHAR(255) NULL DEFAULT '',
+    "demoVideoUrl" VARCHAR(255) NULL DEFAULT '',
+    gallery JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 
 -- =========================================================================
 --                     ROW LEVEL SECURITY (RLS) RULES
@@ -280,6 +299,12 @@ DROP POLICY IF EXISTS "Public select system_settings" ON public.system_settings;
 CREATE POLICY "Public select system_settings" ON public.system_settings FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Admin modify system_settings" ON public.system_settings;
 CREATE POLICY "Admin modify system_settings" ON public.system_settings FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.solutions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select solutions" ON public.solutions;
+CREATE POLICY "Public select solutions" ON public.solutions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage solutions" ON public.solutions;
+CREATE POLICY "Admin manage solutions" ON public.solutions FOR ALL USING (true) WITH CHECK (true);
 
 
 -- 2. Customer Profiles RLS Policies
@@ -401,3 +426,11 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.system_settings (settings_key, settings_val) VALUES
 ('helpline', '+91 95169 16415')
 ON CONFLICT (settings_key) DO NOTHING;
+
+-- Seed Solutions
+INSERT INTO public.solutions (id, "mappedPlanId", title, category, subtitle, description, price, features, icon, badge, "badgeColor", "exeUrl") VALUES
+('sol-retail', 'prod-billing-pro', 'Retail Billing Software', 'Billing Software', 'BESTSELLER FOR SHOPS', 'Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.', 'INR 3,499', '["GST Invoicing", "Barcode Scanner Support", "Thermal Printer Setup", "Offline Database State", "Supplier & Client Ledgers"]'::jsonb, '🛍️', 'Billing', 'emerald', 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0-Setup.zip'),
+('sol-supermarket', 'prod-billing-enterprise', 'Supermarket POS Software', 'Billing Software', 'COMPLETE POS PACK', 'High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.', 'INR 5,999', '["High-Speed POS Checkout", "Integrated Barcode Printing", "Customer Loyalty Points", "Multi-Terminal Syncing", "Automatic Reorder Limits"]'::jsonb, '🏪', 'Billing', 'emerald', ''),
+('sol-grocery', 'prod-billing-pro', 'Grocery Billing Software', 'Billing Software', 'FAST GROCERY STORE SPECIAL', 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.', 'INR 4,499', '["Digital Weight Scale Link", "Barcoding & Item Lookup", "Short Expiry Tracking", "Multiple Payment Options", "Dynamic POS Checkout"]'::jsonb, '🍎', 'Billing', 'emerald', ''),
+('sol-medical', 'prod-billing-enterprise', 'Medical Store Billing Software', 'Billing Software', 'PHARMACY BATCH SPECIAL', 'Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.', 'INR 5,499', '["Batch Code Expiry tracking", "Drug License verification", "Salt-wise generic lookup", "Supplier Invoice Sync", "Doctor referrals lists"]'::jsonb, '💊', 'Billing', 'emerald', '')
+ON CONFLICT (id) DO NOTHING;

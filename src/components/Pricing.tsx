@@ -29,6 +29,12 @@ interface CartItem {
   name: string;
   category: string;
   selectedPlanId: string;
+  price?: number;
+  originalPrice?: number;
+  features?: string[];
+  isSolution?: boolean;
+  description?: string;
+  icon?: string;
 }
 
 interface PricingProps {
@@ -132,8 +138,15 @@ export default function Pricing({
   const entOriginal = dbEnterpriseProduct !== undefined ? (dbEnterpriseProduct.originalPrice || 4999) : 4999;
 
   const currentPlanId = cartItem?.selectedPlanId || 'prod-billing-pro';
-  const rawPrice = currentPlanId === 'prod-billing-enterprise' ? entPrice : proPrice;
-  const rawOriginalPrice = currentPlanId === 'prod-billing-enterprise' ? entOriginal : proOriginal;
+  
+  // Custom solution fallback
+  const rawPrice = cartItem?.isSolution && cartItem?.price !== undefined
+    ? cartItem.price
+    : (currentPlanId === 'prod-billing-enterprise' ? entPrice : proPrice);
+
+  const rawOriginalPrice = cartItem?.isSolution && cartItem?.originalPrice !== undefined
+    ? cartItem.originalPrice
+    : (currentPlanId === 'prod-billing-enterprise' ? entOriginal : proOriginal);
 
   // Coupon discount computation
   const discountPercent = validatedDiscount || 0;
@@ -148,10 +161,11 @@ export default function Pricing({
     const foundProduct = products?.find(p => p.id === planId);
     const resolvedName = foundProduct?.name || (planId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro');
     setCartItem({
-      id: 'suryatech-billing',
+      id: planId,
       name: resolvedName,
       category: 'Billing & POS Software',
-      selectedPlanId: planId
+      selectedPlanId: planId,
+      isSolution: false
     });
   };
 
@@ -241,96 +255,160 @@ export default function Pricing({
             {/* GRID SELECTION OF PRICE PLAN */}
             <div className="space-y-4">
               <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#2563EB]">
-                Step 1: Choose Your License Price Plan
+                {cartItem?.isSolution ? 'Your Selected Custom Business Solution' : 'Step 1: Choose Your License Price Plan'}
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* PLAN A: Pro */}
-                <div
-                  onClick={() => cartItem && setCartItem({ 
-                    ...cartItem, 
-                    selectedPlanId: 'prod-billing-pro',
-                    name: dbProProduct?.name || 'BSP Suryatech Retail Billing Pro' 
-                  })}
-                  className={`p-6 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
-                    currentPlanId === 'prod-billing-pro'
-                      ? 'border-blue-500 bg-slate-900 shadow-lg'
-                      : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
-                  }`}
-                  id="cart-choose-pro"
-                >
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <span className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/35 text-blue-400 text-[9px] rounded font-mono font-bold">
-                        PRO PLAN
+              {cartItem?.isSolution ? (
+                <div className="bg-slate-900 border-2 border-blue-500 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl relative overflow-hidden" id="custom-selected-solution-card">
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl -z-10 pointer-events-none" />
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/85 pb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl bg-blue-500/10 p-2.5 rounded-2xl block text-[#2563EB]">
+                        {cartItem.icon || '🛍️'}
                       </span>
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${currentPlanId === 'prod-billing-pro' ? 'border-blue-500' : 'border-slate-600'}`}>
-                        {currentPlanId === 'prod-billing-pro' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                      <div>
+                        <span className="px-2 py-0.5 bg-blue-500/15 border border-blue-500/35 text-blue-400 text-[10px] rounded font-mono font-bold uppercase tracking-wider">
+                          Custom Solution
+                        </span>
+                        <h4 className="font-extrabold text-lg text-white mt-0.5">{cartItem.name}</h4>
                       </div>
                     </div>
                     
-                    <div>
-                      <h4 className="font-extrabold text-base text-white">Retail Billing Pro Edition</h4>
-                      <p className="text-xs text-slate-450 mt-1 leading-relaxed">
-                        Lightweight single-terminal POS invoice operations. Includes stock minimum alerts, thermal customizing layouts, and full local ledgers.
-                      </p>
+                    <div className="flex items-baseline gap-1.5 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 self-start sm:self-center">
+                      <span className="text-[11px] font-mono text-slate-400">Price:</span>
+                      <span className="text-xl font-black text-white">₹{rawPrice}</span>
+                      <span className="text-[10px] text-slate-500 line-through">₹{rawOriginalPrice}</span>
                     </div>
                   </div>
 
-                  <div className="border-t border-slate-800/80 pt-4 mt-4 flex items-baseline gap-1.5">
-                    <span className="text-xs font-mono text-slate-500">Price:</span>
-                    <span className="text-2xl font-black text-white">₹{proPrice}</span>
-                    <span className="text-xs text-slate-500 line-through">₹{proOriginal}</span>
-                    <span className="text-[10px] bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold font-mono ml-auto">SAVE 60%</span>
+                  <div className="space-y-3">
+                    {cartItem.description && (
+                      <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
+                        {cartItem.description}
+                      </p>
+                    )}
+                    
+                    {cartItem.features && cartItem.features.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">INCLUDED FEATURES:</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {cartItem.features.map((feat: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 text-xs text-slate-350">
+                              <span className="w-4 h-4 bg-emerald-950/40 text-emerald-400 font-bold font-mono rounded-full flex items-center justify-center text-[10px] border border-emerald-900/30">✓</span>
+                              <span className="truncate">{feat}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-4 flex items-center justify-between border-t border-slate-800/60">
+                    <p className="text-[11px] text-slate-400 leading-normal max-w-sm">
+                      This industry-specific application has database setups and layout designers dedicated to your business.
+                    </p>
+                    <button
+                      onClick={() => {
+                        // Switch back to standard Retail Billing Pro
+                        handleAddToCart('prod-billing-pro');
+                      }}
+                      className="px-4 py-2 bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-extrabold uppercase tracking-wider rounded-xl transition-all cursor-pointer border border-slate-755"
+                      id="use-standard-editions-btn"
+                    >
+                      Use Standard Editions
+                    </button>
                   </div>
                 </div>
-
-                {/* PLAN B: Enterprise */}
-                <div
-                  onClick={() => cartItem && setCartItem({ 
-                    ...cartItem, 
-                    selectedPlanId: 'prod-billing-enterprise',
-                    name: dbEnterpriseProduct?.name || 'BSP Suryatech GST Enterprise Suite'
-                  })}
-                  className={`p-6 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
-                    currentPlanId === 'prod-billing-enterprise'
-                      ? 'border-blue-500 bg-slate-900 shadow-lg'
-                      : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
-                  }`}
-                  id="cart-choose-enterprise"
-                >
-                  {currentPlanId === 'prod-billing-enterprise' && (
-                    <span className="absolute -top-2.5 right-6 px-2.5 py-0.5 bg-[#10B981] text-black text-[9px] font-black uppercase tracking-widest rounded-full">
-                      BEST VALUE
-                    </span>
-                  )}
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/35 text-emerald-400 text-[9px] rounded font-mono font-bold">
-                        MULTIFIRM SUITE
-                      </span>
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${currentPlanId === 'prod-billing-enterprise' ? 'border-blue-500' : 'border-slate-600'}`}>
-                        {currentPlanId === 'prod-billing-enterprise' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* PLAN A: Pro */}
+                  <div
+                    onClick={() => cartItem && setCartItem({ 
+                      ...cartItem, 
+                      selectedPlanId: 'prod-billing-pro',
+                      name: dbProProduct?.name || 'BSP Suryatech Retail Billing Pro' 
+                    })}
+                    className={`p-6 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
+                      currentPlanId === 'prod-billing-pro'
+                        ? 'border-blue-500 bg-slate-900 shadow-lg'
+                        : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
+                    }`}
+                    id="cart-choose-pro"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <span className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/35 text-blue-400 text-[9px] rounded font-mono font-bold">
+                          PRO PLAN
+                        </span>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${currentPlanId === 'prod-billing-pro' ? 'border-blue-500' : 'border-slate-600'}`}>
+                          {currentPlanId === 'prod-billing-pro' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-extrabold text-base text-white">Retail Billing Pro Edition</h4>
+                        <p className="text-xs text-slate-450 mt-1 leading-relaxed">
+                          Lightweight single-terminal POS invoice operations. Includes stock minimum alerts, thermal customizing layouts, and full local ledgers.
+                        </p>
                       </div>
                     </div>
 
-                    <div>
-                      <h4 className="font-extrabold text-base text-white">GST Enterprise Suite</h4>
-                      <p className="text-xs text-slate-450 mt-1 leading-relaxed">
-                        Direct GST Portal JSON monthly exports (GSTR-1, GSTR-3B), unlimited firms/branch records, Google Drive automatic cloud backups, and priority hotline calls support.
-                      </p>
+                    <div className="border-t border-slate-800/80 pt-4 mt-4 flex items-baseline gap-1.5">
+                      <span className="text-xs font-mono text-slate-500">Price:</span>
+                      <span className="text-2xl font-black text-white">₹{proPrice}</span>
+                      <span className="text-xs text-slate-500 line-through">₹{proOriginal}</span>
+                      <span className="text-[10px] bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold font-mono ml-auto">SAVE 60%</span>
                     </div>
                   </div>
 
-                  <div className="border-t border-slate-800/80 pt-4 mt-4 flex items-baseline gap-1.5">
-                    <span className="text-xs font-mono text-slate-500">Price:</span>
-                    <span className="text-2xl font-black text-white">₹{entPrice}</span>
-                    <span className="text-xs text-slate-500 line-through">₹{entOriginal}</span>
-                    <span className="text-[10px] bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold font-mono ml-auto">SAVE 40%</span>
+                  {/* PLAN B: Enterprise */}
+                  <div
+                    onClick={() => cartItem && setCartItem({ 
+                      ...cartItem, 
+                      selectedPlanId: 'prod-billing-enterprise',
+                      name: dbEnterpriseProduct?.name || 'BSP Suryatech GST Enterprise Suite'
+                    })}
+                    className={`p-6 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
+                      currentPlanId === 'prod-billing-enterprise'
+                        ? 'border-blue-500 bg-slate-900 shadow-lg'
+                        : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
+                    }`}
+                    id="cart-choose-enterprise"
+                  >
+                    {currentPlanId === 'prod-billing-enterprise' && (
+                      <span className="absolute -top-2.5 right-6 px-2.5 py-0.5 bg-[#10B981] text-black text-[9px] font-black uppercase tracking-widest rounded-full">
+                        BEST VALUE
+                      </span>
+                    )}
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/35 text-emerald-400 text-[9px] rounded font-mono font-bold">
+                          MULTIFIRM SUITE
+                        </span>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${currentPlanId === 'prod-billing-enterprise' ? 'border-blue-500' : 'border-slate-600'}`}>
+                          {currentPlanId === 'prod-billing-enterprise' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-extrabold text-base text-white">GST Enterprise Suite</h4>
+                        <p className="text-xs text-slate-450 mt-1 leading-relaxed">
+                          Direct GST Portal JSON monthly exports (GSTR-1, GSTR-3B), unlimited firms/branch records, Google Drive automatic cloud backups, and priority hotline calls support.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-800/80 pt-4 mt-4 flex items-baseline gap-1.5">
+                      <span className="text-xs font-mono text-slate-500">Price:</span>
+                      <span className="text-2xl font-black text-white">₹{entPrice}</span>
+                      <span className="text-xs text-slate-500 line-through">₹{entOriginal}</span>
+                      <span className="text-[10px] bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold font-mono ml-auto">SAVE 40%</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* COUPON INPUT AND TALLY */}

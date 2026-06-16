@@ -34,7 +34,6 @@ import Tutorials from './components/Tutorials';
 import AboutUs from './components/AboutUs';
 import Contact from './components/Contact';
 import CustomerPortal from './components/CustomerPortal';
-import AdminPortal from './components/AdminPortal';
 import SoftwareDetails from './components/SoftwareDetails';
 import CheckoutModal from './components/CheckoutModal';
 import { TranslationProvider } from './components/TranslationContext';
@@ -60,15 +59,47 @@ export default function App() {
 
   const handleAddToCartAndChoosePrice = (planId: string) => {
     const pId = planId || 'prod-billing-pro';
-    const foundProduct = products?.find((p: any) => p.id === pId);
-    const productName = foundProduct?.name || (pId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro');
+    
+    // Check if it is a specific solution details from Download Center (e.g., matching sol-*)
+    const foundSolution = solutions?.find((s: any) => s.id === pId);
+    let productName = '';
+    let isSolution = false;
+    let price = 999;
+    let originalPrice = 2499;
+    let features: string[] = [];
+    let description = '';
+    let icon = '🛍️';
+    
+    if (foundSolution) {
+      productName = foundSolution.title;
+      isSolution = true;
+      price = Number(foundSolution.price?.replace(/[^0-9]/g, '')) || 999;
+      originalPrice = Math.ceil(price * 1.8) || (price + 2000);
+      features = foundSolution.features || [];
+      description = foundSolution.description || '';
+      icon = foundSolution.icon || '🛍️';
+    } else {
+      const foundProduct = products?.find((p: any) => p.id === pId);
+      productName = foundProduct?.name || (pId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro');
+      price = foundProduct?.price || (pId === 'prod-billing-enterprise' ? 2999 : 999);
+      originalPrice = foundProduct?.originalPrice || (pId === 'prod-billing-enterprise' ? 4999 : 2499);
+      features = foundProduct?.features || [];
+      description = foundProduct?.description || 'Offline Billing and Invoice Automation platform.';
+    }
     
     setCartItem({
-      id: 'suryatech-billing',
+      id: pId,
       name: productName,
       category: 'Billing & POS Software',
-      selectedPlanId: pId
-    });
+      selectedPlanId: pId,
+      price,
+      originalPrice,
+      features,
+      isSolution,
+      description,
+      icon
+    } as any);
+    
     addNotification(`Added ${productName} to Cart! Select details in the Cart layout below.`, 'success');
     setCurrentPage('pricing');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -125,15 +156,11 @@ export default function App() {
                     id: data.user!.id,
                     email: data.user!.email,
                     name: profile?.client_name || data.user!.user_metadata?.full_name || data.user!.user_metadata?.name || data.user!.email?.split('@')[0],
-                    role: data.user!.email === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer',
+                    role: 'customer',
                     profile: profile || null
                   };
                   setUser(u);
-                  if (u.role === 'admin') {
-                    setCurrentPage('admin');
-                  } else {
-                    handleNavigatePage('portal');
-                  }
+                  handleNavigatePage('portal');
                 });
             }
           }
@@ -161,14 +188,11 @@ export default function App() {
             id: session.user.id,
             email: session.user.email,
             name: profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
-            role: session.user.email === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer',
+            role: 'customer',
             profile: profile || null
           };
           setUser(u);
           localStorage.setItem('bsp_token', session.access_token);
-          if (u.role === 'admin') {
-            setCurrentPage('admin');
-          }
         } else {
           // Backward compatible token fallback
           const localToken = localStorage.getItem('bsp_token');
@@ -330,11 +354,28 @@ export default function App() {
       if (data && !error && data.length > 0) {
         setSolutions(data);
       } else {
+        console.log("App: Supabase solutions table empty, missing or gave error, loading from local Express API (/api/solutions)...", error?.message || "");
+        const localRes = await fetch('/api/solutions');
+        if (localRes.ok) {
+          const localData = await localRes.json();
+          setSolutions(localData);
+        } else {
+          setSolutions(defaultSolutions);
+        }
+      }
+    } catch (err: any) {
+      console.warn("Solutions load exception, attempting local Express API fallback...", err?.message || err);
+      try {
+        const localRes = await fetch('/api/solutions');
+        if (localRes.ok) {
+          const localData = await localRes.json();
+          setSolutions(localData);
+        } else {
+          setSolutions(defaultSolutions);
+        }
+      } catch (innerErr) {
         setSolutions(defaultSolutions);
       }
-    } catch (err) {
-      console.warn("Solutions load exception, using default solutions:", err);
-      setSolutions(defaultSolutions);
     }
   };
 
@@ -412,14 +453,10 @@ export default function App() {
     localStorage.setItem('bsp_token', token);
     const updatedUser = {
       ...userData,
-      role: userData.email?.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : userData.role
+      role: 'customer'
     };
     setUser(updatedUser);
-    if (updatedUser.role === 'admin') {
-      setCurrentPage('admin');
-    } else {
-      handleNavigatePage('portal');
-    }
+    handleNavigatePage('portal');
   };
 
   const handleLogout = () => {
@@ -729,13 +766,28 @@ export default function App() {
           console.warn("App: Failed loading direct Razorpay Settings from database table. Using fallback:", sbSettingsErr);
         }
 
-        // Resolve product pricing locally
+        // Resolve product pricing locally from products list or solutions list
+        let resolvedName = '';
+        let resolvedPrice = 999;
+        
         const selectedProduct = products.find((p: any) => p.id === productId);
-        if (!selectedProduct) {
-          throw new Error('Requested product with ID ' + productId + ' not found in local or remote catalog.');
+        if (selectedProduct) {
+          resolvedName = selectedProduct.name;
+          resolvedPrice = selectedProduct.price;
+        } else {
+          // Check solution catalogs
+          const selectedSol = solutions.find((s: any) => s.id === productId);
+          if (selectedSol) {
+            resolvedName = selectedSol.title;
+            resolvedPrice = Number(selectedSol.price?.replace(/[^0-9]/g, '')) || 999;
+          } else {
+            // Ultimate fallback so it doesn't crash
+            resolvedName = productId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro';
+            resolvedPrice = productId === 'prod-billing-enterprise' ? 2999 : 999;
+          }
         }
 
-        let finalAmount = selectedProduct.price;
+        let finalAmount = resolvedPrice;
         if (couponCode) {
           try {
             const { data: couponData } = await supabase
@@ -744,7 +796,7 @@ export default function App() {
               .eq('code', couponCode)
               .maybeSingle();
             if (couponData && couponData.discountPercent) {
-              finalAmount = Math.ceil(selectedProduct.price * (1 - couponData.discountPercent / 100));
+              finalAmount = Math.ceil(resolvedPrice * (1 - couponData.discountPercent / 100));
             }
           } catch (_) {}
         }
@@ -755,7 +807,7 @@ export default function App() {
           razorpayOrderId: undefined, // Direct checkout payment (no order ID required for direct SDK load)
           amount: finalAmount,
           keyId: rzpKeyId,
-          productName: selectedProduct.name,
+          productName: resolvedName,
           currency: 'INR'
         };
       }
@@ -1071,48 +1123,15 @@ export default function App() {
 
   return (
     <TranslationProvider user={user}>
-      {user?.role === 'admin' ? (
-        <div className="w-full min-h-screen bg-[#0F172A] text-[#F8FAFC] font-sans" id="admin-fullscreen-root">
-          <AdminPortal 
-            onAddNotification={addNotification}
-            onPageChange={handleNavigatePage}
-            onRefreshDownloads={fetchDownloads}
-            videos={videos}
-            onRefreshVideos={fetchVideos}
-            onLogout={handleLogout}
-            user={user}
-          />
-          {/* Floating Notifications Toaster */}
-          <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
-            {notifications.map((notif) => (
-              <div
-                key={notif.id}
-                className={`pointer-events-auto flex items-center justify-between p-4 rounded-xl shadow-lg border animate-slide-in text-xs font-sans ${
-                  notif.type === 'success' 
-                    ? 'bg-emerald-950 border-emerald-700 text-emerald-200' 
-                    : notif.type === 'error'
-                    ? 'bg-rose-950 border-rose-700 text-rose-200'
-                    : 'bg-slate-900 border-slate-700 text-slate-200'
-                }`}
-              >
-                <span>{notif.text}</span>
-                <button onClick={() => removeNotification(notif.id)} className="ml-4 hover:opacity-75">
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <Layout 
-          currentPage={currentPage}
-          onPageChange={handleNavigatePage} 
-          user={user}
-          onLogout={handleLogout}
-          notifications={notifications}
-          removeNotification={removeNotification}
-          cartItem={cartItem}
-        >
+      <Layout 
+        currentPage={currentPage}
+        onPageChange={handleNavigatePage} 
+        user={user}
+        onLogout={handleLogout}
+        notifications={notifications}
+        removeNotification={removeNotification}
+        cartItem={cartItem}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={currentPage}
@@ -1192,13 +1211,6 @@ export default function App() {
               initialView={portalInitialView}
             />
           )}
-
-          {currentPage === 'admin' && user?.role === 'admin' && (
-            <div className="p-8 text-center bg-white rounded-2xl shadow border border-slate-200 max-w-md mx-auto my-12">
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Redirecting to Admin Dashboard...</h2>
-              <p className="text-slate-600 text-sm">Please wait while we log you into the secure admin control panel.</p>
-            </div>
-          )}
         </motion.div>
       </AnimatePresence>
 
@@ -1228,7 +1240,6 @@ export default function App() {
         checkoutLoading={checkoutLoading}
       />
     </Layout>
-      )}
     </TranslationProvider>
   );
 }

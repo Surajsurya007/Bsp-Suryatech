@@ -249,7 +249,7 @@ server {
     # Maximum upload sizes for real EXE and large PDF manual files
     client_max_body_size 150M;
 
-    # Static Application UI assets caching
+    # Route all traffic to Node Express full-stack engine (which serves the frontend assets and spa fallbacks)
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -257,9 +257,6 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
-        
-        # Enable HTML5 History API Routing survival (prevents 404 upon refreshing sub-pages)
-        try_files $uri $uri/ /index.html;
     }
 
     # Public Directory Native File Handling

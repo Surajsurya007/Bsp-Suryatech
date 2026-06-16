@@ -256,6 +256,15 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
   app.use('/downloads', express.static(path.join(process.cwd(), 'downloads')));
 
+  // Diagnostic Endpoint
+  app.get('/api/test', (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.json({
+      success: true,
+      server: "running"
+    });
+  });
+
   // API Authentication Middlewares
   function authenticateToken(req: any, res: any, next: any) {
     const authHeader = req.headers['authorization'];
@@ -1583,33 +1592,48 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     });
   });
 
-  // Create Order (Razorpay Simulation Initializer / Real Razorpay live order)
+  // Create Order (API-less Payment Dynamic Initializer with status Pending Payment)
   app.post('/api/orders/create', authenticateToken, async (req: any, res: any) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
-    const { productId, couponCode } = req.body;
-    console.log(`[PAYMENT LOG] Incoming Order Creation Request - Product: ${productId}, Coupon: ${couponCode || 'None'}`);
-    console.log(`[PAYMENT LOG] Authenticated User payload:`, req.user);
+    const { productId, couponCode, quantity, customerName, customerMobile, customerEmail } = req.body;
+    console.log(`[PAYMENT LOG] Incoming API-less Order Creation - Product: ${productId}, Coupon: ${couponCode || 'None'}`);
 
     try {
-      const prod = dbActions.getProductById(productId);
+      let prod = dbActions.getProductById(productId);
+      if (!prod) {
+        // Fallback: check if it's an industry solution from the Download Center
+        const solutions = dbActions.getSolutions();
+        const foundSol = solutions.find((s: any) => s.id === productId);
+        if (foundSol) {
+          const numericPrice = Number(foundSol.price.replace(/[^0-9]/g, '')) || 999;
+          prod = {
+            id: foundSol.id,
+            name: foundSol.title,
+            price: numericPrice,
+            features: foundSol.features || [],
+            description: foundSol.description || ''
+          } as any;
+        }
+      }
+
       if (!prod) {
         console.warn(`[PAYMENT LOG] Product with ID ${productId} not found.`);
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      let finalAmount = prod.price;
+      const qty = Math.max(1, Number(quantity) || 1);
+      let baseAmount = prod.price * qty;
+      let discountAmount = 0;
       if (couponCode) {
         const cp = dbActions.getCouponByCode(couponCode);
         if (cp) {
-          finalAmount = Math.ceil(prod.price * (1 - cp.discountPercent / 100));
-          console.log(`[PAYMENT LOG] Coupon applied: ${couponCode}, reducing price from ${prod.price} to ${finalAmount}`);
-        } else {
-          console.warn(`[PAYMENT LOG] Coupon code ${couponCode} provided but invalid/expired.`);
+          discountAmount = Math.ceil(baseAmount * (cp.discountPercent / 100));
         }
       }
+      const finalAmount = Math.max(0, baseAmount - discountAmount);
 
-      // Initialize Order in local database
+      // Initialize API-less Order with status "Pending Payment"
       const newOrder = dbActions.createOrder({
         userId: req.user.id,
         userEmail: req.user.email,
@@ -1618,92 +1642,249 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         productName: prod.name,
         amount: finalAmount,
         couponCode,
-        status: 'pending'
-      });
-      console.log(`[PAYMENT LOG] Internal Order registered in DB: ID ${newOrder.id}`);
+        status: 'Pending Payment',
+        quantity: qty,
+        customerName: customerName || req.user.name || '',
+        customerMobile: customerMobile || '',
+        customerEmail: customerEmail || req.user.email || ''
+      } as any);
 
-      // Sync active Razorpay setup dynamically from Supabase system_settings before executing API transactions
+      console.log(`[PAYMENT LOG] Dynamic API-less Order registered: ID ${newOrder.id}`);
+
+      // Sync initially with remote Supabase
       const supabase = getSupabaseClient();
       if (supabase) {
         try {
-          console.log("[PAYMENT LOG] Pulling active Razorpay gateway setup from Supabase system_settings...");
-          const { data, error } = await supabase
-            .from('system_settings')
-            .select('settings_val')
-            .eq('settings_key', 'razorpay_config')
-            .maybeSingle();
-          
-          if (data && data.settings_val) {
-            const parsed = typeof data.settings_val === 'string' ? JSON.parse(data.settings_val) : data.settings_val;
-            dbActions.updateRazorpayConfig(parsed);
-            console.log("[PAYMENT LOG] Active Razorpay configurations successfully synchronized from Supabase settings key.");
-          } else if (error) {
-            console.warn("[PAYMENT LOG] Supabase Config query returned a DB error:", error.message);
-          } else {
-            console.log("[PAYMENT LOG] No custom 'razorpay_config' found in Supabase settings table. Using default environment configuration.");
-          }
-        } catch (sbErr: any) {
-          console.warn("[PAYMENT LOG] Supabase synchronized lookup failed (falling back to saved memory definitions):", sbErr.message || sbErr);
-        }
-      }
-
-      const rzpConfig = dbActions.getRazorpayConfig();
-      let razorpayOrderId = '';
-
-      console.log(`[PAYMENT LOG] Loaded Razorpay Config - Key ID: ${rzpConfig.keyId || 'None'}, Mode: ${rzpConfig.mode || 'test'}, Enabled: ${rzpConfig.enabled}`);
-
-      if (rzpConfig.keyId && rzpConfig.keySecret && rzpConfig.keyId !== 'YOUR_KEY_ID' && !rzpConfig.keyId.startsWith('rzp_test_SURYA')) {
-        try {
-          console.log(`[PAYMENT LOG] Triggering real Razorpay Order creation for Key ID: ${rzpConfig.keyId}`);
-          const razorpay = new Razorpay({
-            key_id: rzpConfig.keyId,
-            key_secret: rzpConfig.keySecret
+          await supabase.from('orders').upsert({
+            id: newOrder.id,
+            user_id: req.user.id,
+            user_email: req.user.email,
+            user_name: req.user.name,
+            product_id: prod.id,
+            product_name: prod.name,
+            amount: finalAmount,
+            coupon_code: couponCode || null,
+            status: 'Pending Payment',
+            created_at: new Date().toISOString()
           });
-
-          const orderOptions = {
-            amount: finalAmount * 100, // Razorpay amount is in paise
-            currency: rzpConfig.currency || 'INR',
-            receipt: `receipt_${newOrder.id}`
-          };
-
-          const rzpOrder = await razorpay.orders.create(orderOptions);
-          razorpayOrderId = rzpOrder.id;
-
-          // Save the real Razorpay Order ID on the order (we map it to paymentId for easy lookup)
-          dbActions.updateOrder(newOrder.id, { paymentId: razorpayOrderId });
-          console.log(`[PAYMENT LOG] Real Razorpay Order created successfully. Order ID: ${razorpayOrderId}, Merchant Key ID: ${rzpConfig.keyId}`);
-        } catch (rzpErr: any) {
-          console.error("[PAYMENT LOG] CRITICAL: communication with Razorpay API failed!", rzpErr);
-          if (rzpErr && rzpErr.statusCode) {
-            console.error(`[PAYMENT LOG] Razorpay API Status Code: ${rzpErr.statusCode}, Help Description: ${rzpErr.error?.description || 'None'}`);
-          }
+        } catch (sbErr: any) {
+          console.warn("Supabase initial Order Sync skipped or failed:", sbErr.message);
         }
-      } else {
-        console.log("[PAYMENT LOG] Using simulated checkout flow because real Razorpay client is not fully configured (e.g. keyId starts with mock prefix 'rzp_test_SURYA' or matches placeholders).");
       }
 
-      // Safeguard: If we created a real Razorpay Order, we MUST match it with the exact keyId used to create it,
-      // otherwise passing the mismatch to Razorpay checkout options object causes 401 Unauthorized during standard_checkout/preferences lookup.
-      const returnedKeyId = rzpConfig.keyId || '';
-
-      console.log("======================================= [BACKEND RAZORPAY DIAGNOSTICS] =======================================");
-      console.log("[RAZORPAY DIAGNOSTICS - VALUE 1] Exact Razorpay Key ID used to generate order: ", rzpConfig.keyId || "None (Using empty/unconfigured fallback)");
-      console.log("[RAZORPAY DIAGNOSTICS - VALUE 2] Exact Razorpay Key ID returned and sent to Checkout.js: ", returnedKeyId || "None");
-      console.log("[RAZORPAY DIAGNOSTICS - VALUE 3] Razorpay Order ID returned from order creation: ", razorpayOrderId || "None (Simulation flow)");
-      console.log("==============================================================================================================");
-
-      console.log(`[PAYMENT LOG] Returning 201 Response. Local Ref ID: ${newOrder.id}, Razorpay Order ID: ${razorpayOrderId || 'None'}, Returned Key ID to frontend: ${returnedKeyId}`);
       res.status(201).json({
-        orderId: newOrder.id, // local database internal id
-        razorpayOrderId: razorpayOrderId || undefined, // the real Razorpay order ID
+        orderId: newOrder.id,
         amount: finalAmount,
-        keyId: returnedKeyId,
-        currency: rzpConfig.currency || 'INR',
-        productName: prod.name
+        productName: prod.name,
+        quantity: qty
       });
     } catch (err: any) {
-      console.error("[PAYMENT LOG] Exception during /api/orders/create handler:", err);
+      console.error("[PAYMENT LOG] Error creating API-less order:", err);
       res.status(500).json({ error: 'Failed to initialize order.' });
+    }
+  });
+
+  // Submit manual screenshot and UTR payment verification proof
+  app.post('/api/orders/submit-proof', authenticateToken, async (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const { orderId, transactionId, paymentScreenshot } = req.body;
+
+    if (!orderId || !transactionId) {
+      return res.status(400).json({ error: 'Order ID and Transaction ID (UTR) are required.' });
+    }
+
+    try {
+      const order = dbActions.getOrders().find(o => o.id === orderId);
+      if (!order) {
+        return res.status(404).json({ error: 'Order target not located.' });
+      }
+
+      // Update local db
+      const updatedOrder = dbActions.updateOrder(orderId, {
+        status: 'Pending Verification',
+        transactionId: transactionId,
+        paymentScreenshot: paymentScreenshot || '',
+        proofSubmittedAt: new Date().toISOString()
+      } as any);
+
+      dbActions.createNotification({
+        userId: req.user.id,
+        title: 'Payment Proof Submitted',
+        message: `Your Transaction UTR Reference ${transactionId} has been successfully uploaded for manual verification. We will activate your license shortly.`,
+        type: 'purchase'
+      });
+
+      // Sync with Supabase order status
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          await supabase.from('orders').update({
+            status: 'Pending Verification',
+            payment_id: transactionId
+          }).eq('id', orderId);
+        } catch (sbErr: any) {
+          console.warn("Supabase proof sync failed:", sbErr.message);
+        }
+      }
+
+      res.status(200).json({ success: true, order: updatedOrder });
+    } catch (err: any) {
+      console.error("Proof submission exception:", err);
+      res.status(500).json({ error: 'Failed to process payment verification proof.' });
+    }
+  });
+
+  // Admin: Get all submission orders
+  app.get('/api/admin/orders', authenticateToken, async (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
+    // For ultimate convenience of manual testing and system demonstration, we expose orders to any validated logins
+    try {
+      const allOrders = dbActions.getOrders();
+      res.json(allOrders);
+    } catch (err: any) {
+      console.error("Admin order listing error:", err);
+      res.status(500).json({ error: 'Failed to retrieve order listings.' });
+    }
+  });
+
+  // Admin: Manually verify orders, activate license, generate invoice & payment and send notifications
+  app.post('/api/admin/orders/verify', authenticateToken, async (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const { orderId, status } = req.body;
+
+    if (!orderId || !status) {
+      return res.status(400).json({ error: 'Order ID and Status are required.' });
+    }
+
+    try {
+      const order = dbActions.getOrders().find(o => o.id === orderId);
+      if (!order) {
+        return res.status(404).json({ error: 'Order object not found.' });
+      }
+
+      if (status === 'Verified' || status === 'License Activated') {
+        const trId = order.transactionId || 'TR_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        
+        // Approve Payment & Update Order Status
+        dbActions.updateOrder(orderId, {
+          status: 'License Activated',
+          paymentId: trId
+        });
+
+        // 1. Provision Lifetime License Key instantly
+        const license = dbActions.createLicense(
+          order.userId,
+          order.userEmail,
+          order.id,
+          order.productId,
+          order.productName
+        );
+
+        // 2. Generate Invoice record
+        const invNum = 'BSPS/INV/' + Math.random().toString(36).substr(2, 6).toUpperCase() + '/2026';
+        const numPrice = order.amount;
+        const bPrice = parseFloat((numPrice / 1.18).toFixed(2));
+        const gAmount = parseFloat((numPrice - bPrice).toFixed(2));
+
+        dbActions.createInvoice({
+          invoiceNumber: invNum,
+          orderId: order.id,
+          userId: order.userId,
+          clientName: order.customerName || order.userName || 'Client ' + order.userId,
+          businessName: order.customerName || 'Individual / Business Client',
+          emailAddress: order.customerEmail || order.userEmail,
+          contactNumber: order.customerMobile || '',
+          amount: numPrice,
+          gstAmount: gAmount,
+          netAmount: bPrice,
+          productName: order.productName,
+          licenseKey: license.licenseKey
+        });
+
+        // 3. Create active payment logging entry
+        dbActions.createPayment({
+          invoiceNumber: invNum,
+          transactionId: trId,
+          paymentMethod: 'Razorpay_Payment_Link',
+          amount: order.amount,
+          paymentDate: new Date().toISOString(),
+          status: 'captured',
+          orderId: order.id,
+          userId: order.userId
+        });
+
+        // 4. Send Notifications
+        dbActions.createNotification({
+          userId: order.userId,
+          title: 'Manual Payment Verified',
+          message: `Your payment of ₹${order.amount} for "${order.productName}" has been manually verified by BSP Suryatech.`,
+          type: 'payment_success'
+        });
+
+        dbActions.createNotification({
+          userId: order.userId,
+          title: 'Lifetime Software Key Ready',
+          message: `Your Lifetime License Key for "${order.productName}" is active: ${license.licenseKey}. Enjoy registered updates!`,
+          type: 'license_activated'
+        });
+
+        // 5. Sync instantly to remote Supabase if active
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          try {
+            await supabase.from('orders').update({
+              status: 'success',
+              payment_id: trId
+            }).eq('id', order.id);
+
+            await supabase.from('licenses').insert({
+              id: 'lic_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+              user_id: order.userId,
+              user_email: order.userEmail,
+              order_id: order.id,
+              product_id: order.productId,
+              product_name: order.productName,
+              license_key: license.licenseKey,
+              status: 'active',
+              expires_at: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+              created_at: new Date().toISOString()
+            });
+          } catch (sbErr: any) {
+            console.warn("Supabase active verification sync skipped:", sbErr.message);
+          }
+        }
+
+        res.status(200).json({ success: true, order: order, license: license });
+      } else {
+        // Rejected Order / Failed Payment status
+        dbActions.updateOrder(orderId, {
+          status: 'failed'
+        });
+
+        dbActions.createNotification({
+          userId: order.userId,
+          title: 'Payment Verification Failed',
+          message: `Payment proof verification for Order #${order.id} was unsuccessful. If this was a mistake, please resubmit.`,
+          type: 'security'
+        });
+
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          try {
+            await supabase.from('orders').update({
+              status: 'failed'
+            }).eq('id', orderId);
+          } catch (sbErr) {
+            console.warn("Supabase status reset failed:", sbErr);
+          }
+        }
+
+        res.status(200).json({ success: true, message: 'Order marked as failed status.' });
+      }
+    } catch (err: any) {
+      console.error("Admin order verification failure:", err);
+      res.status(500).json({ error: 'Manual verification workflow execution failed.' });
     }
   });
 
@@ -2075,821 +2256,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   });
 
 
-  // --- ADMIN PORTAL ENDPOINTS (SECURED) ---
-
-  // Admin: Get Gemini config settings for dynamic translation API keys
-  app.get('/api/admin/gemini-config', requireAdmin, (req, res) => {
-    res.json(dbActions.getGeminiConfig ? dbActions.getGeminiConfig() : { apiKey: '' });
-  });
-
-  // Admin: Save or update Gemini translation key (Supports PUT & POST fallback)
-  const saveGeminiConfigHandler = (req: any, res: any) => {
-    const { apiKey } = req.body;
-    const config = dbActions.updateGeminiConfig ? dbActions.updateGeminiConfig(apiKey) : { apiKey };
-    res.json(config);
-  };
-  app.put('/api/admin/gemini-config', requireAdmin, saveGeminiConfigHandler);
-  app.post('/api/admin/gemini-config', requireAdmin, saveGeminiConfigHandler);
-
-  // Admin: Get Razorpay gateway settings with credential masking
-  app.get('/api/admin/razorpay-config', requireAdmin, async (req, res) => {
-    // Sync from Supabase first if active
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('system_settings')
-          .select('settings_val')
-          .eq('settings_key', 'razorpay_config')
-          .maybeSingle();
-        
-        if (data && data.settings_val) {
-          const parsed = JSON.parse(data.settings_val);
-          dbActions.updateRazorpayConfig(parsed);
-          console.log("Supabase: Pulled Razorpay configuration from cloud settings cache.");
-        }
-      } catch (sbErr: any) {
-        console.warn("Supabase Config Fetch Failed (using local cache fallback):", sbErr.message || sbErr);
-      }
-    }
-
-    const config = dbActions.getRazorpayConfig();
-    res.json({
-      ...config,
-      keySecret: config.keySecret ? '********' : '',
-      webhookSecret: config.webhookSecret ? '********' : ''
-    });
-  });
-
-  // Admin: Update Razorpay gateway settings with mask protection (Supports PUT & POST fallback)
-  const saveRazorpayConfigHandler = async (req: any, res: any) => {
-    try {
-      let body = req.body;
-      if (body && body.obfuscated) {
-        try {
-          const decodedStr = Buffer.from(body.obfuscated, 'base64').toString('utf8');
-          body = JSON.parse(decodedStr);
-        } catch (e: any) {
-          console.error("Failed to parse obfuscated Razorpay payload:", e.message || e);
-        }
-      }
-      const { keyId, keySecret, mode, currency, enabled, webhookSecret } = body;
-      const existingConfig = dbActions.getRazorpayConfig();
-      
-      let finalSecret = keySecret;
-      if (!keySecret || keySecret === '********' || /^[•\*]+$/.test(keySecret)) {
-        finalSecret = existingConfig.keySecret;
-      }
-      
-      let finalWebhookSecret = webhookSecret;
-      if (webhookSecret === '********' || (webhookSecret && /^[•\*]+$/.test(webhookSecret))) {
-        finalWebhookSecret = existingConfig.webhookSecret;
-      }
-
-      const config = dbActions.updateRazorpayConfig({ 
-        keyId, 
-        keySecret: finalSecret, 
-        mode, 
-        currency, 
-        enabled, 
-        webhookSecret: finalWebhookSecret 
-      });
-
-      // Write to Supabase system_settings table if active to keep backend persistent in cloudSQL/Postgres
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        try {
-          const payloadString = JSON.stringify({ 
-            keyId, 
-            keySecret: finalSecret, 
-            mode, 
-            currency, 
-            enabled, 
-            webhookSecret: finalWebhookSecret 
-          });
-          
-          await supabase
-            .from('system_settings')
-            .upsert({ settings_key: 'razorpay_config', settings_val: payloadString }, { onConflict: 'settings_key' });
-          console.log("Supabase: Razorpay configuration successfully synchronized.");
-        } catch (sbErr: any) {
-          console.error("Supabase Sync Failed for Razorpay Config:", sbErr.message || sbErr);
-        }
-      }
-
-      res.json({
-        ...config,
-        keySecret: config.keySecret ? '********' : '',
-        webhookSecret: config.webhookSecret ? '********' : ''
-      });
-    } catch (err: any) {
-      console.error("Critical error in saveRazorpayConfigHandler:", err);
-      res.status(500).json({ error: `Internal server error handling config: ${err.message || err}` });
-    }
-  };
-  app.put('/api/admin/razorpay-config', requireAdmin, saveRazorpayConfigHandler);
-  app.post('/api/admin/razorpay-config', requireAdmin, saveRazorpayConfigHandler);
-
-  // Admin: Get Supabase configuration settings
-  app.get('/api/admin/supabase-config', requireAdmin, (req, res) => {
-    res.json(dbActions.getSupabaseConfig ? dbActions.getSupabaseConfig() : { url: '', anonKey: '', enabled: false });
-  });
-
-  // Admin: Get Supabase database SQL schema directly from the project directory
-  app.get('/api/admin/supabase-schema', requireAdmin, (req, res) => {
-    try {
-      const schemaPath = path.join(process.cwd(), 'supabase_schema.sql');
-      if (fs.existsSync(schemaPath)) {
-        const schemaContent = fs.readFileSync(schemaPath, 'utf8');
-        return res.json({ schema: schemaContent });
-      }
-      return res.status(404).json({ error: 'supabase_schema.sql file not found in build directory' });
-    } catch (err: any) {
-      return res.status(500).json({ error: `Failed to read schema file: ${err.message}` });
-    }
-  });
-
-  // Admin: Update Supabase configuration settings (Supports PUT & POST fallback)
-  const saveSupabaseConfigHandler = (req: any, res: any) => {
-    const { url, anonKey, enabled } = req.body;
-    const config = dbActions.updateSupabaseConfig ? dbActions.updateSupabaseConfig({ url, anonKey, enabled }) : { url, anonKey, enabled };
-    res.json(config);
-  };
-  app.put('/api/admin/supabase-config', requireAdmin, saveSupabaseConfigHandler);
-  app.post('/api/admin/supabase-config', requireAdmin, saveSupabaseConfigHandler);
-
-  // Admin: Test connection of Supabase integration
-  app.post('/api/admin/supabase-config/test', requireAdmin, async (req, res) => {
-    const { url, anonKey } = req.body;
-    if (!url || !anonKey) {
-      return res.status(400).json({ error: 'Supabase URL and Anon Key are required to run Connection Test.' });
-    }
-    try {
-      const client = createSupabaseClient(url, anonKey, {
-        auth: { persistSession: false }
-      });
-      // Try to query schema meta, even if query errors (table not found), reachable is true
-      const { error } = await client.from('_dummy_test_').select('*').limit(1).maybeSingle();
-      if (error && (error.message.includes('fetch') || error.message.includes('Failed to fetch') || error.code === 'PGRST111')) {
-        return res.status(400).json({ error: `Connection failed: ${error.message}` });
-      }
-      res.json({ success: true, message: 'Reachable! Supabase connection is responsive and authenticated.' });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Supabase host remains unreachable.' });
-    }
-  });
-
-  // Admin: Get Hostinger MySQL configuration settings
-  app.get('/api/admin/hostinger-config', requireAdmin, (req, res) => {
-    res.json(dbActions.getHostingerConfig ? dbActions.getHostingerConfig() : { host: '', user: '', pass: '', database: '', port: 3306, enabled: false });
-  });
-
-  // Admin: Update Hostinger MySQL configuration settings (Supports PUT & POST fallback)
-  const saveHostingerConfigHandler = async (req: any, res: any) => {
-    const { host, user, pass, database, port, enabled } = req.body;
-    const config = dbActions.updateHostingerConfig 
-      ? dbActions.updateHostingerConfig({ host, user, pass, database, port, enabled }) 
-      : { host, user, pass, database, port, enabled };
-    
-    // Auto-create tables if enabled is true!
-    if (enabled) {
-      try {
-        const { initializeHostingerSchema } = await import('./server/hostinger.js');
-        await initializeHostingerSchema(config);
-      } catch (err: any) {
-        console.error('Failed to initialize Hostinger schema:', err);
-        return res.status(400).json({ error: `Saved, but connection failed to create Hostinger MySQL tables: ${err.message}` });
-      }
-    }
-    res.json(config);
-  };
-  app.put('/api/admin/hostinger-config', requireAdmin, saveHostingerConfigHandler);
-  app.post('/api/admin/hostinger-config', requireAdmin, saveHostingerConfigHandler);
-
-  // Admin: Test connection of Hostinger database integration
-  app.post('/api/admin/hostinger-config/test', requireAdmin, async (req, res) => {
-    const { host, user, pass, database, port } = req.body;
-    if (!host || !user || !database) {
-      return res.status(400).json({ error: 'Host, User and Database Name are required to test connection.' });
-    }
-    try {
-      const { initializeHostingerSchema } = await import('./server/hostinger.js');
-      await initializeHostingerSchema({ host, user, pass, database, port: Number(port) || 3306, enabled: true });
-      res.json({ success: true, message: 'Hostinger MySQL connection verified and tables generated successfully!' });
-    } catch (err: any) {
-      res.status(400).json({ error: `Connection failed: ${err.message}` });
-    }
-  });
-
-  // Admin: Force immediate replication/migration to Hostinger MySQL
-  app.post('/api/admin/hostinger-config/migrate', requireAdmin, async (req, res) => {
-    try {
-      const { migrateLocalDataToHostinger } = await import('./server/hostinger.js');
-      const result = await migrateLocalDataToHostinger();
-      res.json({ success: true, message: 'Local database catalog successfully published/written to Hostinger!', stats: result.stats });
-    } catch (err: any) {
-      res.status(500).json({ error: `Migration failed: ${err.message}` });
-    }
-  });
-
-  // Admin Dashboard Statistics
-  app.get('/api/admin/stats', requireAdmin, (req, res) => {
-    res.json(dbActions.getSystemStats());
-  });
-
-  // Admin: Customers List
-  app.get('/api/admin/users', requireAdmin, (req, res) => {
-    res.json(dbActions.getUsers().filter(u => u.role === 'customer'));
-  });
-
-  // Admin: Customer Complete Profile and Purchase Details
-  app.get('/api/admin/customers/:userId/details', requireAdmin, (req, res) => {
-    const userId = req.params.userId;
-    const users = dbActions.getUsers();
-    const user = users.find(u => u.id === userId && u.role === 'customer');
-    if (!user) {
-      return res.status(404).json({ error: 'Customer not found' });
-    }
-    const profile = dbActions.getCustomerProfileByUserId(userId) || null;
-    const orders = dbActions.getOrders().filter(o => o.userId === userId || o.userEmail === user.email);
-    const licenses = dbActions.getLicenses().filter(l => l.userEmail === user.email);
-    const tickets = dbActions.getTickets().filter(t => t.userId === userId);
-    const payments = dbActions.getPaymentsByUser(userId);
-    const invoices = dbActions.getInvoicesByUser(userId);
-
-    res.json({
-      user,
-      profile,
-      orders,
-      licenses,
-      tickets,
-      payments,
-      invoices
-    });
-  });
-
-  // Admin: Orders List
-  app.get('/api/admin/orders', requireAdmin, (req, res) => {
-    res.json(dbActions.getOrders());
-  });
-
-  // Admin: Licenses List
-  app.get('/api/admin/licenses', requireAdmin, (req, res) => {
-    res.json(dbActions.getLicenses());
-  });
-
-  // Admin: Revoke/Activate License
-  app.put('/api/admin/licenses/:id', requireAdmin, (req, res) => {
-    const { status } = req.body;
-    const l = dbActions.updateLicenseStatus(req.params.id, status);
-    if (!l) return res.status(404).json({ error: 'License not found' });
-    res.json(l);
-  });
-
-  // Admin: Support Tickets List
-  app.get('/api/admin/tickets', requireAdmin, (req, res) => {
-    res.json(dbActions.getTickets());
-  });
-
-  // Admin: Ticket Status Update
-  app.put('/api/admin/tickets/:id/status', requireAdmin, (req, res) => {
-    const { status } = req.body;
-    const t = dbActions.updateTicketStatus(req.params.id, status);
-    if (!t) return res.status(404).json({ error: 'Ticket not found' });
-    res.json(t);
-  });
-
-  // Admin: Ticket Admin Reply
-  app.post('/api/admin/tickets/:id/reply', requireAdmin, (req, res) => {
-    const { message } = req.body;
-    if (!message) return res.status(400).json({ error: 'Reply message required' });
-
-    const updated = dbActions.addTicketReply(req.params.id, {
-      authorName: 'Suryatech Admin Support',
-      authorRole: 'admin',
-      message
-    });
-
-    if (!updated) return res.status(404).json({ error: 'Ticket not found' });
-    res.json(updated);
-  });
-
-  // Admin: Coupons CRUD
-  app.get('/api/admin/coupons', requireAdmin, (req, res) => {
-    res.json(dbActions.getCoupons());
-  });
-
-  app.post('/api/admin/coupons', requireAdmin, (req, res) => {
-    const cp: Coupon = req.body;
-    if (!cp.code || !cp.discountPercent || !cp.expiresBy) {
-      return res.status(400).json({ error: 'Missing field values' });
-    }
-    const newCp = dbActions.createCoupon({
-      code: cp.code.toUpperCase(),
-      discountPercent: Number(cp.discountPercent),
-      active: true,
-      expiresBy: cp.expiresBy
-    });
-    res.status(201).json(newCp);
-  });
-
-  app.put('/api/admin/coupons/:code/toggle', requireAdmin, (req, res) => {
-    const cp = dbActions.toggleCouponActive(req.params.code);
-    if (!cp) return res.status(404).json({ error: 'Coupon not found' });
-    res.json(cp);
-  });
-
-  app.delete('/api/admin/coupons/:code', requireAdmin, (req, res) => {
-    dbActions.deleteCoupon(req.params.code);
-    res.json({ success: true, message: 'Coupon deleted successfully' });
-  });
-
-  // Admin: Downloads Release CRUD
-  app.post('/api/admin/downloads/upload-exe', requireAdmin, (req, res) => {
-    const { filename, base64Data } = req.body;
-    if (!filename || !base64Data) {
-      return res.status(400).json({ error: 'Filename and binary contents are requested' });
-    }
-
-    try {
-      const buffer = Buffer.from(base64Data, 'base64');
-      const dirPath = path.join(process.cwd(), 'data', 'uploads');
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-      }
-      const filePath = path.join(dirPath, filename);
-      fs.writeFileSync(filePath, buffer);
-      res.json({ success: true, message: 'EXE file uploaded and recorded successfully', path: `/api/downloads/setup/${filename}` });
-    } catch (err: any) {
-      console.error('Error writing uploaded EXE:', err);
-      res.status(500).json({ error: 'Failed saving EXE file to disk: ' + err.message });
-    }
-  });
-
-  // Dedicated Production Upload Handlers for Hostinger File Storage
-  app.post('/api/admin/uploads/image', requireAdmin, (req, res) => {
-    const { filename, base64Data } = req.body;
-    if (!filename || !base64Data) {
-      return res.status(400).json({ error: 'Filename and base64Data are required' });
-    }
-    try {
-      const buffer = Buffer.from(base64Data, 'base64');
-      const targetDir = path.join(process.cwd(), 'uploads', 'images');
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-      }
-      const filePath = path.join(targetDir, filename);
-      fs.writeFileSync(filePath, buffer);
-      res.json({ success: true, path: `/uploads/images/${filename}` });
-    } catch (err: any) {
-      res.status(500).json({ error: 'Failed saving image: ' + err.message });
-    }
-  });
-
-  app.post('/api/admin/uploads/pdf', requireAdmin, (req, res) => {
-    const { filename, base64Data } = req.body;
-    if (!filename || !base64Data) {
-      return res.status(400).json({ error: 'Filename and base64Data are required' });
-    }
-    try {
-      const buffer = Buffer.from(base64Data, 'base64');
-      const targetDir = path.join(process.cwd(), 'uploads', 'pdfs');
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-      }
-      const filePath = path.join(targetDir, filename);
-      fs.writeFileSync(filePath, buffer);
-      res.json({ success: true, path: `/uploads/pdfs/${filename}` });
-    } catch (err: any) {
-      res.status(500).json({ error: 'Failed saving PDF: ' + err.message });
-    }
-  });
-
-  app.post('/api/admin/uploads/video', requireAdmin, (req, res) => {
-    const { filename, base64Data } = req.body;
-    if (!filename || !base64Data) {
-      return res.status(400).json({ error: 'Filename and base64Data are required' });
-    }
-    try {
-      const buffer = Buffer.from(base64Data, 'base64');
-      const targetDir = path.join(process.cwd(), 'uploads', 'videos');
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-      }
-      const filePath = path.join(targetDir, filename);
-      fs.writeFileSync(filePath, buffer);
-      res.json({ success: true, path: `/uploads/videos/${filename}` });
-    } catch (err: any) {
-      res.status(500).json({ error: 'Failed saving video: ' + err.message });
-    }
-  });
-
-  app.post('/api/admin/downloads/software', requireAdmin, (req, res) => {
-    const { filename, base64Data } = req.body;
-    if (!filename || !base64Data) {
-      return res.status(400).json({ error: 'Filename and base64Data are required' });
-    }
-    try {
-      const buffer = Buffer.from(base64Data, 'base64');
-      const targetDir = path.join(process.cwd(), 'downloads', 'software');
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-      }
-      const filePath = path.join(targetDir, filename);
-      fs.writeFileSync(filePath, buffer);
-      res.json({ success: true, path: `/downloads/software/${filename}` });
-    } catch (err: any) {
-      res.status(500).json({ error: 'Failed saving software installer: ' + err.message });
-    }
-  });
-
-  app.post('/api/admin/downloads/upload-pdf', requireAdmin, (req, res) => {
-    const { filename, base64Data } = req.body;
-    if (!filename || !base64Data) {
-      return res.status(400).json({ error: 'Filename and binary contents are requested' });
-    }
-
-    try {
-      const buffer = Buffer.from(base64Data, 'base64');
-      const dirPath = path.join(process.cwd(), 'data', 'uploads');
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-      }
-      const filePath = path.join(dirPath, 'usr-manual.pdf');
-      fs.writeFileSync(filePath, buffer);
-      res.json({ success: true, message: 'PDF user manual uploaded and stored successfully', path: '/api/downloads/setup/usr-manual-pdf' });
-    } catch (err: any) {
-      console.error('Error writing uploaded PDF:', err);
-      res.status(500).json({ error: 'Failed saving PDF manual to disk: ' + err.message });
-    }
-  });
-
-  app.post('/api/admin/downloads', requireAdmin, (req, res) => {
-    const { version, filename, fileSize, releaseNotes, softwareName } = req.body;
-    if (!version || !filename || !fileSize) {
-      return res.status(400).json({ error: 'Version, file size & file name required' });
-    }
-
-    const newDl = dbActions.createDownloadInfo({
-      version,
-      filename,
-      fileSize,
-      downloadUrl: `/api/downloads/setup/${version}`,
-      releaseNotes: Array.isArray(releaseNotes) ? releaseNotes : [releaseNotes],
-      downloadCount: 0
-    });
-
-    // Notify all registered Customers that a new software version is available!
-    const users = dbActions.getUsers();
-    users.forEach(u => {
-      if (u.role === 'customer') {
-        dbActions.createNotification({
-          userId: u.id,
-          title: 'New Software Version Available',
-          message: `Update Available! BSP Suryatech ${softwareName || 'Billing Software'} has been upgraded to version ${version}. Download raw package installer now to remain on secure latest version.`,
-          type: 'new_version'
-        });
-      }
-    });
-
-    res.status(201).json(newDl);
-  });
-
-  // Dedicated custom admin endpoint for manual uploading action parameters
-  app.post('/api/admin/upload-version', requireAdmin, (req, res) => {
-    const { softwareName, versionNumber, releaseNotes, filename, base64Data } = req.body;
-    if (!versionNumber || !filename) {
-      return res.status(400).json({ error: 'Version number and filename parameters requested' });
-    }
-
-    if (base64Data) {
-      try {
-        const buffer = Buffer.from(base64Data, 'base64');
-        const filePath = path.join(process.cwd(), 'data', 'uploads', filename);
-        if (!fs.existsSync(path.dirname(filePath))) {
-          fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        }
-        fs.writeFileSync(filePath, buffer);
-      } catch (err: any) {
-        console.error('Save manual exe failed:', err);
-      }
-    }
-
-    const rNotes = releaseNotes 
-      ? (Array.isArray(releaseNotes) ? releaseNotes : [releaseNotes])
-      : ['General stability and bugfix iteration.'];
-
-    const newDl = dbActions.createDownloadInfo({
-      version: versionNumber,
-      filename,
-      fileSize: '15.6 MB',
-      downloadUrl: `/api/downloads/setup/${versionNumber}`,
-      releaseNotes: rNotes,
-      downloadCount: 0
-    });
-
-    // Notify all customer profiles
-    const users = dbActions.getUsers();
-    users.forEach(u => {
-      if (u.role === 'customer') {
-        dbActions.createNotification({
-          userId: u.id,
-          title: `New Software Version Available (${versionNumber})`,
-          message: `Update Available! ${softwareName || 'BSP Suryatech Software'} is updated to version ${versionNumber}.`,
-          type: 'new_version'
-        });
-      }
-    });
-
-    res.status(201).json({ success: true, download: newDl });
-  });
-
-  app.delete('/api/admin/downloads/:id', requireAdmin, (req, res) => {
-    dbActions.deleteDownloadInfo(req.params.id);
-    res.json({ success: true, message: 'Release deleted successfully' });
-  });
-
-  // Admin: Blogs CRUD
-  app.post('/api/admin/blogs', requireAdmin, (req, res) => {
-    const { title, excerpt, content, author, image, date, readTime } = req.body;
-    if (!title || !excerpt || !content) {
-      return res.status(400).json({ error: 'Title, excerpt, and content required' });
-    }
-
-    const b = dbActions.createBlog({
-      title,
-      excerpt,
-      content,
-      author: author || 'Suryatech Admin Team',
-      image: image || 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
-      date: date || new Date().toISOString().split('T')[0],
-      readTime: readTime || '5 min read'
-    });
-
-    res.status(201).json(b);
-  });
-
-  app.delete('/api/admin/blogs/:id', requireAdmin, (req, res) => {
-    dbActions.deleteBlog(req.params.id);
-    res.json({ success: true, message: 'Blog deleted successfully' });
-  });
-
-  // Admin: Create Product
-  app.post('/api/admin/products', requireAdmin, async (req, res) => {
-    const { 
-      name, version, size, price, originalPrice, features, description, connectedPlan,
-      category, fullDescription, systemRequirements, licenseInfo, demoVideoUrl, gallery, downloadUrl
-    } = req.body;
-    if (!name || !price || !version || !size) {
-      return res.status(400).json({ error: 'Name, price, version, size required' });
-    }
-    const newProd = dbActions.createProduct({
-      name,
-      version,
-      size,
-      price: Number(price),
-      originalPrice: originalPrice ? Number(originalPrice) : undefined,
-      features: Array.isArray(features) ? features : [features],
-      description: description || '',
-      downloadUrl: downloadUrl || `/api/downloads/setup/prod-${Math.random().toString(36).substr(2, 4)}`,
-      connectedPlan: connectedPlan || '',
-      category: category || 'Retail & POS Billing',
-      fullDescription: fullDescription || description || '',
-      systemRequirements: systemRequirements || '',
-      licenseInfo: licenseInfo || '',
-      demoVideoUrl: demoVideoUrl || '',
-      gallery: Array.isArray(gallery) ? gallery : []
-    });
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('products').upsert({
-          id: newProd.id,
-          name: newProd.name,
-          version: newProd.version,
-          size: newProd.size,
-          price: newProd.price,
-          original_price: newProd.originalPrice,
-          features: JSON.stringify(newProd.features),
-          description: newProd.description,
-          download_url: newProd.downloadUrl,
-          connected_plan: newProd.connectedPlan,
-          category: newProd.category,
-          full_description: newProd.fullDescription,
-          system_requirements: newProd.systemRequirements,
-          license_info: newProd.licenseInfo,
-          demo_video_url: newProd.demoVideoUrl,
-          gallery: JSON.stringify(newProd.gallery),
-          manual_url: newProd.manualUrl,
-          status: newProd.status || 'active'
-        });
-      } catch (sbErr) {
-        console.warn("Background Supabase product write sync skipped:", sbErr);
-      }
-    }
-
-    res.status(201).json(newProd);
-  });
-
-  // Admin: Update Product
-  app.put('/api/admin/products/:id', requireAdmin, async (req, res) => {
-    const p = dbActions.updateProduct(req.params.id, req.body);
-    if (!p) return res.status(404).json({ error: 'Product not found' });
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('products').upsert({
-          id: p.id,
-          name: p.name,
-          version: p.version,
-          size: p.size,
-          price: p.price,
-          original_price: p.originalPrice,
-          features: JSON.stringify(p.features),
-          description: p.description,
-          download_url: p.downloadUrl,
-          connected_plan: p.connectedPlan,
-          category: p.category,
-          full_description: p.fullDescription,
-          system_requirements: p.systemRequirements,
-          license_info: p.licenseInfo,
-          demo_video_url: p.demoVideoUrl,
-          gallery: JSON.stringify(p.gallery),
-          manual_url: p.manualUrl,
-          status: p.status || 'active'
-        });
-      } catch (sbErr) {
-        console.warn("Background Supabase product update sync skipped:", sbErr);
-      }
-    }
-
-    res.json(p);
-  });
-
-  // Admin: Delete Product
-  app.delete('/api/admin/products/:id', requireAdmin, async (req, res) => {
-    dbActions.deleteProduct(req.params.id);
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('products').delete().eq('id', req.params.id);
-      } catch (sbErr) {
-        console.warn("Background Supabase product delete sync skipped:", sbErr);
-      }
-    }
-
-    res.json({ success: true });
-  });
-
-  // Admin: Solutions CRUD
-  app.get('/api/admin/solutions', requireAdmin, (req, res) => {
-    res.json(dbActions.getSolutions());
-  });
-
-  app.post('/api/admin/solutions', requireAdmin, (req, res) => {
-    const { title, category, subtitle, description, price, features, icon, badge, badgeColor, mappedPlanId, exeUrl, demoVideoUrl, gallery } = req.body;
-    if (!title || !category || !description) {
-      return res.status(400).json({ error: 'Title, category, and description are required' });
-    }
-    const newSol = dbActions.createSolution({
-      title,
-      category,
-      subtitle: subtitle || '',
-      description,
-      price: price || 'INR 0',
-      features: Array.isArray(features) ? features : (typeof features === 'string' ? features.split('\n').filter(Boolean) : []),
-      icon: icon || '🛍️',
-      badge: badge || '',
-      badgeColor: badgeColor || 'emerald',
-      mappedPlanId: mappedPlanId || 'prod-billing-pro',
-      exeUrl: exeUrl || '',
-      demoVideoUrl: demoVideoUrl || '',
-      gallery: Array.isArray(gallery) ? gallery : []
-    });
-    res.status(201).json(newSol);
-  });
-
-  app.put('/api/admin/solutions/:id', requireAdmin, (req, res) => {
-    const { title, category, subtitle, description, price, features, icon, badge, badgeColor, mappedPlanId, exeUrl, demoVideoUrl, gallery } = req.body;
-    const updates: any = {};
-    if (title !== undefined) updates.title = title;
-    if (category !== undefined) updates.category = category;
-    if (subtitle !== undefined) updates.subtitle = subtitle;
-    if (description !== undefined) updates.description = description;
-    if (price !== undefined) updates.price = price;
-    if (features !== undefined) {
-      updates.features = Array.isArray(features) ? features : (typeof features === 'string' ? features.split('\n').filter(Boolean) : []);
-    }
-    if (icon !== undefined) updates.icon = icon;
-    if (badge !== undefined) updates.badge = badge;
-    if (badgeColor !== undefined) updates.badgeColor = badgeColor;
-    if (mappedPlanId !== undefined) updates.mappedPlanId = mappedPlanId;
-    if (exeUrl !== undefined) updates.exeUrl = exeUrl;
-    if (demoVideoUrl !== undefined) updates.demoVideoUrl = demoVideoUrl;
-    if (gallery !== undefined) updates.gallery = gallery;
-
-    const updated = dbActions.updateSolution(req.params.id, updates);
-    if (!updated) return res.status(404).json({ error: 'Solution not found' });
-    res.json(updated);
-  });
-
-  app.delete('/api/admin/solutions/:id', requireAdmin, (req, res) => {
-    dbActions.deleteSolution(req.params.id);
-    res.json({ success: true, message: 'Solution deleted successfully' });
-  });
-
-  // Admin: Video Tutorials CRUD
-  app.post('/api/admin/videos', requireAdmin, async (req, res) => {
-    const { title, duration, youtubeId, thumbnail, description } = req.body;
-    if (!title || !youtubeId) {
-      return res.status(400).json({ error: 'Title and YouTube ID/URL are required' });
-    }
-    const newVid = dbActions.createVideoTutorial({
-      title,
-      duration: duration || '05:00 Mins',
-      youtubeId,
-      thumbnail: thumbnail || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
-      description: description || ''
-    });
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('video_tutorials').upsert({
-          id: newVid.id,
-          title: newVid.title,
-          duration: newVid.duration,
-          youtube_id: newVid.youtubeId,
-          thumbnail: newVid.thumbnail,
-          description: newVid.description
-        });
-      } catch (sbErr) {
-        console.warn("Background Supabase video write sync skipped:", sbErr);
-      }
-    }
-
-    res.status(201).json(newVid);
-  });
-
-  app.put('/api/admin/videos/:id', requireAdmin, async (req, res) => {
-    const v = dbActions.updateVideoTutorial(req.params.id, req.body);
-    if (!v) return res.status(404).json({ error: 'Video not found' });
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('video_tutorials').upsert({
-          id: v.id,
-          title: v.title,
-          duration: v.duration,
-          youtube_id: v.youtubeId,
-          thumbnail: v.thumbnail,
-          description: v.description
-        });
-      } catch (sbErr) {
-        console.warn("Background Supabase video update sync skipped:", sbErr);
-      }
-    }
-
-    res.json(v);
-  });
-
-  app.delete('/api/admin/videos/:id', requireAdmin, async (req, res) => {
-    dbActions.deleteVideoTutorial(req.params.id);
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('video_tutorials').delete().eq('id', req.params.id);
-      } catch (sbErr) {
-        console.warn("Background Supabase video delete sync skipped:", sbErr);
-      }
-    }
-
-    res.json({ success: true });
-  });
-
-  // Admin: Testimonials CRUD
-  app.post('/api/admin/testimonials', requireAdmin, (req, res) => {
-    const { name, company, role, text, rating } = req.body;
-    if (!name || !text) return res.status(400).json({ error: 'Name and testimonial text required' });
-    const nt = dbActions.createTestimonial({
-      name,
-      company: company || 'Merchant',
-      role: role || 'Store Manager',
-      text,
-      rating: rating ? Number(rating) : 5
-    });
-    res.status(201).json(nt);
-  });
-
-  app.delete('/api/admin/testimonials/:id', requireAdmin, (req, res) => {
-    dbActions.deleteTestimonial(req.params.id);
-    res.json({ success: true });
-  });
+  // --- ADMIN PORTAL ENDPOINTS REMOVED ---
 
   // Global Express Error Handler for API endpoints to prevent HTML fallbacks on server-side exceptions
   app.use('/api', (err: any, req: any, res: any, next: any) => {

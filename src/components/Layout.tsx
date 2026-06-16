@@ -218,16 +218,6 @@ export default function Layout({
                     </div>
                   </div>
                   
-                  {user.role === 'admin' && (
-                    <button
-                      onClick={() => handleNavClick('admin')}
-                      className="px-3.5 py-1.5 bg-[#10B981] text-black font-black rounded-sm text-xs tracking-wider uppercase hover:bg-emerald-400 transition-colors"
-                      id="admin-dashboard-btn"
-                    >
-                      {t('Admin Panel')}
-                    </button>
-                  )}
-
                   <button
                     onClick={onLogout}
                     className="p-1.5 border border-slate-850 text-slate-400 hover:text-red-500 hover:bg-[#1E293B]/60 rounded-sm transition-colors cursor-pointer"
@@ -311,14 +301,6 @@ export default function Layout({
                       <div className="text-xs text-slate-400">{user.email}</div>
                     </div>
                   </div>
-                  {user.role === 'admin' && (
-                    <button
-                      onClick={() => handleNavClick('admin')}
-                      className="w-full text-center py-3 bg-[#10B981] text-black font-black rounded-sm text-xs tracking-wider uppercase"
-                    >
-                      {t('Open Admin Control Panel')}
-                    </button>
-                  )}
                   <button
                     onClick={onLogout}
                     className="w-full flex items-center justify-center gap-2 py-3 border border-slate-800 rounded-sm text-xs font-black uppercase text-red-500 hover:bg-[#1E293B]"

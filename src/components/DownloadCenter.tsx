@@ -382,8 +382,8 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
 
                     <button
                       onClick={() => {
-                        console.log(`DownloadCenter: Adding ${sol.title} Solution (${sol.mappedPlanId}) to cart...`);
-                        onAddToCart?.(sol.mappedPlanId);
+                        console.log(`DownloadCenter: Adding ${sol.title} Solution (${sol.id}) to cart...`);
+                        onAddToCart?.(sol.id);
                       }}
                       className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 mt-4 transition-all duration-150 cursor-pointer shadow-md hover:shadow-blue-500/10 active:scale-97"
                     >
@@ -394,16 +394,29 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       <button
                         onClick={() => {
-                          console.log(`DownloadCenter: Adding ${sol.title} Solution to cart...`);
-                          onAddToCart?.(sol.mappedPlanId);
+                          if (sol.exeUrl) {
+                            console.log(`DownloadCenter: Opening download URL for ${sol.title}: ${sol.exeUrl}`);
+                            const link = document.createElement('a');
+                            link.href = sol.exeUrl;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            link.download = '';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          } else {
+                            console.log(`DownloadCenter: No direct exeUrl configured for ${sol.title}. Falling back to adding to cart...`);
+                            onAddToCart?.(sol.id);
+                          }
                         }}
-                        className="py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer text-center"
+                        className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer text-center"
                       >
-                        Add to Cart
+                        <Download className="w-3 h-3 text-white shrink-0" />
+                        <span>Download Setup</span>
                       </button>
                       <button
                         onClick={() => {
-                          onPageChange?.(`software-details:${sol.mappedPlanId}`);
+                          onPageChange?.(`software-details:${sol.id}`);
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         className="py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer text-center"

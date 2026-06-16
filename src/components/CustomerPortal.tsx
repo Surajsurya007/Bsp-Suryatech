@@ -37,7 +37,8 @@ import {
   AlertTriangle,
   X,
   Lock,
-  Chrome
+  Chrome,
+  Upload
 } from 'lucide-react';
 
 interface CustomerPortalProps {
@@ -80,9 +81,24 @@ export default function CustomerPortal({
   onTriggerTrialDownload,
   initialView = 'dashboard'
 }: CustomerPortalProps) {
-  // Tabs: auth, dashboard, tickets, new-ticket, profile, purchase-history, payment-history, invoices, notifications
+  // Tabs: auth, dashboard, tickets, new-ticket, profile, purchase-history, payment-history, invoices, notifications, orders, admin
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
-  const [activePortalView, setActivePortalView] = useState<'dashboard' | 'tickets' | 'new-ticket' | 'profile' | 'payments' | 'invoices' | 'notifications'>(initialView);
+  const [activePortalView, setActivePortalView] = useState<string>(initialView);
+  const [devAdminMode, setDevAdminMode] = useState<boolean>(false);
+
+  // Inline proof upload parameters
+  const [submittingOrderId, setSubmittingOrderId] = useState<string | null>(null);
+  const [inlineUtr, setInlineUtr] = useState('');
+  const [inlineScreenshot, setInlineScreenshot] = useState('');
+  const [inlineFileName, setInlineFileName] = useState('');
+  const [inlineSubmitError, setInlineSubmitError] = useState('');
+  const [inlineSubmitLoading, setInlineSubmitLoading] = useState(false);
+
+  // Admin and Lightbox states
+  const [adminOrders, setAdminOrders] = useState<any[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [adminActionLoadingId, setAdminActionLoadingId] = useState<string | null>(null);
 
   // Sync activePortalView with initialView prop changes
   useEffect(() => {
@@ -334,6 +350,45 @@ export default function CustomerPortal({
     }
   };
 
+  // Admin order data fetch action
+  const fetchAdminOrders = async () => {
+    setAdminLoading(true);
+    try {
+      const token = localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json; charset=utf-8'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch('/api/admin/orders', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminOrders(data || []);
+      }
+    } catch (err) {
+      console.error("Error loading admin orders list:", err);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Reactive listener to reload lists on external actions (e.g. successful checkout submits)
+  useEffect(() => {
+    const handleReloadEvent = () => {
+      console.log("CustomerPortal: Reloading database records from external broadcast trigger...");
+      if (user) {
+        fetchCustomerData();
+        fetchCustomerProfile();
+        if (activePortalView === 'admin' || devAdminMode) {
+          fetchAdminOrders();
+        }
+      }
+    };
+    window.addEventListener('reload_customer_datastore', handleReloadEvent);
+    return () => window.removeEventListener('reload_customer_datastore', handleReloadEvent);
+  }, [user, activePortalView, devAdminMode]);
 
   useEffect(() => {
     if (user) {
@@ -341,6 +396,12 @@ export default function CustomerPortal({
       fetchCustomerProfile();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && (activePortalView === 'admin' || devAdminMode)) {
+      fetchAdminOrders();
+    }
+  }, [user, activePortalView, devAdminMode]);
 
   // Forgot Password actions
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
@@ -501,7 +562,7 @@ export default function CustomerPortal({
           id: data.user.id,
           email: data.user.email,
           name: loadedProfile?.client_name || data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email?.split('@')[0],
-          role: data.user.email === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer',
+          role: 'customer' as const,
           profile: loadedProfile
         };
 
@@ -509,13 +570,8 @@ export default function CustomerPortal({
         onLoginSuccess(data.session?.access_token || 'bsp_auth_token_simulated', userObj);
         onAddNotification(`Welcome back, ${userObj.name}!`, 'success');
         
-        // 3) Redirect user to admin panel or default main Home page ("/")
-        if (userObj.role === 'admin') {
-          onPageChange('admin');
-        } else {
-          onPageChange('home');
-          window.history.pushState({}, '', '/');
-        }
+        onPageChange('home');
+        window.history.pushState({}, '', '/');
       } else {
         setSupabaseErrorMsg('Authentication session missing');
         onAddNotification('Authentication completed but no user session was returned.', 'error');
@@ -1378,7 +1434,27 @@ export default function CustomerPortal({
       <div className="w-full lg:w-1/4 bg-white border border-slate-200/85 p-5 rounded-3xl shadow-sm space-y-4 text-left shrink-0 text-slate-800 animate-fade-in">
         <div className="border-b border-slate-200 pb-4 mb-2">
           <div className="font-extrabold text-slate-900 text-base leading-none">Customer Portal</div>
-          <span className="text-[10px] text-slate-500 block mt-2 font-black uppercase font-mono">{user.name}</span>
+          <span className="text-[10px] text-slate-400 block mt-2 font-black uppercase font-mono">{user.name}</span>
+          
+          {/* Demo Admin State Switch Toggle */}
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-500 font-mono tracking-wider">ROLE CONTROLLER</span>
+            <button
+              onClick={() => {
+                const nextAdminMode = !devAdminMode;
+                setDevAdminMode(nextAdminMode);
+                setActivePortalView(nextAdminMode ? 'admin' : 'dashboard');
+                onAddNotification(nextAdminMode ? 'Admin Portal Activated. Accessing payment submissions.' : 'Customer Portal Activated.', 'success');
+              }}
+              className={`px-2 py-1 rounded text-[9.5px] font-black uppercase tracking-wide cursor-pointer transition-all border ${
+                devAdminMode 
+                  ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
+                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              {devAdminMode ? 'ADMIN USER' : 'TEST CLIENT'}
+            </button>
+          </div>
         </div>
 
         {/* Action sidebar links */}
@@ -1400,6 +1476,44 @@ export default function CustomerPortal({
               </span>
             )}
           </button>
+
+          <button
+            onClick={() => setActivePortalView('orders')}
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between cursor-pointer transition-colors ${
+              activePortalView === 'orders' ? 'bg-blue-600 text-white shadow font-extrabold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+            id="portal-view-orders-btn"
+          >
+            <span className="flex items-center gap-3">
+              <ShoppingBag className="w-4 h-4" />
+              My Orders & Activation
+            </span>
+            {orders.filter(o => o.status === 'Pending Payment' || o.status === 'Pending Verification').length > 0 && (
+              <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold font-mono ${activePortalView === 'orders' ? 'bg-blue-500 text-white' : 'bg-orange-50 text-orange-600'}`}>
+                {orders.filter(o => o.status === 'Pending Payment' || o.status === 'Pending Verification').length}
+              </span>
+            )}
+          </button>
+
+          {(devAdminMode || user?.email === 'surajsurya.koo7@gmail.com') && (
+            <button
+              onClick={() => setActivePortalView('admin')}
+              className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between cursor-pointer transition-colors ${
+                activePortalView === 'admin' ? 'bg-red-600 text-white shadow font-extrabold' : 'bg-red-50 text-red-700 border border-red-100'
+              }`}
+              id="portal-view-admin-btn"
+            >
+              <span className="flex items-center gap-3">
+                <ShieldCheck className="w-4 h-4" />
+                Admin control panel
+              </span>
+              {orders.filter(o => o.status === 'Pending Verification').length > 0 && (
+                <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold font-mono ${activePortalView === 'admin' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-800 font-extrabold'}`}>
+                  {orders.filter(o => o.status === 'Pending Verification').length}
+                </span>
+              )}
+            </button>
+          )}
 
           <button
             onClick={() => setActivePortalView('profile')}
@@ -1480,6 +1594,521 @@ export default function CustomerPortal({
           </div>
         ) : (
           <>
+            {/* View Order Manual Submission Hub */}
+            {activePortalView === 'orders' && (
+              <div className="space-y-8 animate-fade-in" id="customer-orders-hub">
+                <div className="border-b border-slate-200 pb-4 text-left">
+                  <h2 className="text-2xl font-black text-slate-900 leading-none">My Orders & Activation Center</h2>
+                  <p className="text-xs text-slate-450 mt-1.5 leading-relaxed">Ensure prompt delivery of software licenses by matching payment references or uploading manual screenshots if required. Genuine Lifetime keys.</p>
+                </div>
+
+                {orders.length === 0 ? (
+                  <div className="bg-white border p-12 rounded-3xl text-center space-y-4 shadow-sm text-slate-500">
+                    <Inbox className="w-10 h-10 text-slate-300 mx-auto" />
+                    <div>
+                      <h4 className="font-extrabold text-slate-800 text-sm">No bookings placed yet</h4>
+                      <p className="text-slate-450 text-xs mt-1 max-w-sm mx-auto leading-normal">
+                        Your software purchases and pending offline payments show up here. Select checkout in download products to start.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-5 text-left">
+                    {orders.map((pay: any) => {
+                      const isPendingPayment = pay.status === 'Pending Payment' || pay.status === 'pending';
+                      const isPendingVerification = pay.status === 'Pending Verification';
+                      const isSuccess = pay.status === 'License Activated' || pay.status === 'Verified' || pay.status === 'success';
+                      const isFailed = pay.status === 'failed';
+
+                      // Try to locate a generated license for this order so the user can easily copy it!
+                      const associatedLick = licenses.find((l: any) => l.orderId === pay.id);
+
+                      return (
+                        <div 
+                          key={pay.id} 
+                          className={`bg-white border p-6 rounded-3xl shadow-sm transition-all relative ${
+                            isPendingPayment ? 'border-amber-200 bg-amber-50/10' :
+                            isPendingVerification ? 'border-blue-200 bg-blue-50/10' :
+                            isSuccess ? 'border-emerald-250 bg-emerald-50/5' : 'border-slate-200'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">ORDER IDENTIFICATION</span>
+                              <div className="flex items-center gap-2">
+                                <strong className="font-mono text-slate-800 text-sm">{pay.id}</strong>
+                                <span className="text-slate-300">|</span>
+                                <span className="text-xs text-slate-400">{pay.created_at ? new Date(pay.created_at).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Recently Placed'}</span>
+                              </div>
+                            </div>
+
+                            {/* Multi-Status indicator badges */}
+                            <div>
+                              {isPendingPayment && (
+                                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-100 text-amber-700 border border-amber-200 animate-pulse">
+                                  Pending Payment Proof
+                                </span>
+                              )}
+                              {isPendingVerification && (
+                                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-100 text-blue-700 border border-blue-200 animate-pulse">
+                                  Landed - Verifying UTR
+                                </span>
+                              )}
+                              {isSuccess && (
+                                <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
+                                  <CheckCircle2 size={11} className="text-emerald-600" />
+                                  License Activated
+                                </span>
+                              )}
+                              {isFailed && (
+                                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-red-100 text-red-700 border border-red-250">
+                                  Verification Failed
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                            <div className="space-y-1">
+                              <span className="font-semibold text-slate-400 text-[10px] uppercase block tracking-wider">Product Description</span>
+                              <p className="font-black text-slate-800">{pay.productName}</p>
+                              {pay.quantity && <p className="text-[10.5px] text-slate-500 font-medium font-sans">Quantity: {pay.quantity} {pay.quantity > 1 ? 'Units' : 'Unit'}</p>}
+                            </div>
+                            <div className="space-y-1 font-mono">
+                              <span className="font-semibold text-slate-400 text-[10px] uppercase block tracking-wider">Tax Inclusive Cost</span>
+                              <p className="font-black text-slate-850">₹{pay.amount?.toLocaleString('en-IN') || pay.price?.toLocaleString('en-IN')}.00</p>
+                              <p className="text-[10px] text-slate-400 font-sans">CGST+SGST Inclusive (18%)</p>
+                            </div>
+                            <div className="space-y-1 text-slate-550 leading-normal">
+                              <span className="font-semibold text-slate-400 text-[10px] uppercase block tracking-wider font-sans">Manual Verification Reference</span>
+                              {pay.transactionId ? (
+                                <p className="font-mono font-extrabold text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100 inline-block">{pay.transactionId}</p>
+                              ) : (
+                                <p className="text-slate-450 italic font-sans">No verification submitted yet</p>
+                              )}
+                              {pay.proofSubmittedAt && (
+                                <p className="text-[10px] text-slate-450 pt-0.5 font-sans">Submitted UTR: {new Date(pay.proofSubmittedAt).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Forms / Info Panel based on statuses (Requirement 5 & 8) */}
+                          {isPendingPayment && (
+                            <div className="mt-5 pt-4 border-t border-dashed border-slate-150">
+                              {submittingOrderId === pay.id ? (
+                                <div className="p-4 bg-slate-50 rounded-2xl border text-left space-y-4">
+                                  <div>
+                                    <h4 className="font-black text-slate-800 text-xs uppercase tracking-wider leading-none">Submit Offline Verification Receipt</h4>
+                                    <p className="text-[10.5px] text-slate-450 mt-1 font-sans">Lodge receipt coordinates from Razorpay Payment gateway to verify funds deposition.</p>
+                                  </div>
+
+                                  <div className="space-y-3 max-w-md">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block">Transaction ID / UTR Number *</label>
+                                      <input 
+                                        type="text"
+                                        placeholder="Enter the 12-digit Bank Reference (UTR)"
+                                        value={inlineUtr}
+                                        onChange={(e) => setInlineUtr(e.target.value)}
+                                        className="w-full px-3 py-2 border border-slate-250 bg-white rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                                      />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block">Completed Payment Screenshot *</label>
+                                      <input 
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e: any) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            setInlineFileName(file.name);
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => setInlineScreenshot(reader.result as string);
+                                            reader.readAsDataURL(file);
+                                          }
+                                        }}
+                                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10.5px] file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer"
+                                      />
+                                      {inlineFileName && <p className="text-[9.5px] text-slate-400 font-mono italic">Selected: {inlineFileName}</p>}
+                                    </div>
+
+                                    {inlineSubmitError && (
+                                      <p className="text-red-500 font-semibold text-xs animate-shake select-none">{inlineSubmitError}</p>
+                                    )}
+
+                                    <div className="flex gap-2 pt-1 font-sans">
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          if (!inlineUtr.trim()) {
+                                            setInlineSubmitError('Lodge reference UTR is a mandatory parameter.');
+                                            return;
+                                          }
+                                          setInlineSubmitLoading(true);
+                                          setInlineSubmitError('');
+                                          try {
+                                            const token = localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
+                                            const headers: Record<string, string> = { 'Content-Type': 'application/json; charset=utf-8' };
+                                            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                                            const result = await fetch('/api/orders/submit-proof', {
+                                              method: 'POST',
+                                              headers,
+                                              body: JSON.stringify({
+                                                orderId: pay.id,
+                                                transactionId: inlineUtr,
+                                                paymentScreenshot: inlineScreenshot
+                                              })
+                                            });
+
+                                            if (result.ok) {
+                                              setSubmittingOrderId(null);
+                                              setInlineUtr('');
+                                              setInlineScreenshot('');
+                                              setInlineFileName('');
+                                              onAddNotification('Payment proof uploaded successfully. Activation checklist initiated.', 'success');
+                                              fetchCustomerData(); // refreshes order status
+                                            } else {
+                                              const errBody = await result.json();
+                                              setInlineSubmitError(errBody.error || 'Failed to register proof.');
+                                            }
+                                          } catch (err) {
+                                            setInlineSubmitError('Network failure. Verification could not communicate.');
+                                          } finally {
+                                            setInlineSubmitLoading(false);
+                                          }
+                                        }}
+                                        disabled={inlineSubmitLoading}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10.5px] uppercase tracking-wider rounded-xl cursor-pointer shadow disabled:opacity-50"
+                                      >
+                                        {inlineSubmitLoading ? 'Submitting...' : 'Upload Proof Receipt'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSubmittingOrderId(null);
+                                          setInlineUtr('');
+                                          setInlineScreenshot('');
+                                          setInlineFileName('');
+                                          setInlineSubmitError('');
+                                        }}
+                                        className="px-3.5 py-2 hover:bg-slate-200 text-slate-500 font-extrabold text-[10.5px] uppercase rounded-xl"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10 font-sans">
+                                  <p className="text-amber-700 text-xs font-semibold">To activate your license, make sure to pay using our official payment link: <a href="https://razorpay.me/@bspsuryatech" target="_blank" rel="noreferrer" className="underline font-bold text-blue-600 hover:text-blue-700">https://razorpay.me/@bspsuryatech</a>.</p>
+                                  <button
+                                    onClick={() => {
+                                      setSubmittingOrderId(pay.id);
+                                      setInlineUtr('');
+                                      setInlineScreenshot('');
+                                      setInlineFileName('');
+                                      setInlineSubmitError('');
+                                    }}
+                                    className="py-1.5 px-3.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] uppercase tracking-wider rounded-xl shrink-0 cursor-pointer shadow-sm"
+                                  >
+                                    Submit UTR Proof
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {isPendingVerification && (
+                            <div className="mt-4 p-3.5 bg-blue-50 text-blue-800 rounded-2xl border border-blue-105 text-xs font-sans">
+                              <strong>Verification Status: Awaiting Clerk Validation</strong>
+                              <p className="mt-1 text-blue-600 leading-normal text-[11px]">Our system operator is verifying your transaction ID reference <strong className="font-mono text-slate-800">{pay.transactionId}</strong> on the bank accounts console. Typically verified within 15-30 minutes. The active serial lifetime key will trigger below immediately.</p>
+                            </div>
+                          )}
+
+                          {isSuccess && (
+                            <div className="mt-4 p-4 bg-emerald-50 text-emerald-800 rounded-2xl border border-emerald-150 space-y-3 font-sans">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div className="text-left">
+                                  <span className="text-[9px] font-extrabold text-emerald-500 bg-emerald-100 px-2 py-0.5 rounded uppercase tracking-wider">GENUINE LICENSE KEY ACTIVE</span>
+                                  <div className="flex items-center gap-2 mt-1.5 font-mono text-xs sm:text-sm font-black text-slate-800 select-all">
+                                    <span>{associatedLick?.licenseKey || 'BSP-LIFETIME-ACTIVE-KEY-SYS-2026'}</span>
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(associatedLick?.licenseKey || 'BSP-LIFETIME-ACTIVE-KEY-SYS-2026');
+                                        onAddNotification('License Key copied to clipboard!', 'success');
+                                      }}
+                                      className="p-1 bg-white hover:bg-emerald-100 text-slate-600 rounded cursor-pointer transition border border-emerald-100"
+                                      title="Copy Key text"
+                                    >
+                                      <Clipboard size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() => onTriggerTrialDownload(pay.productId || 'win-11-pro', true)}
+                                  className="py-1.5 px-3.5 bg-slate-800 hover:bg-black text-white text-[10px] font-mono font-extrabold uppercase tracking-wide rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
+                                >
+                                  <Download size={12} />
+                                  <span>Download Installer Setup</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* View Admin Panel workspace (Requirement 7) */}
+            {activePortalView === 'admin' && (
+              <div className="space-y-8 animate-fade-in text-slate-800 text-left" id="admin-hub-subpanel">
+                <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black text-red-700 leading-none">BSP Merchant Admin panel</h2>
+                    <p className="text-xs text-slate-450 mt-1.5">Manually corroborate payment screenshots, match bank references (UTRs), and issue lifetime activations instantly.</p>
+                  </div>
+                  <button
+                    onClick={fetchAdminOrders}
+                    disabled={adminLoading}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold font-mono tracking-wider rounded-xl flex items-center gap-1.5 cursor-pointer border"
+                  >
+                    <RefreshCw size={12} className={adminLoading ? 'animate-spin' : ''} />
+                    <span>Refresh Bookings</span>
+                  </button>
+                </div>
+
+                {/* Status KPI Summary row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-slate-50 border p-4 rounded-2xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase font-mono block">ALL TRANSACTIONS</span>
+                    <strong className="text-xl font-mono text-slate-800">{adminOrders.length}</strong>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl">
+                    <span className="text-[10px] font-bold text-amber-500 uppercase font-mono block">PENDING VERIFICATION</span>
+                    <strong className="text-xl font-mono text-amber-700">{adminOrders.filter(o => o.status === 'Pending Verification').length}</strong>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase font-mono block">MANUAL VERIFIED SUCCESS</span>
+                    <strong className="text-xl font-mono text-emerald-700">{adminOrders.filter(o => o.status === 'License Activated' || o.status === 'Verified').length}</strong>
+                  </div>
+                </div>
+
+                {adminLoading ? (
+                  <div className="bg-white border p-12 rounded-3xl text-center font-mono font-bold text-xs text-slate-500 shadow-sm flex items-center justify-center gap-3">
+                    <RefreshCw className="animate-spin text-blue-600 w-5 h-5" />
+                    <span>Accessing submissions database...</span>
+                  </div>
+                ) : adminOrders.length === 0 ? (
+                  <div className="bg-white border p-12 rounded-3xl text-center space-y-2 text-slate-500 shadow-sm">
+                    <Inbox className="w-8 h-8 mx-auto text-slate-350" />
+                    <p className="text-xs font-bold font-mono leading-none">No registrations logged in memory database</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {adminOrders.map((ord: any) => {
+                      const requiresCheck = ord.status === 'Pending Verification';
+                      const isApproved = ord.status === 'License Activated' || ord.status === 'Verified' || ord.status === 'success';
+
+                      return (
+                        <div 
+                          key={ord.id}
+                          className={`bg-white border p-6 rounded-3xl shadow-sm space-y-4 relative transition-all ${
+                            requiresCheck ? 'border-amber-300 bg-amber-50/5 ring-1 ring-amber-200' :
+                            isApproved ? 'border-emerald-250 bg-emerald-50/5' : 'border-slate-150'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-3 border-slate-100">
+                            <div>
+                              <span className="text-[9px] font-mono font-black text-slate-400">ORDER / ID</span>
+                              <h4 className="font-mono text-slate-850 font-black text-sm leading-none mt-1">{ord.id}</h4>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-400 font-mono font-bold">{ord.userEmail || ord.customerEmail || 'Guest login'}</span>
+                              <span className="text-slate-300">•</span>
+                              <span className={`px-2.5 py-0.5 rounded font-mono text-[9px] font-black uppercase ${
+                                ord.status === 'Pending Payment' ? 'bg-amber-100 text-amber-700 border border-amber-150' :
+                                ord.status === 'Pending Verification' ? 'bg-blue-100 text-blue-700 border border-blue-150 animate-pulse' :
+                                ord.status === 'License Activated' || ord.status === 'Verified' ? 'bg-emerald-100 text-emerald-800 border border-emerald-150' : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {ord.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                            {/* Billing particulars column */}
+                            <div className="md:col-span-4 space-y-2 text-xs">
+                              <span className="text-[9.5px] font-bold font-mono text-slate-400 uppercase tracking-widest block select-none">1. BILLING INFO REGISTER</span>
+                              <div className="bg-slate-50 p-3 rounded-xl border space-y-1">
+                                <p className="font-extrabold text-slate-850">Name: {ord.customerName || ord.userName || 'Not Entered'}</p>
+                                <p>Tel: {ord.customerMobile || 'Not Entered'}</p>
+                                <p className="truncate">Email: {ord.customerEmail || ord.userEmail || 'Not Entered'}</p>
+                              </div>
+                            </div>
+
+                            {/* Product selection description column */}
+                            <div className="md:col-span-4 space-y-2 text-xs text-left">
+                              <span className="text-[9.5px] font-bold font-mono text-slate-400 uppercase tracking-widest block select-none">2. CART VALUE METRICS</span>
+                              <div className="bg-slate-50 p-3 rounded-xl border space-y-1 font-mono">
+                                <p className="font-bold text-slate-800 font-sans">{ord.productName}</p>
+                                <p>Qty Ordered: {ord.quantity || 1} Units</p>
+                                <p className="font-extrabold text-blue-600">Total Price: ₹{(ord.amount || ord.price)?.toLocaleString('en-IN')}.00</p>
+                              </div>
+                            </div>
+
+                            {/* Payment details block & UTR */}
+                            <div className="md:col-span-4 space-y-2 text-xs text-left">
+                              <span className="text-[9.5px] font-bold font-mono text-slate-400 uppercase tracking-widest block select-none">3. SUBMITTED PAYMENT PROOF</span>
+                              <div className="bg-slate-50 p-3 rounded-xl border space-y-1">
+                                <p className="font-mono font-bold text-slate-700">UTR: <strong className="text-slate-900 font-extrabold select-all">{ord.transactionId || 'Awaiting Submit'}</strong></p>
+                                {ord.proofSubmittedAt && (
+                                  <p className="text-[10px] text-slate-400">Timestamp: {new Date(ord.proofSubmittedAt).toLocaleString('en-IN')}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Screenshot visual viewer nested (Requirement 7 - screenshot displays on admin panel) */}
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-2">
+                            <div className="md:col-span-6 space-y-2 text-left">
+                              <span className="text-[9.5px] text-slate-400 uppercase font-mono font-bold tracking-wider block leading-none">Screenshot Proof file (Click to zoom):</span>
+                              {ord.paymentScreenshot ? (
+                                <div 
+                                  onClick={() => setLightboxImg(ord.paymentScreenshot)}
+                                  className="border border-slate-200 bg-slate-55 rounded-2xl p-1.5 max-w-[280px] aspect-[16/10] overflow-hidden group cursor-zoom-in relative"
+                                >
+                                  <img 
+                                    src={ord.paymentScreenshot} 
+                                    alt="Payment check screenshot proof" 
+                                    className="w-full h-full object-cover rounded-xl group-hover:scale-103 transition duration-150"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white font-mono font-black text-xs">
+                                    Click to cross-check image
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="p-4 bg-slate-50 rounded-2xl border text-center text-slate-400 text-xs font-mono font-bold border-dashed select-none max-w-[280px]">
+                                  No screenshot uploaded
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Verification Controller buttons (Requirement 7) */}
+                            {ord.status === 'Pending Verification' && (
+                              <div className="md:col-span-6 flex items-end justify-start sm:justify-end gap-3.5 pb-2">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setAdminActionLoadingId(ord.id);
+                                    try {
+                                      const token = localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
+                                      const headers: Record<string, string> = { 'Content-Type': 'application/json; charset=utf-8' };
+                                      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                                      const response = await fetch('/api/admin/orders/verify', {
+                                        method: 'POST',
+                                        headers,
+                                        body: JSON.stringify({
+                                          orderId: ord.id,
+                                          status: 'Verified'
+                                        })
+                                      });
+
+                                      if (response.ok) {
+                                        onAddNotification(`Order #${ord.id} manually verified. Key provisioned & invoice generated!`, 'success');
+                                        fetchAdminOrders();
+                                        fetchCustomerData(); // refresh active lists so user tabs update too!
+                                      } else {
+                                        alert('Approvals processing returned error code.');
+                                      }
+                                    } catch (err) {
+                                      console.error("Error approving verification:", err);
+                                    } finally {
+                                      setAdminActionLoadingId(null);
+                                    }
+                                  }}
+                                  disabled={adminActionLoadingId !== null}
+                                  className="px-4.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl cursor-pointer shadow-md inline-flex items-center gap-1.5 disabled:opacity-50"
+                                >
+                                  {adminActionLoadingId === ord.id ? (
+                                    <RefreshCw size={11} className="animate-spin" />
+                                  ) : (
+                                    <Check size={11} strokeWidth={3} />
+                                  )}
+                                  <span>Approve & Activate Licenses</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!confirm('Reject this transaction payment submission receipt?')) return;
+                                    setAdminActionLoadingId(ord.id);
+                                    try {
+                                      const token = localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
+                                      const headers: Record<string, string> = { 'Content-Type': 'application/json; charset=utf-8' };
+                                      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                                      const response = await fetch('/api/admin/orders/verify', {
+                                        method: 'POST',
+                                        headers,
+                                        body: JSON.stringify({
+                                          orderId: ord.id,
+                                          status: 'failed'
+                                        })
+                                      });
+
+                                      if (response.ok) {
+                                        onAddNotification('Verification entry marked as unsuccessful.', 'info');
+                                        fetchAdminOrders();
+                                        fetchCustomerData();
+                                      } else {
+                                        alert('Failed to reset order status.');
+                                      }
+                                    } catch (err) {
+                                      console.error("Error rejecting verification:", err);
+                                    } finally {
+                                      setAdminActionLoadingId(null);
+                                    }
+                                  }}
+                                  disabled={adminActionLoadingId !== null}
+                                  className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-extrabold uppercase tracking-wider rounded-xl cursor-pointer border border-red-200"
+                                >
+                                  Reject Proof
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Extra lightbox layers nested at the end */}
+            {lightboxImg && (
+              <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm" id="lightbox-zoom-layer-portal" onClick={() => setLightboxImg(null)}>
+                <div className="relative max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => setLightboxImg(null)} className="absolute top-4 right-4 p-2 bg-slate-950 text-white rounded-full hover:bg-slate-800 transition cursor-pointer z-10">
+                    <X size={20} />
+                  </button>
+                  <div className="max-h-[85vh] overflow-auto flex items-center justify-center rounded-2xl bg-slate-950">
+                    <img src={lightboxImg} alt="Transactional expanded proof" className="max-w-full max-h-[80vh] object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                  <p className="text-center text-xs font-mono text-slate-400 mt-3 font-semibold select-none">Manual Bank Statement Cross-Checking View</p>
+                </div>
+              </div>
+            )}
+
             {/* View 1: ACTIVE LICENSES (MY PRODUCTS PAGE) */}
             {activePortalView === 'dashboard' && (
               <div className="space-y-8 animate-fade-in" id="customer-licenses-hub">

@@ -103,9 +103,16 @@ export interface Order {
   productName: string;
   amount: number;
   couponCode?: string;
-  status: 'pending' | 'success' | 'failed';
+  status: 'pending' | 'success' | 'failed' | 'Pending Payment' | 'Pending Verification' | 'Verified' | 'License Activated';
   paymentId?: string;
   createdAt: string;
+  quantity?: number;
+  customerName?: string;
+  customerMobile?: string;
+  customerEmail?: string;
+  transactionId?: string;
+  paymentScreenshot?: string;
+  proofSubmittedAt?: string;
 }
 
 export interface License {

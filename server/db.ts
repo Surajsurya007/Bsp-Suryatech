@@ -360,7 +360,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🛍️',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0-Setup.zip'
   },
   {
     id: 'sol-supermarket',
