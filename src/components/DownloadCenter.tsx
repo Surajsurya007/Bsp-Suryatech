@@ -64,7 +64,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'BESTSELLER FOR SHOPS',
     description: 'Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.',
-    price: 'INR 3,499',
+    price: 'INR 1,999',
     features: ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State', 'Supplier & Client Ledgers'],
     icon: '🛍️',
     badge: 'Billing',
@@ -77,7 +77,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'COMPLETE POS PACK',
     description: 'High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.',
-    price: 'INR 5,999',
+    price: 'INR 1,999',
     features: ['High-Speed POS Checkout', 'Integrated Barcode Printing', 'Customer Loyalty Points', 'Multi-Terminal Syncing', 'Automatic Reorder Limits'],
     icon: '🏪',
     badge: 'Billing',
@@ -90,7 +90,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'FAST GROCERY STORE SPECIAL',
     description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
-    price: 'INR 4,499',
+    price: 'INR 1,999',
     features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
     icon: '🍎',
     badge: 'Billing',
@@ -103,7 +103,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'PHARMACY BATCH SPECIAL',
     description: 'Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.',
-    price: 'INR 5,499',
+    price: 'INR 1,999',
     features: ['Batch Code Expiry tracking', 'Drug License verification', 'Salt-wise generic lookup', 'Supplier Invoice Sync', 'Doctor referrals lists'],
     icon: '💊',
     badge: 'Billing',
@@ -116,7 +116,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'KITCHEN & HOTEL SPECIAL',
     description: 'Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.',
-    price: 'INR 3,499',
+    price: 'INR 1,999',
     features: ['Kitchen Order Tickets (KOT)', 'Table Mapping & Status', 'Recipe Ingredient Control', 'Split Bill Settlements', 'Waiter Android App link'],
     icon: '🍽️',
     badge: 'Billing',
@@ -129,7 +129,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'IMEI & SERIAL TRACKER',
     description: 'Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.',
-    price: 'INR 4,999',
+    price: 'INR 1,999',
     features: ['Unique IMEI/Serial logging', 'Dynamic Repairs Tracker', 'Warranty Status Records', 'Brand & Model Catalog', 'Customer AMC reminders'],
     icon: '📱',
     badge: 'Billing',
@@ -142,7 +142,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'APPLIANCE SPECIAL',
     description: 'Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.',
-    price: 'INR 5,999',
+    price: 'INR 1,999',
     features: ['Dual-Serial Code validation', 'Manufacturer Warranty link', 'Installations Scheduler', 'Commission Agent ledger', 'Multi-Godown Stock check'],
     icon: '📺',
     badge: 'Billing',
@@ -155,7 +155,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Transport Software',
     subtitle: 'LOGISTICS & FLEET STANDARD',
     description: 'Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.',
-    price: 'INR 7,999',
+    price: 'INR 1,999',
     features: ['Fleet Management', 'Vehicle Tracking', 'Trip Sheet expense logs', 'Driver Commission accounts', 'Client & Consignee Ledgers'],
     icon: '🚚',
     badge: 'Transport',
@@ -167,7 +167,7 @@ const solutions: SoftwareSolution[] = [
     title: 'Hospital & Clinic Software',
     category: 'Hospital Software',
     subtitle: 'HEALTHCARE INTEGRATED',
-    price: 'INR 12,499',
+    price: 'INR 1,999',
     icon: '🏥',
     badge: 'Hospital',
     badgeColor: 'red',
@@ -180,7 +180,7 @@ const solutions: SoftwareSolution[] = [
     title: 'Diagnostic Lab Manager',
     category: 'Hospital Software',
     subtitle: 'PATHOLOGY LABORATORY',
-    price: 'INR 8,499',
+    price: 'INR 1,999',
     icon: '🔬',
     badge: 'Hospital',
     badgeColor: 'red',
@@ -193,7 +193,7 @@ const solutions: SoftwareSolution[] = [
     title: 'School ERP Management Suite',
     category: 'School Software',
     subtitle: 'ACADEMIC INSTITUTIONS',
-    price: 'INR 11,499',
+    price: 'INR 1,999',
     icon: '🏫',
     badge: 'School',
     badgeColor: 'indigo',
@@ -206,7 +206,7 @@ const solutions: SoftwareSolution[] = [
     title: 'Enterprise ERP Suite',
     category: 'ERP Software',
     subtitle: 'SUPPLY CHAIN SUITE',
-    price: 'INR 14,999',
+    price: 'INR 1,999',
     icon: '🏭',
     badge: 'ERP',
     badgeColor: 'purple',
@@ -375,9 +375,11 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                   <div className="pt-6 mt-6 border-t border-slate-100">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-400 font-bold font-mono tracking-tight uppercase">Lifetime License</span>
-                      <span className="text-lg font-black text-slate-900 tracking-tight font-sans">
-                        {sol.price}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-lg font-black text-slate-900 tracking-tight font-sans">
+                          {sol.price}
+                        </span>
+                      </div>
                     </div>
 
                     <button

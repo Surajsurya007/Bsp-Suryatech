@@ -31,7 +31,7 @@
     }
   ],
   "passwordHashes": {
-    "u-admin": "fd0dbeb33cc69e6d50bcc861caec2efd:e7733008c3430f6238cb5516b7063636a3f6c28e93528aaf94b472896b8b9893a7cc320e5c417589658ca4a35f4260f8aa414d56e1aa84ae9a289720189d5b09",
+    "u-admin": "dc7f5069715a76a37376dbcc33aa9605:4f7d2da47d5f1fc5f9d73e32cf0f8e6143118f213056593f7ca2e0fd0a36741dde652ed781fe0f89936b2b79e15f7b803bac0635c011357943f07fa0c732addf",
     "u-customer": "b9ccc2338bf8b5bd3bcd5dbea1001339:ea390073d180cee9336d82e4dc34eefd3e2a12a0ed27318662dac716f7a2d0ec5311db41f80a5520b0492eb1993b313ae1aa442adda7af46e3a8d0e32f3eedf9",
     "u-uj137orkt": "166fa432211355487677d46a637de1c1:d850c445d5fffb3469bffcdc5a7ab58a2dcf80815075d0674a560aa85773ebfa59d1693a94e41ba9aedd30d59777d8bbf9fe56c86ff9fdfb8b74d3ea1f135b6b",
     "u-f04fqbizv": "26b62f5e59666df8af89d9024e91dabe:6d4f83d3a83b04cef63c96639f4a726c61b943c9e5c72674db889bdd7184135440afbea1e25fdd8e8b97f71cfb61f49ab2841f48d4e24c8b548e021a4200cc1e"
@@ -315,8 +315,8 @@
     {
       "id": "pay-seed-001",
       "invoiceNumber": "INV-2026-001",
-      "transactionId": "pay_RZP_seed938475",
-      "paymentMethod": "UP_Razorpay",
+      "transactionId": "pay_seed938475",
+      "paymentMethod": "UPI",
       "amount": 999,
       "paymentDate": "2026-06-01T14:28:24.281Z",
       "status": "captured",
@@ -478,14 +478,6 @@
       "description": "How to easily compile columns in Excel sheets, configure tax rates, stock minimum levels, barcodes, and upload directly to BSP Suryatech local database with no syntax issues."
     }
   ],
-  "razorpayConfig": {
-    "keyId": "",
-    "keySecret": "",
-    "mode": "live",
-    "currency": "INR",
-    "enabled": true,
-    "webhookSecret": ""
-  },
   "helpline": "+91 95169 16415",
   "solutions": [
     {

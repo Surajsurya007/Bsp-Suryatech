@@ -55,7 +55,7 @@ export default function SoftwareDetails({
           category: foundSolution.category,
           description: foundSolution.description,
           fullDescription: foundSolution.description,
-          price: foundSolution.price,
+          price: Number(foundSolution.price.replace(/[^0-9]/g, '')) || 1999,
           mappedPlanId: foundSolution.mappedPlanId,
           badge: foundSolution.badge,
           icon: foundSolution.icon,
@@ -66,7 +66,7 @@ export default function SoftwareDetails({
           systemRequirements: 'Operating System: Windows 7, 8, 10, or 11\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space',
           version: '1.0.0',
           size: '8.4 MB',
-          originalPrice: foundSolution.price
+          originalPrice: 6999
         }
       : products[0];
 

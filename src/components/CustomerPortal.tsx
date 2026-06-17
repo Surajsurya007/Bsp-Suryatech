@@ -354,7 +354,7 @@ export default function CustomerPortal({
   const fetchAdminOrders = async () => {
     setAdminLoading(true);
     try {
-      const token = localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
+      const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
       const headers: Record<string, string> = {
         'Content-Type': 'application/json; charset=utf-8'
       };
@@ -1699,7 +1699,7 @@ export default function CustomerPortal({
                                 <div className="p-4 bg-slate-50 rounded-2xl border text-left space-y-4">
                                   <div>
                                     <h4 className="font-black text-slate-800 text-xs uppercase tracking-wider leading-none">Submit Offline Verification Receipt</h4>
-                                    <p className="text-[10.5px] text-slate-450 mt-1 font-sans">Lodge receipt coordinates from Razorpay Payment gateway to verify funds deposition.</p>
+                                    <p className="text-[10.5px] text-slate-450 mt-1 font-sans">Lodge payment coordinates from your receipt or UTR reference to verify funds deposition.</p>
                                   </div>
 
                                   <div className="space-y-3 max-w-md">
@@ -1748,7 +1748,7 @@ export default function CustomerPortal({
                                           setInlineSubmitLoading(true);
                                           setInlineSubmitError('');
                                           try {
-                                            const token = localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
+                                            const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
                                             const headers: Record<string, string> = { 'Content-Type': 'application/json; charset=utf-8' };
                                             if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -1801,19 +1801,21 @@ export default function CustomerPortal({
                                   </div>
                                 </div>
                               ) : (
-                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10 font-sans">
-                                  <p className="text-amber-700 text-xs font-semibold">To activate your license, make sure to pay using our official payment link: <a href="https://razorpay.me/@bspsuryatech" target="_blank" rel="noreferrer" className="underline font-bold text-blue-600 hover:text-blue-700">https://razorpay.me/@bspsuryatech</a>.</p>
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-blue-500/5 p-3 rounded-2xl border border-blue-500/10 font-sans">
+                                  <p className="text-blue-700 text-xs font-semibold">To activate your software license, instantiate the secure auto-verification sequence.</p>
                                   <button
                                     onClick={() => {
-                                      setSubmittingOrderId(pay.id);
-                                      setInlineUtr('');
-                                      setInlineScreenshot('');
-                                      setInlineFileName('');
-                                      setInlineSubmitError('');
+                                      window.dispatchEvent(new CustomEvent('trigger_automated_checkout', { 
+                                        detail: { 
+                                          productId: pay.product_id || pay.productId || 'prod-custom',
+                                          productName: pay.productName || pay.product_name || 'Software License',
+                                          amount: pay.amount || pay.price || 0
+                                        } 
+                                      }));
                                     }}
-                                    className="py-1.5 px-3.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] uppercase tracking-wider rounded-xl shrink-0 cursor-pointer shadow-sm"
+                                    className="py-1.5 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-wider rounded-xl shrink-0 cursor-pointer shadow-sm"
                                   >
-                                    Submit UTR Proof
+                                    Activate License
                                   </button>
                                 </div>
                               )}
@@ -2009,7 +2011,7 @@ export default function CustomerPortal({
                                   onClick={async () => {
                                     setAdminActionLoadingId(ord.id);
                                     try {
-                                      const token = localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
+                                      const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
                                       const headers: Record<string, string> = { 'Content-Type': 'application/json; charset=utf-8' };
                                       if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -2052,7 +2054,7 @@ export default function CustomerPortal({
                                     if (!confirm('Reject this transaction payment submission receipt?')) return;
                                     setAdminActionLoadingId(ord.id);
                                     try {
-                                      const token = localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
+                                      const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || localStorage.getItem('auth_token') || '';
                                       const headers: Record<string, string> = { 'Content-Type': 'application/json; charset=utf-8' };
                                       if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -2669,7 +2671,7 @@ export default function CustomerPortal({
                         className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
                       >
                         <option value="License Issue">License Activation / Keys Transfer</option>
-                        <option value="Billing & Invoice">Billing & Simulated Razorpay Payments</option>
+                        <option value="Billing & Invoice">Billing & Customer Invoices</option>
                         <option value="Technical Bug">Thermal Printer Configuration Help</option>
                         <option value="Feature Request">GST HSN / Composition scheme request</option>
                         <option value="Other">Other Miscellaneous Guides</option>

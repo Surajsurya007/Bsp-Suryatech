@@ -215,15 +215,6 @@ export interface SystemStats {
   openTickets: number;
 }
 
-export interface RazorpayConfig {
-  keyId: string;
-  keySecret: string;
-  mode: 'test' | 'live';
-  currency: string;
-  enabled: boolean;
-  webhookSecret: string;
-}
-
 export interface SoftwareSolution {
   id: string;
   mappedPlanId: string;

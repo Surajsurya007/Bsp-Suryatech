@@ -8,7 +8,6 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import Razorpay from 'razorpay';
 import { GoogleGenAI } from '@google/genai';
 import { dbActions, verifyPassword, signToken, verifyToken } from './server/db';
 import { Coupon } from './src/types';
@@ -1560,38 +1559,6 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // --- SECURE CUSTOMER ENDPOINTS ---
 
-  // Public dynamic endpoint to load configured Razorpay Key ID securely without exposing secrets
-  app.get('/api/orders/rzp-pubkey', async (req: any, res: any) => {
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    
-    // Sync from Supabase first if active
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('system_settings')
-          .select('settings_val')
-          .eq('settings_key', 'razorpay_config')
-          .maybeSingle();
-        
-        if (data && data.settings_val) {
-          const parsed = JSON.parse(data.settings_val);
-          dbActions.updateRazorpayConfig(parsed);
-        }
-      } catch (sbErr: any) {
-        console.warn("Supabase Config Fetch Failed (using local cache fallback):", sbErr.message || sbErr);
-      }
-    }
-
-    const rzpConfig = dbActions.getRazorpayConfig();
-    res.json({
-      keyId: rzpConfig.keyId || '',
-      enabled: rzpConfig.enabled || false,
-      currency: rzpConfig.currency || 'INR',
-      mode: rzpConfig.mode || 'live'
-    });
-  });
-
   // Create Order (API-less Payment Dynamic Initializer with status Pending Payment)
   app.post('/api/orders/create', authenticateToken, async (req: any, res: any) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -1633,7 +1600,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       }
       const finalAmount = Math.max(0, baseAmount - discountAmount);
 
-      // Initialize API-less Order with status "Pending Payment"
+      // Initialize API-less Order as "Pending Verification" directly
       const newOrder = dbActions.createOrder({
         userId: req.user.id,
         userEmail: req.user.email,
@@ -1642,11 +1609,12 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         productName: prod.name,
         amount: finalAmount,
         couponCode,
-        status: 'Pending Payment',
+        status: 'Pending Verification',
         quantity: qty,
         customerName: customerName || req.user.name || '',
         customerMobile: customerMobile || '',
-        customerEmail: customerEmail || req.user.email || ''
+        customerEmail: customerEmail || req.user.email || '',
+        transactionId: 'Awaiting Bank Confirm'
       } as any);
 
       console.log(`[PAYMENT LOG] Dynamic API-less Order registered: ID ${newOrder.id}`);
@@ -1664,7 +1632,8 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
             product_name: prod.name,
             amount: finalAmount,
             coupon_code: couponCode || null,
-            status: 'Pending Payment',
+            status: 'Pending Verification',
+            payment_id: 'Awaiting Bank Confirm',
             created_at: new Date().toISOString()
           });
         } catch (sbErr: any) {
@@ -1806,7 +1775,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         dbActions.createPayment({
           invoiceNumber: invNum,
           transactionId: trId,
-          paymentMethod: 'Razorpay_Payment_Link',
+          paymentMethod: 'Direct_Settlement',
           amount: order.amount,
           paymentDate: new Date().toISOString(),
           status: 'captured',
@@ -1888,71 +1857,39 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     }
   });
 
-  // Complete / Verify Razorpay Payment (Handles both Real Cryptographic Signature and Secure Fallbacks)
+  // Complete / Verify Payment (Handles verification for checkout)
   app.post('/api/orders/verify', authenticateToken, async (req: any, res: any) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
     const { 
       orderId, 
-      razorpay_order_id, 
-      razorpay_payment_id, 
-      razorpay_signature, 
       status, 
       paymentMethod 
     } = req.body;
 
-    console.log(`[PAYMENT LOG] Incoming Verification Request - Internal Order: ${orderId}, Rzp Order: ${razorpay_order_id}, Rzp Payment: ${razorpay_payment_id || 'None'}, Status: ${status}, Method: ${paymentMethod}`);
+    console.log(`[PAYMENT LOG] Incoming Verification Request - Internal Order: ${orderId}, Status: ${status}, Method: ${paymentMethod}`);
 
     try {
       
-      console.log("Verifying payment registers for Order:", orderId || razorpay_order_id);
+      console.log("Verifying payment registers for Order:", orderId);
 
-      // Find order either by internal orderId or mapped Razorpay Order ID (saved in paymentId)
       let order = dbActions.getOrders().find(o => o.id === orderId);
-      if (!order && razorpay_order_id) {
-        order = dbActions.getOrders().find(o => o.paymentId === razorpay_order_id);
-      }
       
       if (!order) {
         return res.status(404).json({ error: 'Order not found' });
       }
 
-      const rzpConfig = dbActions.getRazorpayConfig();
       let verified = false;
       let errorMsg = '';
 
-      // Perform Signature Verification if real signature parameters are provided
-      if (razorpay_order_id && razorpay_payment_id && razorpay_signature) {
-        if (rzpConfig.keySecret && rzpConfig.keySecret !== 'YOUR_SECRET') {
-          const textToVerify = razorpay_order_id + "|" + razorpay_payment_id;
-          const generatedSignature = crypto
-            .createHmac('sha256', rzpConfig.keySecret)
-            .update(textToVerify)
-            .digest('hex');
-
-          if (generatedSignature === razorpay_signature) {
-            verified = true;
-            console.log("Real cryptographic Razorpay signature verified successfully!");
-          } else {
-            console.error("Razorpay Signature Validation Mismatch!");
-            errorMsg = "Cryptographic signature mismatch. Transaction authentication rejected.";
-          }
-        } else {
-          // No secret configured but signature passed? fallback
-          verified = true;
-          console.warn("Razorpay Secret missing in database configuration - completed via bypass.");
-        }
+      if (status === 'success') {
+        verified = true;
       } else {
-        // Fallback for simulated checkout form
-        if (status === 'success') {
-          verified = true;
-        } else {
-          errorMsg = "Simulated payment failed, transaction aborted.";
-        }
+        errorMsg = "Payment failed, transaction aborted.";
       }
 
       if (verified) {
-        const cleanPaymentId = razorpay_payment_id || 'pay_RZPSIM_' + Math.random().toString(36).substr(2, 10).toUpperCase();
+        const cleanPaymentId = 'pay_SIM_' + Math.random().toString(36).substr(2, 10).toUpperCase();
 
         // 1. Update Order status
         dbActions.updateOrder(order.id, {
@@ -1974,7 +1911,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         dbActions.createPayment({
           invoiceNumber: invNum,
           transactionId: cleanPaymentId,
-          paymentMethod: paymentMethod || 'UPI_Razorpay',
+          paymentMethod: paymentMethod || 'UPI',
           amount: order.amount,
           paymentDate: new Date().toISOString(),
           status: 'captured',
@@ -2008,7 +1945,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         });
         dbActions.createNotification({
           userId: order.userId,
-          title: 'Razorpay Payment Completed Successful',
+          title: 'Secure Payment Completed Successfully',
           message: `Successfully paid ₹${order.amount}. Transaction Reference: ${cleanPaymentId}`,
           type: 'payment_success'
         });
@@ -2064,7 +2001,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
               id: 'pay_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
               invoice_number: invNum,
               transaction_id: cleanPaymentId,
-              payment_method: paymentMethod || 'UPI_Razorpay',
+              payment_method: paymentMethod || 'UPI',
               amount: order.amount,
               payment_date: new Date().toISOString(),
               status: 'success',

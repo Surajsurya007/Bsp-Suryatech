@@ -131,11 +131,11 @@ export default function Pricing({
   const dbProProduct = products?.find(p => p.connectedPlan === 'prod-billing-pro' || p.id === 'prod-billing-pro');
   const dbEnterpriseProduct = products?.find(p => p.connectedPlan === 'prod-billing-enterprise' || p.id === 'prod-billing-enterprise');
 
-  const proPrice = dbProProduct !== undefined ? dbProProduct.price : 999;
-  const proOriginal = dbProProduct !== undefined ? (dbProProduct.originalPrice || 2499) : 2499;
+  const proPrice = dbProProduct !== undefined ? dbProProduct.price : 1999;
+  const proOriginal = dbProProduct !== undefined ? (dbProProduct.originalPrice || 6999) : 6999;
 
-  const entPrice = dbEnterpriseProduct !== undefined ? dbEnterpriseProduct.price : 2999;
-  const entOriginal = dbEnterpriseProduct !== undefined ? (dbEnterpriseProduct.originalPrice || 4999) : 4999;
+  const entPrice = dbEnterpriseProduct !== undefined ? dbEnterpriseProduct.price : 1999;
+  const entOriginal = dbEnterpriseProduct !== undefined ? (dbEnterpriseProduct.originalPrice || 6999) : 6999;
 
   const currentPlanId = cartItem?.selectedPlanId || 'prod-billing-pro';
   
@@ -517,7 +517,7 @@ export default function Pricing({
                   id="checkout-proceed-cart-btn"
                 >
                   <Lock className="w-3.5 h-3.5" />
-                  <span>Proceed to Simulated Razorpay Secure Gateway</span>
+                  <span>Proceed to Secure Lifetime Activation</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 

@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, RazorpayConfig, SoftwareSolution } from '../src/types';
+import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, SoftwareSolution } from '../src/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
@@ -88,7 +88,6 @@ interface DatabaseSchema {
   languageConfigs: LanguageConfig[];
   videos: VideoTutorial[];
   solutions: SoftwareSolution[];
-  razorpayConfig?: RazorpayConfig;
   helpline?: string;
   geminiApiKey?: string;
   supabaseConfig?: {
@@ -145,8 +144,8 @@ const defaultProducts: Product[] = [
     name: 'BSP Suryatech Retail Billing Pro',
     version: 'v4.2.1',
     size: '14.8 MB',
-    price: 999,
-    originalPrice: 2499,
+    price: 1999,
+    originalPrice: 6999,
     features: [
       'Retail & Wholesale Billing',
       'GST Invoice Generation & PDF Export',
@@ -181,8 +180,8 @@ const defaultProducts: Product[] = [
     name: 'BSP Suryatech GST Enterprise Suite',
     version: 'v5.0.3',
     size: '22.4 MB',
-    price: 2999,
-    originalPrice: 4999,
+    price: 1999,
+    originalPrice: 6999,
     features: [
       'All features of Retail Billing Pro',
       'Multi-firm & Multi-branch handling',
@@ -355,7 +354,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'BESTSELLER FOR SHOPS',
     description: 'Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.',
-    price: 'INR 3,499',
+    price: 'INR 1,999',
     features: ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State', 'Supplier & Client Ledgers'],
     icon: '🛍️',
     badge: 'Billing',
@@ -369,7 +368,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'COMPLETE POS PACK',
     description: 'High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.',
-    price: 'INR 5,999',
+    price: 'INR 1,999',
     features: ['High-Speed POS Checkout', 'Integrated Barcode Printing', 'Customer Loyalty Points', 'Multi-Terminal Syncing', 'Automatic Reorder Limits'],
     icon: '🏪',
     badge: 'Billing',
@@ -383,7 +382,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'FAST GROCERY STORE SPECIAL',
     description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
-    price: 'INR 4,499',
+    price: 'INR 1,999',
     features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
     icon: '🍎',
     badge: 'Billing',
@@ -397,7 +396,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'PHARMACY BATCH SPECIAL',
     description: 'Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.',
-    price: 'INR 5,499',
+    price: 'INR 1,999',
     features: ['Batch Code Expiry tracking', 'Drug License verification', 'Salt-wise generic lookup', 'Supplier Invoice Sync', 'Doctor referrals lists'],
     icon: '💊',
     badge: 'Billing',
@@ -411,7 +410,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'KITCHEN & HOTEL SPECIAL',
     description: 'Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.',
-    price: 'INR 3,499',
+    price: 'INR 1,999',
     features: ['Kitchen Order Tickets (KOT)', 'Table Mapping & Status', 'Recipe Ingredient Control', 'Split Bill Settlements', 'Waiter Android App link'],
     icon: '🍽️',
     badge: 'Billing',
@@ -425,7 +424,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'IMEI & SERIAL TRACKER',
     description: 'Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.',
-    price: 'INR 4,999',
+    price: 'INR 1,999',
     features: ['Unique IMEI/Serial logging', 'Dynamic Repairs Tracker', 'Warranty Status Records', 'Brand & Model Catalog', 'Customer AMC reminders'],
     icon: '📱',
     badge: 'Billing',
@@ -439,7 +438,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'APPLIANCE SPECIAL',
     description: 'Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.',
-    price: 'INR 5,999',
+    price: 'INR 1,999',
     features: ['Dual-Serial Code validation', 'Manufacturer Warranty link', 'Installations Scheduler', 'Commission Agent ledger', 'Multi-Godown Stock check'],
     icon: '📺',
     badge: 'Billing',
@@ -453,7 +452,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Transport Software',
     subtitle: 'LOGISTICS & FLEET STANDARD',
     description: 'Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.',
-    price: 'INR 7,999',
+    price: 'INR 1,999',
     features: ['Fleet Management', 'Vehicle Tracking', 'Trip Sheet expense logs', 'Driver Commission accounts', 'Client & Consignee Ledgers'],
     icon: '🚚',
     badge: 'Transport',
@@ -466,7 +465,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Hospital & Clinic Software',
     category: 'Hospital Software',
     subtitle: 'HEALTHCARE INTEGRATED',
-    price: 'INR 12,499',
+    price: 'INR 1,999',
     icon: '🏥',
     badge: 'Hospital',
     badgeColor: 'red',
@@ -480,7 +479,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Diagnostic Lab Manager',
     category: 'Hospital Software',
     subtitle: 'PATHOLOGY LABORATORY',
-    price: 'INR 8,499',
+    price: 'INR 1,999',
     icon: '🔬',
     badge: 'Hospital',
     badgeColor: 'red',
@@ -494,7 +493,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'School ERP Management Suite',
     category: 'School Software',
     subtitle: 'ACADEMIC INSTITUTIONS',
-    price: 'INR 11,499',
+    price: 'INR 1,999',
     icon: '🏫',
     badge: 'School',
     badgeColor: 'indigo',
@@ -508,7 +507,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Enterprise ERP Suite',
     category: 'ERP Software',
     subtitle: 'SUPPLY CHAIN SUITE',
-    price: 'INR 14,999',
+    price: 'INR 1,999',
     icon: '🏭',
     badge: 'ERP',
     badgeColor: 'purple',
@@ -517,15 +516,6 @@ export const defaultSolutions: SoftwareSolution[] = [
     exeUrl: ''
   }
 ];
-
-export const defaultRazorpayConfig: RazorpayConfig = {
-  keyId: process.env.RAZORPAY_KEY_ID || '',
-  keySecret: process.env.RAZORPAY_KEY_SECRET || '',
-  mode: 'live',
-  currency: 'INR',
-  enabled: true,
-  webhookSecret: ''
-};
 
 // Initialize DB and Save
 export function initDB() {
@@ -554,9 +544,6 @@ export function initDB() {
       if (db.downloadCounter === undefined) db.downloadCounter = 1420;
       if (!db.languageConfigs || db.languageConfigs.length === 0) {
         db.languageConfigs = [...defaultLanguageConfigs];
-      }
-      if (!db.razorpayConfig) {
-        db.razorpayConfig = { ...defaultRazorpayConfig };
       }
       if (!db.helpline) {
         db.helpline = '+91 95169 16415';
@@ -608,7 +595,6 @@ function seedDB() {
     downloadCounter: 1420,
     languageConfigs: [...defaultLanguageConfigs],
     videos: [...defaultVideos],
-    razorpayConfig: { ...defaultRazorpayConfig },
     helpline: '+91 95169 16415',
     solutions: defaultSolutions
   };
@@ -713,8 +699,8 @@ function seedDB() {
   db.payments.push({
     id: 'pay-seed-001',
     invoiceNumber: 'INV-2026-001',
-    transactionId: 'pay_RZP_seed938475',
-    paymentMethod: 'UP_Razorpay',
+    transactionId: 'pay_seed938475',
+    paymentMethod: 'UPI',
     amount: 999,
     paymentDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     status: 'captured',
@@ -1179,28 +1165,6 @@ export const dbActions = {
     return true;
   },
 
-  getRazorpayConfig: () => {
-    if (!db.razorpayConfig) {
-      db.razorpayConfig = { ...defaultRazorpayConfig };
-      saveDB();
-    }
-    const config = { ...db.razorpayConfig };
-    if (process.env.RAZORPAY_KEY_ID) {
-      config.keyId = process.env.RAZORPAY_KEY_ID;
-    }
-    if (process.env.RAZORPAY_KEY_SECRET) {
-      config.keySecret = process.env.RAZORPAY_KEY_SECRET;
-    }
-    return config;
-  },
-  updateRazorpayConfig: (updates: Partial<RazorpayConfig>) => {
-    if (!db.razorpayConfig) {
-      db.razorpayConfig = { ...defaultRazorpayConfig };
-    }
-    db.razorpayConfig = { ...db.razorpayConfig, ...updates };
-    saveDB();
-    return db.razorpayConfig;
-  },
   getHelpline: () => {
     return db.helpline || '+91 95169 16415';
   },

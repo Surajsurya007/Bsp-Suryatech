@@ -82,15 +82,6 @@ ADMIN_EMAIL=admin@suryatech.com
 ADMIN_PASSWORD=Suryatech_Admin_2026_SecurePass!
 
 # ==========================================
-# Razorpay Live Integration Credentials
-# ==========================================
-# Toggle mode: set to "live" for real financial transactions, or "test" for sandbox
-RAZORPAY_MODE=live
-RAZORPAY_KEY_ID=rzp_live_productionKeyHere
-RAZORPAY_KEY_SECRET=productionSecretHere
-RAZORPAY_WEBHOOK_SECRET=productionWebhookSigningSecretToken
-
-# ==========================================
 # Supabase Cloud Database Integration
 # ==========================================
 # Paste your Supabase project parameters below to allow full master-slave dual writes

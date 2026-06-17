@@ -331,7 +331,7 @@ export async function initializeHostingerSchema(config?: HostingerConfig): Promi
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 17. Multi-purpose Key-Value App Settings (Razorpay, helpline, counters, etc.)
+    // 17. Multi-purpose Key-Value App Settings (helpline, counters, etc.)
     await activePool.execute(`
       CREATE TABLE IF NOT EXISTS system_settings (
         settings_key VARCHAR(255) PRIMARY KEY,
@@ -417,7 +417,6 @@ export async function migrateLocalDataToHostinger(): Promise<{ success: boolean;
       languageConfigs = [],
       videos = [],
       downloadCounter = 1420,
-      razorpayConfig,
       helpline,
       geminiApiKey,
       supabaseConfig
@@ -571,7 +570,6 @@ export async function migrateLocalDataToHostinger(): Promise<{ success: boolean;
     // 19. Set Settings Variables
     const settings = {
       downloadCounter: String(downloadCounter),
-      razorpayConfig: JSON.stringify(razorpayConfig || {}),
       helpline: helpline || '+91 95169 16415',
       geminiApiKey: geminiApiKey || '',
       supabaseConfig: JSON.stringify(supabaseConfig || {})
