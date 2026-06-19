@@ -40,8 +40,11 @@ import PaymentSuccess from './components/PaymentSuccess';
 import PaymentFailure from './components/PaymentFailure';
 import PaymentVerification from './components/PaymentVerification';
 import { TranslationProvider } from './components/TranslationContext';
+import { useAdmin } from './components/AdminContext';
+import { AdminDashboard } from './components/AdminDashboard';
 
 export default function App() {
+  const { isAdminMode } = useAdmin();
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [successPaymentState, setSuccessPaymentState] = useState<{
     orderId: string;
@@ -1066,6 +1069,16 @@ export default function App() {
       setCheckoutLoading(false);
     }
   };
+
+  if (isAdminMode) {
+    return (
+      <AdminDashboard 
+        user={user} 
+        onLogout={handleLogout} 
+        onAddNotification={addNotification} 
+      />
+    );
+  }
 
   return (
     <TranslationProvider user={user}>

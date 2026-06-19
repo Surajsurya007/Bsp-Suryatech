@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useTranslation } from './TranslationContext';
+import { useAdmin } from './AdminContext';
 import { 
   Building2, 
   Phone, 
@@ -50,6 +51,7 @@ export default function Layout({
   cartItem
 }: LayoutProps) {
   const { t, currentLanguage, languages, changeLanguage, loading } = useTranslation();
+  const { setIsAdminMode } = useAdmin();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [helpline, setHelpline] = useState<string>('+91 95169 16415');
@@ -205,6 +207,18 @@ export default function Layout({
                 <span className="text-[10px] bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded-xs font-mono font-black">{cartItem ? 1 : 0}</span>
               </button>
 
+              {user?.email?.trim().toLowerCase() === 'surajsurya.koo7@gmail.com' && (
+                <button
+                  onClick={() => setIsAdminMode(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/40 border border-red-900/60 text-red-400 hover:bg-red-900 hover:text-white rounded-sm text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 shrink-0"
+                  title="Open Admin Dashboard"
+                  id="header-admin-console-btn"
+                >
+                  <ShieldCheck className="w-4 h-4 text-red-500 shrink-0" />
+                  <span className="text-[10px] font-mono tracking-wide uppercase font-black">Admin</span>
+                </button>
+              )}
+
               {user ? (
                 <div className="flex items-center gap-2">
                   <div 
@@ -249,6 +263,18 @@ export default function Layout({
                 <ShoppingCart className="w-3.5 h-3.5" />
                 <span className="text-[9px] font-bold font-mono text-slate-300">{cartItem ? 1 : 0}</span>
               </button>
+
+              {user?.email?.trim().toLowerCase() === 'surajsurya.koo7@gmail.com' && (
+                <button
+                  onClick={() => setIsAdminMode(true)}
+                  className="p-1 px-2 border border-red-900/60 rounded-sm text-red-400 bg-red-950/40 font-bold flex items-center gap-1 shrink-0 animate-pulse"
+                  id="mobile-admin-shortcut-btn"
+                  title="Open Admin Dashboard"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-red-500" />
+                  <span className="text-[9px] font-mono tracking-wide uppercase font-black">Admin</span>
+                </button>
+              )}
 
               {user && (
                 <button 
