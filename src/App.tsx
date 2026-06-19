@@ -856,7 +856,7 @@ export default function App() {
         if (scriptLoaded) {
           const amountInPaise = finalAmount * 100;
           let rzpOrderId: string | undefined = undefined;
-          let razorpayKey = 'rzp_live_T1nYz3RnnW4F0o'; // User provided gateway key for Luxemarket/BSP Suryatech
+          let razorpayKey = 'rzp_live_T1nYz3RnnW4F0o'; // User provided gateway key for BSP Suryatech
 
           try {
             const orderResponse = await createRazorpayOrder(amountInPaise);
@@ -875,8 +875,9 @@ export default function App() {
             key: razorpayKey,
             amount: amountInPaise,
             currency: 'INR',
-            name: 'LUXEMARKET',
-            description: 'Order Payment',
+            name: 'BSP Suryatech',
+            description: 'BSP Suryatech Billing Software Purchase',
+            image: "https://bspsuryatech.in/logo.png",
             prefill: {
               name: currentUser.name || currentUser.username || '',
               email: currentUser.email || '',
