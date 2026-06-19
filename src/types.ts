@@ -110,9 +110,14 @@ export interface Order {
   customerName?: string;
   customerMobile?: string;
   customerEmail?: string;
+  customerCompany?: string;
+  customerGst?: string;
   transactionId?: string;
   paymentScreenshot?: string;
   proofSubmittedAt?: string;
+  paymentDate?: string;
+  amountPaid?: number;
+  remarks?: string;
 }
 
 export interface License {

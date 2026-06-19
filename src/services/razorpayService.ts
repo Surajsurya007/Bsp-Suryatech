@@ -79,6 +79,31 @@ export function loadRazorpayScript(): Promise<boolean> {
  * Ensures the Razorpay private secret key remains securely nested on the server side.
  */
 export async function createRazorpayOrder(amountInPaise: number): Promise<RazorpayOrderResponse> {
+  // 1. Try local server-side proxy route first (bypasses CORS "Failed to fetch" on browser)
+  try {
+    console.log(`[RAZORPAY SERVICE] Attempting to call local server proxy. Amount: ${amountInPaise} paise`);
+    const proxyResponse = await fetch('/api/razorpay/create-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ amount: amountInPaise })
+    });
+
+    if (proxyResponse.ok) {
+      const data = await proxyResponse.json();
+      const orderId = data.id || data.order_id;
+      if (orderId) {
+        console.log('[RAZORPAY SERVICE] Success via local server-side proxy:', data);
+        return data;
+      }
+    }
+    console.warn('[RAZORPAY SERVICE] Local proxy returned non-OK/invalid payload. Falling back to direct Edge function call...');
+  } catch (proxyError: any) {
+    console.warn('[RAZORPAY SERVICE] Local proxy call failed or was unreachable. Falling back to direct Supabase Edge Function... Error:', proxyError.message || proxyError);
+  }
+
+  // 2. Fallback to direct client-side fetch (with the identical headers and body)
   const url = 'https://wabhgsdzmptgxrggjjgm.supabase.co/functions/v1/smart-handler';
 
   const headers = {
@@ -87,7 +112,7 @@ export async function createRazorpayOrder(amountInPaise: number): Promise<Razorp
     'Content-Type': 'application/json'
   };
 
-  console.log(`[RAZORPAY SERVICE] Calling Supabase Edge Function. Amount: ${amountInPaise} paise`);
+  console.log(`[RAZORPAY SERVICE] Fetching direct Edge function at: ${url}`);
 
   const response = await fetch(url, {
     method: 'POST',
@@ -99,12 +124,12 @@ export async function createRazorpayOrder(amountInPaise: number): Promise<Razorp
 
   if (!response.ok) {
     const errBody = await response.text();
-    console.error(`[RAZORPAY SERVICE] Edge Function HTTP error: ${response.status}`, errBody);
+    console.error(`[RAZORPAY SERVICE] Direct Edge Function HTTP error: ${response.status}`, errBody);
     throw new Error(`Failed to initialize payment order: ${response.status} ${response.statusText}`);
   }
 
   const responseData = await response.json();
-  console.log('[RAZORPAY SERVICE] Received edge function order response:', responseData);
+  console.log('[RAZORPAY SERVICE] Received direct edge function order response:', responseData);
 
   // Validate properties
   const orderId = responseData.id || responseData.order_id;

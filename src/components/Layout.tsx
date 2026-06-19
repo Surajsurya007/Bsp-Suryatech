@@ -71,7 +71,7 @@ export default function Layout({
     loadHelpline();
   }, []);
 
-  const announcementMsg = '🇮🇳 Special Offer: Desktop GST Billing Lifetime License now only ₹1999 / Free Trial Enabled';
+  const announcementMsg = '🇮🇳 Special Offer: Desktop GST Billing Lifetime License now only ₹3000 / Free Trial Enabled';
 
   const navItems = [
     { id: 'home', label: 'Home' },

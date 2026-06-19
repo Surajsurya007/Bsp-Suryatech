@@ -58,69 +58,24 @@ const categories = [
 
 const solutions: SoftwareSolution[] = [
   {
-    id: 'sol-retail',
-    mappedPlanId: 'prod-billing-pro',
-    title: 'Retail Billing Software',
-    category: 'Billing Software',
-    subtitle: 'BESTSELLER FOR SHOPS',
-    description: 'Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.',
-    price: 'INR 1,999',
-    features: ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State', 'Supplier & Client Ledgers'],
-    icon: '🛍️',
-    badge: 'Billing',
-    badgeColor: 'emerald'
-  },
-  {
-    id: 'sol-supermarket',
-    mappedPlanId: 'prod-billing-enterprise',
-    title: 'Supermarket POS Software',
-    category: 'Billing Software',
-    subtitle: 'COMPLETE POS PACK',
-    description: 'High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.',
-    price: 'INR 1,999',
-    features: ['High-Speed POS Checkout', 'Integrated Barcode Printing', 'Customer Loyalty Points', 'Multi-Terminal Syncing', 'Automatic Reorder Limits'],
-    icon: '🏪',
-    badge: 'Billing',
-    badgeColor: 'emerald'
-  },
-  {
-    id: 'sol-grocery',
-    mappedPlanId: 'prod-billing-pro',
-    title: 'Grocery Billing Software',
-    category: 'Billing Software',
-    subtitle: 'FAST GROCERY STORE SPECIAL',
-    description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
-    price: 'INR 1,999',
-    features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
-    icon: '🍎',
-    badge: 'Billing',
-    badgeColor: 'emerald'
-  },
-  {
-    id: 'sol-medical',
-    mappedPlanId: 'prod-billing-enterprise',
-    title: 'Medical Store Billing Software',
-    category: 'Billing Software',
-    subtitle: 'PHARMACY BATCH SPECIAL',
-    description: 'Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.',
-    price: 'INR 1,999',
-    features: ['Batch Code Expiry tracking', 'Drug License verification', 'Salt-wise generic lookup', 'Supplier Invoice Sync', 'Doctor referrals lists'],
-    icon: '💊',
-    badge: 'Billing',
-    badgeColor: 'emerald'
-  },
-  {
     id: 'sol-restaurant',
     mappedPlanId: 'prod-billing-pro',
     title: 'Restaurant POS & KOT Software',
     category: 'Billing Software',
     subtitle: 'KITCHEN & HOTEL SPECIAL',
     description: 'Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.',
-    price: 'INR 1,999',
-    features: ['Kitchen Order Tickets (KOT)', 'Table Mapping & Status', 'Recipe Ingredient Control', 'Split Bill Settlements', 'Waiter Android App link'],
+    price: '₹3,000',
+    features: [
+      'Kitchen Order Tickets (KOT)',
+      'Table Mapping & Status',
+      'Split Billing & Discounts',
+      'Captains App Integration',
+      'Multi-payment checkout'
+    ],
     icon: '🍽️',
     badge: 'Billing',
-    badgeColor: 'emerald'
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-v1.0.0-Setup.zip'
   },
   {
     id: 'sol-mobile',
@@ -129,11 +84,18 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'IMEI & SERIAL TRACKER',
     description: 'Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.',
-    price: 'INR 1,999',
-    features: ['Unique IMEI/Serial logging', 'Dynamic Repairs Tracker', 'Warranty Status Records', 'Brand & Model Catalog', 'Customer AMC reminders'],
+    price: '₹3,000',
+    features: [
+      'Unique IMEI/Serial logging',
+      'Dynamic Repairs Tracker',
+      'Accessories Inventory Control',
+      'Supplier Serial Sync',
+      'Technician assignments'
+    ],
     icon: '📱',
     badge: 'Billing',
-    badgeColor: 'emerald'
+    badgeColor: 'emerald',
+    exeUrl: ''
   },
   {
     id: 'sol-electronics',
@@ -142,11 +104,18 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'APPLIANCE SPECIAL',
     description: 'Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.',
-    price: 'INR 1,999',
-    features: ['Dual-Serial Code validation', 'Manufacturer Warranty link', 'Installations Scheduler', 'Commission Agent ledger', 'Multi-Godown Stock check'],
+    price: '₹3,000',
+    features: [
+      'Dual-Serial Code validation',
+      'Manufacturer Warranty link',
+      'Installations tracking',
+      'Multi-warehouse logistics',
+      'Finance/EMI Checkout options'
+    ],
     icon: '📺',
     badge: 'Billing',
-    badgeColor: 'emerald'
+    badgeColor: 'emerald',
+    exeUrl: ''
   },
   {
     id: 'sol-transport',
@@ -155,63 +124,98 @@ const solutions: SoftwareSolution[] = [
     category: 'Transport Software',
     subtitle: 'LOGISTICS & FLEET STANDARD',
     description: 'Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.',
-    price: 'INR 1,999',
-    features: ['Fleet Management', 'Vehicle Tracking', 'Trip Sheet expense logs', 'Driver Commission accounts', 'Client & Consignee Ledgers'],
+    price: '₹3,000',
+    features: [
+      'Fleet Management',
+      'Vehicle Tracking',
+      'Driver Management',
+      'Route Planning',
+      'Trip Management'
+    ],
     icon: '🚚',
     badge: 'Transport',
-    badgeColor: 'blue'
+    badgeColor: 'blue',
+    exeUrl: ''
   },
   {
     id: 'sol-hospital',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'Hospital & Clinic Software',
+    title: 'Hospital Management Software',
     category: 'Hospital Software',
-    subtitle: 'HEALTHCARE INTEGRATED',
-    price: 'INR 1,999',
+    subtitle: 'COMPLETE CLINICAL SUITE',
+    description: 'Enterprise-grade platform for managing multi-specialty clinical operations, patient registrations, IPD/OPD, and doctors slots.',
+    price: '₹3,000',
+    features: [
+      'Patient Registration',
+      'OPD Management',
+      'IPD Management',
+      'Doctor Management',
+      'Appointment Scheduling'
+    ],
     icon: '🏥',
     badge: 'Hospital',
     badgeColor: 'red',
-    description: 'In-patient/Out-patient registration, modular appointments, doctor scheduling, prescription prints, and laboratory logs.',
-    features: ['OPD/IPD Patient Registry', 'Doctor Scheduler & Fees', 'EHR & Digital Prescriptions', 'Pharmacy & Lab Bilateral', 'Ward Bed Occupancy']
-  },
-  {
-    id: 'sol-diagnostic',
-    mappedPlanId: 'prod-billing-pro',
-    title: 'Diagnostic Lab Manager',
-    category: 'Hospital Software',
-    subtitle: 'PATHOLOGY LABORATORY',
-    price: 'INR 1,999',
-    icon: '🔬',
-    badge: 'Hospital',
-    badgeColor: 'red',
-    description: 'Streamlined report-making logs with custom layout sheets templates, sample collection workflows, and referral networks bookkeeping.',
-    features: ['Test Report Template Maker', 'Barcode Sample Tracker', 'Patient Bill & Due Receipts', 'B2B Lab Referral Account', 'Automated Analyzer Sync']
+    exeUrl: ''
   },
   {
     id: 'sol-school',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'School ERP Management Suite',
+    title: 'School Management Software',
     category: 'School Software',
-    subtitle: 'ACADEMIC INSTITUTIONS',
-    price: 'INR 1,999',
+    subtitle: 'CAMPUS ERP SUITE',
+    description: 'Consolidated school and college operations, managing admissions database, fee schedules collection, exams, and attendance.',
+    price: '₹3,000',
+    features: [
+      'Student Management',
+      'Admission Management',
+      'Attendance Management',
+      'Fee Collection',
+      'Exam Management'
+    ],
     icon: '🏫',
     badge: 'School',
     badgeColor: 'indigo',
-    description: 'Robust student lifecycle bookkeeping. Integrated fee customizer modules, grades charts, schedule grids and bus tracking.',
-    features: ['Student Profile & Admissions', 'Dynamic Fee Structure Maker', 'Class Timetable Grid', 'Exam Marks & Report Cards', 'SMS & WhatsApp Notifications']
+    exeUrl: ''
+  },
+  {
+    id: 'sol-inventory',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Inventory Management Software',
+    category: 'Billing Software',
+    subtitle: 'STOCK CONTROL PRO',
+    description: 'Dedicated supply chain tracker with SKU code generation, multi-bin inventory controls, and automatic purchase orders.',
+    price: '₹3,000',
+    features: [
+      'Multi-warehouse SKU grids',
+      'Barcode layouts printing',
+      'Supplier Ledger balances',
+      'Automated Purchase PO',
+      'Dead Stock audit logs'
+    ],
+    icon: '📦',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: ''
   },
   {
     id: 'sol-erp-warehouse',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'Enterprise ERP Suite',
+    title: 'ERP Management Software',
     category: 'ERP Software',
-    subtitle: 'SUPPLY CHAIN SUITE',
-    price: 'INR 1,999',
-    icon: '🏭',
+    subtitle: 'ENTERPRISE RESOURCE ERP',
+    description: 'Unified system combining production, accounts, sales forces CRM, human resource profiles, and payroll audits.',
+    price: '₹3,000',
+    features: [
+      'Sales Management',
+      'Purchase Management',
+      'Inventory Management',
+      'Accounts Management',
+      'CRM'
+    ],
+    icon: '⚙️',
     badge: 'ERP',
     badgeColor: 'purple',
-    description: 'Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.',
-    features: ['Multi-Warehouse Transfer Logs', 'Manufacturing Bill of Materials', 'Advanced Batch/Lot Control', 'PO & SO Purchase Orders', 'Reorder Stock Estimations']
+    exeUrl: ''
   }
 ];
 
@@ -310,7 +314,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
 
                 {/* Dark Blue patterned graphic icon header */}
                 <div 
-                  className="bg-slate-950 px-6 py-12 flex flex-col items-center justify-center relative overflow-hidden select-none"
+                  className="bg-slate-950 px-6 pt-[15px] pb-12 flex flex-col items-center justify-center relative overflow-hidden select-none"
                   style={{
                     backgroundImage: 'radial-gradient(circle at top, #0E1B32 0%, #040810 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 10px)'
                   }}
@@ -323,18 +327,18 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                     {sol.icon}
                   </span>
 
-                  {/* Emerald or Blue category badge */}
+                  {/* Specific themed category badge under the icon */}
                   <span 
-                    className={`px-3 py-1 text-[10px] font-bold uppercase rounded-full tracking-wider font-mono absolute bottom-4 border ${
-                      sol.badgeColor === 'emerald' 
-                        ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' 
-                        : sol.badgeColor === 'blue'
-                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                        : sol.badgeColor === 'red'
-                        ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                        : sol.badgeColor === 'purple'
-                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                        : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                    className={`px-3.5 py-1 text-[11px] font-bold rounded-full tracking-wide border absolute bottom-4 shadow-sm ${
+                      sol.badge === 'Billing' 
+                        ? 'bg-[#DCFCE7] text-[#15803D] border-emerald-200' 
+                        : sol.badge === 'Transport'
+                        ? 'bg-[#E0F2FE] text-[#0369A1] border-sky-200'
+                        : sol.badge === 'Hospital'
+                        ? 'bg-[#FEE2E2] text-[#B91C1C] border-rose-200'
+                        : sol.badge === 'School'
+                        ? 'bg-[#EEF2FF] text-[#4338CA] border-indigo-200'
+                        : 'bg-[#FEF3C7] text-[#B45309] border-amber-200'
                     }`}
                   >
                     {sol.badge || sol.category}
@@ -363,7 +367,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                       <ul className="space-y-2">
                         {sol.features.map((feat, fidx) => (
                           <li key={fidx} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                            <span className="w-4 h-4 bg-emerald-50 text-emerald-600 font-bold font-mono rounded-full flex items-center justify-center text-[9px] border border-emerald-100 shrink-0">✓</span>
+                            <span className="text-[#10B981] font-bold text-sm shrink-0">✓</span>
                             <span className="truncate">{feat}</span>
                           </li>
                         ))}
@@ -393,35 +397,22 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                       <span>Buy Now</span>
                     </button>
 
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="grid grid-cols-2 gap-3 mt-2">
                       <button
                         onClick={() => {
-                          if (sol.exeUrl) {
-                            console.log(`DownloadCenter: Opening download URL for ${sol.title}: ${sol.exeUrl}`);
-                            const link = document.createElement('a');
-                            link.href = sol.exeUrl;
-                            link.target = '_blank';
-                            link.rel = 'noopener noreferrer';
-                            link.download = '';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          } else {
-                            console.log(`DownloadCenter: No direct exeUrl configured for ${sol.title}. Falling back to adding to cart...`);
-                            onAddToCart?.(sol.id);
-                          }
+                          console.log(`DownloadCenter: Adding ${sol.title} Solution (${sol.id}) to cart...`);
+                          onAddToCart?.(sol.id);
                         }}
-                        className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer text-center"
+                        className="py-3 bg-white border border-slate-250 hover:bg-slate-50 text-slate-800 hover:text-slate-950 font-extrabold rounded-xl text-xs flex items-center justify-center transition-all duration-150 cursor-pointer text-center shadow-sm"
                       >
-                        <Download className="w-3 h-3 text-white shrink-0" />
-                        <span>Download Setup</span>
+                        Add to Cart
                       </button>
                       <button
                         onClick={() => {
                           onPageChange?.(`software-details:${sol.id}`);
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
-                        className="py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer text-center"
+                        className="py-3 bg-white border border-slate-250 hover:bg-slate-50 text-slate-800 hover:text-slate-950 font-extrabold rounded-xl text-xs flex items-center justify-center transition-all duration-150 cursor-pointer text-center shadow-sm"
                       >
                         Learn More
                       </button>

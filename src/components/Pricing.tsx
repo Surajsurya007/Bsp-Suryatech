@@ -41,7 +41,15 @@ interface PricingProps {
   onPageChange: (page: string) => void;
   products: any[];
   user: any;
-  onInitiateSimulatedCheckout: (productId: string, couponCode?: string) => void;
+  onInitiateSimulatedCheckout: (
+    productId: string, 
+    couponCode?: string, 
+    extraDetails?: { 
+      customerMobile?: string; 
+      customerCompany?: string; 
+      customerGst?: string; 
+    }
+  ) => void;
   cartItem: CartItem | null;
   setCartItem: (item: CartItem | null) => void;
 }
@@ -59,6 +67,11 @@ export default function Pricing({
   const [appliedCoupon, setAppliedCoupon] = useState<string>('');
   const [couponError, setCouponError] = useState('');
   const [validationLoading, setValidationLoading] = useState(false);
+  
+  // New billing details form states
+  const [mobile, setMobile] = useState('');
+  const [company, setCompany] = useState('');
+  const [gst, setGst] = useState('');
 
   // Validate coupon code via server / Supabase
   const handleValidateCoupon = async (e: React.FormEvent) => {
@@ -131,10 +144,10 @@ export default function Pricing({
   const dbProProduct = products?.find(p => p.connectedPlan === 'prod-billing-pro' || p.id === 'prod-billing-pro');
   const dbEnterpriseProduct = products?.find(p => p.connectedPlan === 'prod-billing-enterprise' || p.id === 'prod-billing-enterprise');
 
-  const proPrice = dbProProduct !== undefined ? dbProProduct.price : 1999;
+  const proPrice = dbProProduct !== undefined ? dbProProduct.price : 3000;
   const proOriginal = dbProProduct !== undefined ? (dbProProduct.originalPrice || 6999) : 6999;
 
-  const entPrice = dbEnterpriseProduct !== undefined ? dbEnterpriseProduct.price : 1999;
+  const entPrice = dbEnterpriseProduct !== undefined ? dbEnterpriseProduct.price : 3000;
   const entOriginal = dbEnterpriseProduct !== undefined ? (dbEnterpriseProduct.originalPrice || 6999) : 6999;
 
   const currentPlanId = cartItem?.selectedPlanId || 'prod-billing-pro';
@@ -177,10 +190,21 @@ export default function Pricing({
   const handleBuyClickInCart = () => {
     if (!cartItem) return;
     if (!user) {
-      // Must login/register first to track active keys!
+      // Must login/register first to track active keys! Save checkout state in localStorage.
+      localStorage.setItem('checkout_pending_after_login', JSON.stringify({
+        selectedPlanId: cartItem.selectedPlanId,
+        appliedCoupon: appliedCoupon || '',
+        customerMobile: mobile,
+        customerCompany: company,
+        customerGst: gst
+      }));
       onPageChange('portal');
     } else {
-      onInitiateSimulatedCheckout(cartItem.selectedPlanId, appliedCoupon || undefined);
+      onInitiateSimulatedCheckout(cartItem.selectedPlanId, appliedCoupon || undefined, {
+        customerMobile: mobile,
+        customerCompany: company,
+        customerGst: gst
+      });
     }
   };
 
@@ -463,6 +487,59 @@ export default function Pricing({
                   {couponError && (
                     <p className="text-[10px] text-red-400 font-sans">{couponError}</p>
                   )}
+                </div>
+
+                {/* Billing Details Block */}
+                <div className="space-y-4 pt-2">
+                  <span className="text-xs font-mono font-bold uppercase tracking-widest text-slate-400 block">
+                    Billing Particulars
+                  </span>
+                  <div className="bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80 space-y-3.5 text-left">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest block">
+                        Mobile Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={mobile}
+                        onChange={(e) => setMobile(e.target.value)}
+                        placeholder="e.g., +91 98765 43210"
+                        className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:border-blue-500 outline-none font-sans"
+                        id="billing-input-mobile"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest block">
+                        Company Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        placeholder="e.g., Suryatech Solutions Pvt Ltd"
+                        className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:border-blue-500 outline-none font-sans"
+                        id="billing-input-company"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest block">
+                        GSTIN Number (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={gst}
+                        onChange={(e) => setGst(e.target.value)}
+                        placeholder="e.g., 27AAAAA1111A1Z1"
+                        className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white uppercase focus:border-blue-500 outline-none font-mono"
+                        id="billing-input-gst"
+                      />
+                      <span className="text-[9px] text-slate-500 block leading-tight font-sans">
+                        Provide GSTIN for input tax credit claims.
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

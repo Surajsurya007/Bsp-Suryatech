@@ -55,7 +55,7 @@ export default function SoftwareDetails({
           category: foundSolution.category,
           description: foundSolution.description,
           fullDescription: foundSolution.description,
-          price: Number(foundSolution.price.replace(/[^0-9]/g, '')) || 1999,
+          price: Number(foundSolution.price.replace(/[^0-9]/g, '')) || 3000,
           mappedPlanId: foundSolution.mappedPlanId,
           badge: foundSolution.badge,
           icon: foundSolution.icon,

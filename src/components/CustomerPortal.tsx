@@ -100,6 +100,11 @@ export default function CustomerPortal({
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const [adminActionLoadingId, setAdminActionLoadingId] = useState<string | null>(null);
 
+  // Client tab selections & Admin notes/search indicators (Requirement 7, 9)
+  const [clientSubTab, setClientSubTab] = useState<'orders' | 'activations' | 'downloads'>('orders');
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [adminRemarksMap, setAdminRemarksMap] = useState<Record<string, string>>({});
+
   // Sync activePortalView with initialView prop changes
   useEffect(() => {
     setActivePortalView(initialView);
@@ -1602,17 +1607,53 @@ export default function CustomerPortal({
                   <p className="text-xs text-slate-450 mt-1.5 leading-relaxed">Ensure prompt delivery of software licenses by matching payment references or uploading manual screenshots if required. Genuine Lifetime keys.</p>
                 </div>
 
-                {orders.length === 0 ? (
-                  <div className="bg-white border p-12 rounded-3xl text-center space-y-4 shadow-sm text-slate-500">
-                    <Inbox className="w-10 h-10 text-slate-300 mx-auto" />
-                    <div>
-                      <h4 className="font-extrabold text-slate-800 text-sm">No bookings placed yet</h4>
-                      <p className="text-slate-450 text-xs mt-1 max-w-sm mx-auto leading-normal">
-                        Your software purchases and pending offline payments show up here. Select checkout in download products to start.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
+                {/* Sub Tab Buttons (Requirement 9) */}
+                <div className="flex border-b border-slate-200 gap-1 pb-0" id="orders-subtab-navbar">
+                  <button
+                    onClick={() => setClientSubTab('orders')}
+                    className={`pb-3 px-4 text-xs font-black uppercase tracking-wider relative cursor-pointer font-sans transition-all ${
+                      clientSubTab === 'orders' 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-slate-450 hover:text-slate-700'
+                    }`}
+                  >
+                    My Orders
+                  </button>
+                  <button
+                    onClick={() => setClientSubTab('activations')}
+                    className={`pb-3 px-4 text-xs font-black uppercase tracking-wider relative cursor-pointer font-sans transition-all ${
+                      clientSubTab === 'activations' 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-slate-450 hover:text-slate-700'
+                    }`}
+                  >
+                    My Activations
+                  </button>
+                  <button
+                    onClick={() => setClientSubTab('downloads')}
+                    className={`pb-3 px-4 text-xs font-black uppercase tracking-wider relative cursor-pointer font-sans transition-all ${
+                      clientSubTab === 'downloads' 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-slate-450 hover:text-slate-700'
+                    }`}
+                  >
+                    Downloads
+                  </button>
+                </div>
+
+                {clientSubTab === 'orders' && (
+                  <>
+                    {orders.length === 0 ? (
+                      <div className="bg-white border p-12 rounded-3xl text-center space-y-4 shadow-sm text-slate-500">
+                        <Inbox className="w-10 h-10 text-slate-300 mx-auto" />
+                        <div>
+                          <h4 className="font-extrabold text-slate-800 text-sm font-sans">No bookings placed yet</h4>
+                          <p className="text-slate-455 text-xs mt-1 max-w-sm mx-auto leading-normal font-sans">
+                            Your software purchases and pending offline payments show up here. Select checkout in download products to start.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
                   <div className="space-y-5 text-left">
                     {orders.map((pay: any) => {
                       const isPendingPayment = pay.status === 'Pending Payment' || pay.status === 'pending';
@@ -1864,6 +1905,93 @@ export default function CustomerPortal({
                     })}
                   </div>
                 )}
+                  </>
+                )}
+
+                {/* Sub Tab 2: Activations (Requirement 9) */}
+                {clientSubTab === 'activations' && (
+                  <div className="space-y-4" id="activations-subtab-container">
+                    {licenses.length === 0 ? (
+                      <div className="bg-white border p-12 rounded-3xl text-center text-slate-450 shadow-sm font-sans" id="empty-activations-panel">
+                        <ShieldCheck className="w-10 h-10 text-slate-350 mx-auto opacity-35" />
+                        <h4 className="font-extrabold text-slate-800 text-sm mt-3 font-sans">No activations approved yet</h4>
+                        <p className="text-xs mt-1 max-w-sm mx-auto leading-normal font-sans">
+                          Once your submitted payment reference is reviewed and approved by administrators, your activated lifetime license keys will display here instantly.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {licenses.map((lic: any) => (
+                          <div key={lic.id} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm text-left space-y-4 font-sans" id={`lic-card-${lic.id}`}>
+                            <div className="flex justify-between items-center pb-2 border-b border-slate-100 font-sans">
+                              <span className="px-2.5 py-0.5 bg-emerald-100 border border-emerald-250 text-emerald-800 text-[9.5px] font-mono font-black tracking-wider rounded uppercase">
+                                Lifetime Active
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                Registered: {lic.createdAt ? new Date(lic.createdAt).toLocaleDateString('en-IN') : 'Recently'}
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-mono font-bold text-slate-400 block leading-none">LICENSED SOFTWARE PRODUCT</span>
+                              <h4 className="font-sans font-black text-slate-900 text-sm leading-tight font-sans">{lic.productName || 'BSP Retail Software Application'}</h4>
+                            </div>
+                            <div className="space-y-1.5 font-sans">
+                              <span className="text-[10px] font-mono font-bold text-slate-400 block leading-none">REGISTRATION KEY</span>
+                              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between gap-2.5 font-mono text-xs text-slate-850">
+                                <span className="truncate select-all tracking-wide">{lic.licenseKey}</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(lic.licenseKey);
+                                    onAddNotification('License Key copied to clipboard!', 'success');
+                                  }}
+                                  className="p-1.5 hover:bg-slate-200 text-slate-550 rounded-lg transition shrink-0 cursor-pointer"
+                                  title="Copy Registration Serial Key"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sub Tab 3: Downloads (Requirement 9) */}
+                {clientSubTab === 'downloads' && (
+                  <div className="space-y-4 font-sans" id="downloads-subtab-container">
+                    <div className="bg-blue-50/50 border border-blue-200/40 rounded-2xl p-4 text-xs font-sans text-blue-700 leading-snug text-left">
+                      Below are the certified master installers and binaries for your products. Copy your active key from the <strong>"My Activations"</strong> tab to register the desktop executable during setup.
+                    </div>
+                    <div className="space-y-3 font-sans">
+                      {[
+                        { id: 'prod-billing-pro', name: 'BSP Suryatech Retail Billing Pro', version: 'v4.1.2', size: '28.4 MB' },
+                        { id: 'prod-billing-enterprise', name: 'BSP Suryatech GST Enterprise Suite', version: 'v7.0.8', size: '42.1 MB' },
+                        { id: 'prod-supermarket', name: 'BSP Suryatech Supermarket/POS Suite', version: 'v3.5.4', size: '36.5 MB' },
+                        { id: 'prod-grocery', name: 'BSP Suryatech Quick Grocery Executive', version: 'v2.1.0', size: '19.8 MB' },
+                      ].map((pkg) => (
+                        <div key={pkg.id} className="bg-white border p-4 px-5 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-sans" id={`down-pkg-${pkg.id}`}>
+                          <div className="text-left space-y-1 font-sans">
+                            <h4 className="font-extrabold text-slate-850 text-xs sm:text-sm leading-none">{pkg.name}</h4>
+                            <p className="text-[10px] text-slate-400 font-mono">Current Version: {pkg.version} | Size: {pkg.size}</p>
+                          </div>
+                          <button
+                            onClick={() => onTriggerTrialDownload(pkg.id, true)}
+                            className="w-full sm:w-auto px-4 py-2 bg-slate-900 border border-slate-950 hover:bg-slate-850 text-white font-mono text-[10.5px] font-black uppercase tracking-wider rounded-xl cursor-pointer flex items-center justify-center gap-2 shadow transition-all shrink-0"
+                          >
+                            <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Download Installer Setup</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1901,19 +2029,62 @@ export default function CustomerPortal({
                   </div>
                 </div>
 
+                {/* Search bar inside admin hub (Requirement 7 - Search transaction ID, Search order number, Search customer name) */}
+                <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl flex flex-col sm:flex-row gap-3 items-center justify-between">
+                  <div className="text-left w-full sm:w-auto">
+                    <span className="text-[10px] font-black uppercase text-slate-400 font-mono block">CORROBORATION FILTERS</span>
+                    <p className="text-xs text-slate-500">Search across UTR reference codes, client profiles, and billing logs.</p>
+                  </div>
+                  <div className="w-full sm:w-80 relative">
+                    <input 
+                      type="text"
+                      className="w-full bg-white border border-slate-200 hover:border-slate-350 focus:border-blue-500 rounded-xl px-4 py-2.5 text-xs outline-none placeholder-slate-405 text-slate-800"
+                      placeholder="Search Order ID, Trans ID, Customer name..."
+                      value={adminSearchQuery}
+                      onChange={(e) => setAdminSearchQuery(e.target.value)}
+                    />
+                    {adminSearchQuery && (
+                      <button 
+                        onClick={() => setAdminSearchQuery('')}
+                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {adminLoading ? (
                   <div className="bg-white border p-12 rounded-3xl text-center font-mono font-bold text-xs text-slate-500 shadow-sm flex items-center justify-center gap-3">
                     <RefreshCw className="animate-spin text-blue-600 w-5 h-5" />
                     <span>Accessing submissions database...</span>
                   </div>
-                ) : adminOrders.length === 0 ? (
+                ) : adminOrders.filter((ord: any) => {
+                  if (!adminSearchQuery.trim()) return true;
+                  const q = adminSearchQuery.toLowerCase();
+                  const matchesOrderId = ord.id && ord.id.toLowerCase().includes(q);
+                  const matchesTxId = ord.transactionId && ord.transactionId.toLowerCase().includes(q);
+                  const matchesCustName = (ord.customerName || ord.userName || '').toLowerCase().includes(q);
+                  const matchesCustEmail = (ord.customerEmail || ord.userEmail || '').toLowerCase().includes(q);
+                  return matchesOrderId || matchesTxId || matchesCustName || matchesCustEmail;
+                }).length === 0 ? (
                   <div className="bg-white border p-12 rounded-3xl text-center space-y-2 text-slate-500 shadow-sm">
                     <Inbox className="w-8 h-8 mx-auto text-slate-350" />
-                    <p className="text-xs font-bold font-mono leading-none">No registrations logged in memory database</p>
+                    <p className="text-xs font-bold font-mono leading-none">
+                      {adminSearchQuery ? "No matching orders found for this query" : "No registrations logged in memory database"}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {adminOrders.map((ord: any) => {
+                    {adminOrders.filter((ord: any) => {
+                      if (!adminSearchQuery.trim()) return true;
+                      const q = adminSearchQuery.toLowerCase();
+                      const matchesOrderId = ord.id && ord.id.toLowerCase().includes(q);
+                      const matchesTxId = ord.transactionId && ord.transactionId.toLowerCase().includes(q);
+                      const matchesCustName = (ord.customerName || ord.userName || '').toLowerCase().includes(q);
+                      const matchesCustEmail = (ord.customerEmail || ord.userEmail || '').toLowerCase().includes(q);
+                      return matchesOrderId || matchesTxId || matchesCustName || matchesCustEmail;
+                    }).map((ord: any) => {
                       const requiresCheck = ord.status === 'Pending Verification';
                       const isApproved = ord.status === 'License Activated' || ord.status === 'Verified' || ord.status === 'success';
 
@@ -1948,9 +2119,11 @@ export default function CustomerPortal({
                             {/* Billing particulars column */}
                             <div className="md:col-span-4 space-y-2 text-xs">
                               <span className="text-[9.5px] font-bold font-mono text-slate-400 uppercase tracking-widest block select-none">1. BILLING INFO REGISTER</span>
-                              <div className="bg-slate-50 p-3 rounded-xl border space-y-1">
+                              <div className="bg-slate-50 p-3 rounded-xl border space-y-1 text-left">
                                 <p className="font-extrabold text-slate-850">Name: {ord.customerName || ord.userName || 'Not Entered'}</p>
-                                <p>Tel: {ord.customerMobile || 'Not Entered'}</p>
+                                <p>Tel: {ord.customerMobile || ord.customerPhone || 'Not Entered'}</p>
+                                {ord.customerCompany && <p className="text-slate-700 font-medium">Company: {ord.customerCompany}</p>}
+                                {ord.customerGst && <p className="text-blue-600 font-bold font-mono">GSTIN: {ord.customerGst}</p>}
                                 <p className="truncate">Email: {ord.customerEmail || ord.userEmail || 'Not Entered'}</p>
                               </div>
                             </div>
@@ -1967,11 +2140,14 @@ export default function CustomerPortal({
 
                             {/* Payment details block & UTR */}
                             <div className="md:col-span-4 space-y-2 text-xs text-left">
-                              <span className="text-[9.5px] font-bold font-mono text-slate-400 uppercase tracking-widest block select-none">3. SUBMITTED PAYMENT PROOF</span>
+                              <span className="text-[9.5px] font-bold font-mono text-slate-400 uppercase tracking-widest block select-none font-sans">3. SUBMITTED PAYMENT PROOF</span>
                               <div className="bg-slate-50 p-3 rounded-xl border space-y-1">
                                 <p className="font-mono font-bold text-slate-700">UTR: <strong className="text-slate-900 font-extrabold select-all">{ord.transactionId || 'Awaiting Submit'}</strong></p>
+                                {ord.paymentDate && <p className="text-[11px] text-slate-600 font-medium">Paid Date: {ord.paymentDate}</p>}
+                                {ord.amountPaid !== undefined && ord.amountPaid !== null && <p className="text-[11px] font-bold text-emerald-700 font-mono">Amt Paid: ₹{Number(ord.amountPaid).toLocaleString('en-IN') || ord.amountPaid}</p>}
+                                {ord.remarks && <p className="text-[10.5px] text-slate-500 italic font-sans leading-none mt-1">Remarks: "{ord.remarks}"</p>}
                                 {ord.proofSubmittedAt && (
-                                  <p className="text-[10px] text-slate-400">Timestamp: {new Date(ord.proofSubmittedAt).toLocaleString('en-IN')}</p>
+                                  <p className="text-[9.5px] text-slate-400 mt-1">Timestamp: {new Date(ord.proofSubmittedAt).toLocaleString('en-IN')}</p>
                                 )}
                               </div>
                             </div>

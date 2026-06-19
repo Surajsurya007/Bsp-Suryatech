@@ -1557,13 +1557,59 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   });
 
 
+  // Proxy endpoint to call Supabase Edge Function to avoid CORS "Failed to fetch" on the client
+  app.post('/api/razorpay/create-order', async (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const { amount } = req.body;
+    console.log(`[PAYMENT PROXY LOG] Initiating order proxy to Supabase for amount: ${amount} paise`);
+
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({ error: 'Valid amount in paise is required' });
+    }
+
+    try {
+      const edgeFunctionUrl = 'https://wabhgsdzmptgxrggjjgm.supabase.co/functions/v1/smart-handler';
+      const headers = {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhYmhnc2R6bXB0Z3hyZ2dqamdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MDQzMjIsImV4cCI6MjA5NjQ4MDMyMn0.g92rXSE_my0UyIUYuApjel6QyNP7CVrqBQoboNj6kDo',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhYmhnc2R6bXB0Z3hyZ2dqamdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MDQzMjIsImV4cCI6MjA5NjQ4MDMyMn0.g92rXSE_my0UyIUYuApjel6QyNP7CVrqBQoboNj6kDo',
+        'Content-Type': 'application/json'
+      };
+
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ amount })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[PAYMENT PROXY LOG] Supabase Edge Function returned error status ${response.status}`, errText);
+        return res.status(response.status).json({
+          error: `Edge function returned error: ${response.status} ${response.statusText}`,
+          details: errText
+        });
+      }
+
+      const responseData = await response.json();
+      console.log('[PAYMENT PROXY LOG] Successfully fetched order signature:', responseData);
+      return res.json(responseData);
+    } catch (error: any) {
+      console.error('[PAYMENT PROXY LOG] Exception raised during Edge Function call proxy:', error);
+      return res.status(500).json({
+        error: 'Proxy server failed to communicate with payment gateway signature generator.',
+        details: error.message || error
+      });
+    }
+  });
+
+
   // --- SECURE CUSTOMER ENDPOINTS ---
 
   // Create Order (API-less Payment Dynamic Initializer with status Pending Payment)
   app.post('/api/orders/create', authenticateToken, async (req: any, res: any) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
-    const { productId, couponCode, quantity, customerName, customerMobile, customerEmail } = req.body;
+    const { productId, couponCode, quantity, customerName, customerMobile, customerEmail, customerCompany, customerGst } = req.body;
     console.log(`[PAYMENT LOG] Incoming API-less Order Creation - Product: ${productId}, Coupon: ${couponCode || 'None'}`);
 
     try {
@@ -1600,7 +1646,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       }
       const finalAmount = Math.max(0, baseAmount - discountAmount);
 
-      // Initialize API-less Order as "Pending Verification" directly
+      // Initialize API-less Order as "Pending Payment" directly (Requirement 6)
       const newOrder = dbActions.createOrder({
         userId: req.user.id,
         userEmail: req.user.email,
@@ -1609,12 +1655,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         productName: prod.name,
         amount: finalAmount,
         couponCode,
-        status: 'Pending Verification',
+        status: 'Pending Payment',
         quantity: qty,
         customerName: customerName || req.user.name || '',
         customerMobile: customerMobile || '',
         customerEmail: customerEmail || req.user.email || '',
-        transactionId: 'Awaiting Bank Confirm'
+        customerCompany: customerCompany || '',
+        customerGst: customerGst || '',
+        transactionId: ''
       } as any);
 
       console.log(`[PAYMENT LOG] Dynamic API-less Order registered: ID ${newOrder.id}`);
@@ -1632,7 +1680,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
             product_name: prod.name,
             amount: finalAmount,
             coupon_code: couponCode || null,
-            status: 'Pending Verification',
+            status: 'Pending Payment',
             payment_id: 'Awaiting Bank Confirm',
             created_at: new Date().toISOString()
           });
@@ -1650,6 +1698,144 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     } catch (err: any) {
       console.error("[PAYMENT LOG] Error creating API-less order:", err);
       res.status(500).json({ error: 'Failed to initialize order.' });
+    }
+  });
+
+  // Submit manual payment verification for client (Requirement 3, 4, 5, 6, 11)
+  app.post('/api/orders/verify-manual', authenticateToken, async (req: any, res: any) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const { 
+      transactionId, 
+      orderId, 
+      productId, 
+      productName, 
+      customerName, 
+      customerEmail, 
+      amount, 
+      paymentDate, 
+      amountPaid, 
+      paymentScreenshot, 
+      remarks,
+      customerMobile,
+      customerCompany,
+      customerGst
+    } = req.body;
+
+    if (!transactionId) {
+      return res.status(400).json({ error: 'Transaction ID is required.' });
+    }
+
+    try {
+      const trimmedTxId = transactionId.trim();
+
+      // 1. Prevent duplicate transaction IDs (UTR)
+      const allOrders = dbActions.getOrders() || [];
+      const duplicateTx = allOrders.find(o => 
+        o.transactionId && 
+        o.transactionId.trim().toLowerCase() === trimmedTxId.toLowerCase() && 
+        o.status !== 'failed'
+      );
+
+      if (duplicateTx) {
+        return res.status(400).json({ error: 'This Transaction ID has already been submitted or processed.' });
+      }
+
+      // 2. Prevent duplicate activations (check if an approved license already exists for this user and product)
+      const userLicenses = dbActions.getLicensesByUser ? dbActions.getLicensesByUser(req.user.id) : [];
+      const duplicateActivation = userLicenses.find((l: any) => 
+        l.productId === productId && 
+        l.status === 'active'
+      );
+
+      // We can also check if there is an order that is already active/success for this product and user
+      const existingSuccessOrder = allOrders.find(o => 
+        o.userId === req.user.id && 
+        o.productId === productId && 
+        (o.status === 'License Activated' || o.status === 'Verified' || o.status === 'success')
+      );
+
+      if (duplicateActivation || existingSuccessOrder) {
+        return res.status(400).json({ error: 'Duplicate Activation Prevented: You already hold an active lifetime license key for this software product.' });
+      }
+
+      // 3. Look up order, or create/upsert it
+      let order = allOrders.find(o => o.id === orderId);
+      let finalOrder;
+
+      if (order) {
+        // Update existing order register
+        finalOrder = dbActions.updateOrder(orderId, {
+          status: 'Pending Verification',
+          transactionId: trimmedTxId,
+          proofSubmittedAt: new Date().toISOString(),
+          customerName: customerName || req.user.name,
+          customerEmail: customerEmail || req.user.email,
+          customerMobile: customerMobile || order.customerMobile || '',
+          customerCompany: customerCompany || order.customerCompany || '',
+          customerGst: customerGst || order.customerGst || '',
+          paymentDate: paymentDate || new Date().toISOString().split('T')[0],
+          amountPaid: amountPaid ? Number(amountPaid) : (amount || 3000),
+          paymentScreenshot: paymentScreenshot || '',
+          remarks: remarks || '',
+        } as any);
+      } else {
+        // Fallback: Create direct manual activation order
+        finalOrder = dbActions.createOrder({
+          userId: req.user.id,
+          userEmail: req.user.email,
+          userName: req.user.name,
+          productId: productId || 'prod-billing-pro',
+          productName: productName || 'BSP Suryatech Retail Billing Pro',
+          amount: amount || 3000,
+          status: 'Pending Verification',
+          quantity: 1,
+          customerName: customerName || req.user.name || '',
+          customerEmail: customerEmail || req.user.email || '',
+          customerMobile: customerMobile || '',
+          customerCompany: customerCompany || '',
+          customerGst: customerGst || '',
+          transactionId: trimmedTxId,
+          proofSubmittedAt: new Date().toISOString(),
+          paymentDate: paymentDate || new Date().toISOString().split('T')[0],
+          amountPaid: amountPaid ? Number(amountPaid) : (amount || 3000),
+          paymentScreenshot: paymentScreenshot || '',
+          remarks: remarks || '',
+        } as any);
+      }
+
+      // 4. Create Notification: Payment submitted for verification
+      dbActions.createNotification({
+        userId: req.user.id,
+        title: 'Payment submitted for verification',
+        message: 'Your payment proof has been successfully logged. Status is currently Pending Verification.',
+        type: 'purchase'
+      });
+
+      // 5. Sync to remote Supabase DB if enabled
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          await supabase.from('orders').upsert({
+            id: finalOrder.id,
+            user_id: req.user.id,
+            user_email: req.user.email,
+            user_name: req.user.name,
+            product_id: productId || 'prod-billing-pro',
+            product_name: productName || 'BSP Suryatech Retail Billing Pro',
+            amount: amount || 3000,
+            status: 'Pending Verification',
+            payment_id: trimmedTxId,
+            created_at: new Date().toISOString()
+          });
+        } catch (sbErr: any) {
+          console.warn("Supabase manual verification upload sync skipped:", sbErr.message);
+        }
+      }
+
+      res.status(200).json({ success: true, order: finalOrder });
+    } catch (err: any) {
+      console.error("Manual verification post failed:", err);
+      res.status(500).json({ error: 'Manual registration and payment proof submission failed.' });
     }
   });
 
@@ -1720,7 +1906,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   // Admin: Manually verify orders, activate license, generate invoice & payment and send notifications
   app.post('/api/admin/orders/verify', authenticateToken, async (req: any, res: any) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    const { orderId, status } = req.body;
+    const { orderId, status, remarks } = req.body;
 
     if (!orderId || !status) {
       return res.status(400).json({ error: 'Order ID and Status are required.' });
@@ -1738,7 +1924,8 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         // Approve Payment & Update Order Status
         dbActions.updateOrder(orderId, {
           status: 'License Activated',
-          paymentId: trId
+          paymentId: trId,
+          remarks: remarks || ''
         });
 
         // 1. Provision Lifetime License Key instantly
@@ -1783,11 +1970,11 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           userId: order.userId
         });
 
-        // 4. Send Notifications
+        // 4. Send Notifications (Requirement 11 - custom message title match)
         dbActions.createNotification({
           userId: order.userId,
-          title: 'Manual Payment Verified',
-          message: `Your payment of ₹${order.amount} for "${order.productName}" has been manually verified by BSP Suryatech.`,
+          title: 'Your software has been activated successfully.',
+          message: `Your manual verification for order #${orderId} of "${order.productName}" is complete. Admin Remarks: ${remarks || 'Approved and activated successfully.'}`,
           type: 'payment_success'
         });
 
@@ -1828,13 +2015,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       } else {
         // Rejected Order / Failed Payment status
         dbActions.updateOrder(orderId, {
-          status: 'failed'
+          status: 'failed',
+          remarks: remarks || ''
         });
 
         dbActions.createNotification({
           userId: order.userId,
-          title: 'Payment Verification Failed',
-          message: `Payment proof verification for Order #${order.id} was unsuccessful. If this was a mistake, please resubmit.`,
+          title: 'Verification failed. Please contact support.',
+          message: `Payment proof verification for Order #${order.id} was rejected closely. Admin Remarks: ${remarks || 'Mismatching reference. Please double check entry and resubmit.'}`,
           type: 'security'
         });
 

@@ -38,6 +38,7 @@ import CustomerPortal from './components/CustomerPortal';
 import SoftwareDetails from './components/SoftwareDetails';
 import PaymentSuccess from './components/PaymentSuccess';
 import PaymentFailure from './components/PaymentFailure';
+import PaymentVerification from './components/PaymentVerification';
 import { TranslationProvider } from './components/TranslationContext';
 
 export default function App() {
@@ -73,7 +74,7 @@ export default function App() {
     const foundSolution = solutions?.find((s: any) => s.id === pId);
     let productName = '';
     let isSolution = false;
-    let price = 1999;
+    let price = 3000;
     let originalPrice = 6999;
     let features: string[] = [];
     let description = '';
@@ -82,7 +83,7 @@ export default function App() {
     if (foundSolution) {
       productName = foundSolution.title;
       isSolution = true;
-      price = Number(foundSolution.price?.replace(/[^0-9]/g, '')) || 1999;
+      price = Number(foundSolution.price?.replace(/[^0-9]/g, '')) || 3000;
       originalPrice = 6999;
       features = foundSolution.features || [];
       description = foundSolution.description || '';
@@ -90,7 +91,7 @@ export default function App() {
     } else {
       const foundProduct = products?.find((p: any) => p.id === pId);
       productName = foundProduct?.name || (pId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro');
-      price = foundProduct?.price || 1999;
+      price = foundProduct?.price || 3000;
       originalPrice = foundProduct?.originalPrice || 6999;
       features = foundProduct?.features || [];
       description = foundProduct?.description || 'Offline Billing and Invoice Automation platform.';
@@ -126,6 +127,7 @@ export default function App() {
   } | null>(null);
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [isRedirectingToRazorpay, setIsRedirectingToRazorpay] = useState(false);
   const [checkoutMop, setCheckoutMop] = useState<'card' | 'upi' | 'netbanking' | 'wallet'>('card');
   const [checkoutUpiMethod, setCheckoutUpiMethod] = useState<'vpa' | 'qr'>('qr');
   const [checkoutCardNo, setCheckoutCardNo] = useState('4111 1111 1111 1111');
@@ -215,6 +217,12 @@ export default function App() {
 
     checkSupabaseSession();
 
+    // Check deep links or manual redirection paths
+    const path = window.location.pathname;
+    if (path === '/payment-verification' || window.location.hash === '#/payment-verification') {
+      setCurrentPage('payment-verification');
+    }
+
     // Fetch master catalogs
     fetchProducts();
     fetchTestimonials();
@@ -280,8 +288,8 @@ export default function App() {
       if (sbData && !sbError && sbData.length > 0) {
         const parsedProducts = sbData.map(item => ({
           ...item,
-          price: 1999,
-          originalPrice: 6999,
+          price: item.price ? Number(item.price) : (item.id === 'prod-billing-pro' ? 999 : 2999),
+          originalPrice: item.original_price ? Number(item.original_price) : (item.id === 'prod-billing-pro' ? 2499 : 4999),
           downloadUrl: item.download_url || item.downloadUrl,
           connectedPlan: item.connected_plan || item.connectedPlan,
           category: item.category || 'Retail & POS Billing',
@@ -376,7 +384,7 @@ export default function App() {
       if (data && !error && data.length > 0) {
         const parsed = data.map((item: any) => ({
           ...item,
-          price: 'INR 1,999'
+          price: '₹3,000'
         }));
         setSolutions(parsed);
       } else {
@@ -386,7 +394,7 @@ export default function App() {
           const localData = await localRes.json();
           const parsed = localData.map((item: any) => ({
             ...item,
-            price: 'INR 1,999'
+            price: '₹3,000'
           }));
           setSolutions(parsed);
         } else {
@@ -401,7 +409,7 @@ export default function App() {
           const localData = await localRes.json();
           const parsed = localData.map((item: any) => ({
             ...item,
-            price: 'INR 1,999'
+            price: '₹3,000'
           }));
           setSolutions(parsed);
         } else {
@@ -416,8 +424,9 @@ export default function App() {
   // Toast notifications helpers
   const [userLicenses, setUserLicenses] = useState<any[]>([]);
 
-  const fetchUserLicenses = async () => {
-    if (!user) {
+  const fetchUserLicenses = async (userOverride?: any) => {
+    const currentUser = userOverride || user;
+    if (!currentUser) {
       setUserLicenses([]);
       return;
     }
@@ -426,7 +435,7 @@ export default function App() {
       const { data, error } = await supabase
         .from('licenses')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', currentUser.id);
 
       if (data && !error) {
         const mapped = data.map(item => ({
@@ -480,6 +489,13 @@ export default function App() {
     if (page === 'portal') {
       setPortalInitialView('dashboard');
     }
+    if (page === 'payment-verification') {
+      window.history.pushState({}, '', '/payment-verification');
+    } else {
+      if (window.location.pathname === '/payment-verification') {
+        window.history.pushState({}, '', '/');
+      }
+    }
     setCurrentPage(page);
   };
 
@@ -490,6 +506,25 @@ export default function App() {
       role: 'customer'
     };
     setUser(updatedUser);
+
+    // Check if there is a pending checkout redirect saved in localStorage before login
+    const pendingJson = localStorage.getItem('checkout_pending_after_login');
+    if (pendingJson) {
+      try {
+        const pending = JSON.parse(pendingJson);
+        localStorage.removeItem('checkout_pending_after_login');
+        addNotification('Restoring your checkout request...', 'info');
+        setTimeout(() => {
+          handleInitiateSimulatedCheckout(pending.selectedPlanId, pending.appliedCoupon, updatedUser, {
+            customerMobile: pending.customerMobile,
+            customerCompany: pending.customerCompany,
+            customerGst: pending.customerGst
+          });
+        }, 600);
+        return;
+      } catch (_) {}
+    }
+
     handleNavigatePage('portal');
   };
 
@@ -569,8 +604,11 @@ export default function App() {
     paymentId: string,
     status: 'success' | 'failed',
     paymentMethod: string,
-    couponCode?: string
+    couponCode?: string,
+    userOverride?: any
   ) => {
+    const currentUser = userOverride || user;
+    if (!currentUser) return;
     console.log("App: Committing order payment transaction status directly to Supabase with ID:", orderId);
     
     try {
@@ -578,20 +616,20 @@ export default function App() {
       const { data: profile } = await supabase
         .from('customer_profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
         .single();
 
       // 1. Write payment record
       const orderRecord = {
         id: orderId,
-        user_id: user.id,
-        user_email: user.email,
-        user_name: user?.name || user?.email?.split('@')[0],
+        user_id: currentUser.id,
+        user_email: currentUser.email,
+        user_name: currentUser?.name || currentUser?.email?.split('@')[0],
         product_id: productId,
         product_name: productName,
         amount: amount,
         coupon_code: couponCode || null,
-        status: status, // "success" or "failed"
+        status: status === 'success' ? 'completed' : 'pending', // "completed" or "pending" as requested
         payment_id: paymentId,
         created_at: new Date().toISOString()
       };
@@ -607,8 +645,8 @@ export default function App() {
         
         const licenseRecord = {
           id: 'lic_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-          user_id: user.id,
-          user_email: user.email,
+          user_id: currentUser.id,
+          user_email: currentUser.email,
           order_id: orderId,
           product_id: productId,
           product_name: productName,
@@ -634,7 +672,7 @@ export default function App() {
           payment_date: new Date().toISOString(),
           status: 'success',
           order_id: orderId,
-          user_id: user.id
+          user_id: currentUser.id
         };
 
         const { error: payErr } = await supabase.from('payments').insert(paymentRecord);
@@ -649,10 +687,10 @@ export default function App() {
           id: 'inv_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
           invoice_number: invoiceNumber,
           order_id: orderId,
-          user_id: user.id,
-          client_name: profile?.client_name || user?.name || user?.email?.split('@')[0],
+          user_id: currentUser.id,
+          client_name: profile?.client_name || currentUser?.name || currentUser?.email?.split('@')[0],
           business_name: profile?.business_name || 'Retail Enterprise Partner',
-          email_address: user.email,
+          email_address: currentUser.email,
           contact_number: profile?.contact_number || '9999999999',
           amount: amount,
           gst_amount: gstAmount,
@@ -670,7 +708,7 @@ export default function App() {
         // 5. Dispatch customized portal notifications
         const notificationRecord = {
           id: 'not_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-          user_id: user.id,
+          user_id: currentUser.id,
           title: 'Suryatech Subscription Serial Dispatched!',
           message: `Your BSP Suryatech software serial subscription key for ${productName} was activated successfully. Key: ${licenseKey}`,
           type: 'success',
@@ -689,7 +727,7 @@ export default function App() {
       }
       
       // Refresh user states
-      await fetchUserLicenses();
+      await fetchUserLicenses(currentUser);
     } catch (dbErr: any) {
       console.warn("Serverless direct insertion fallback active for transactions:", dbErr.message);
       // Fallback local memory list update if tables don't exist yet
@@ -699,9 +737,19 @@ export default function App() {
     }
   };
 
-  // Order initialization and Profile Completion guard
-  const handleInitiateSimulatedCheckout = async (productId: string, couponCode?: string) => {
-    if (!user) {
+  // Order initialization and direct Razorpay same-tab redirection (Requirement 1, 2)
+  const handleInitiateSimulatedCheckout = async (
+    productId: string, 
+    couponCode?: string, 
+    userOverride?: any,
+    extraBillingDetails?: {
+      customerMobile?: string;
+      customerCompany?: string;
+      customerGst?: string;
+    }
+  ) => {
+    const currentUser = userOverride || user;
+    if (!currentUser) {
       addNotification('Please log in or register to purchase a license plan.', 'info');
       setPortalInitialView('dashboard');
       handleNavigatePage('portal');
@@ -709,48 +757,17 @@ export default function App() {
     }
 
     if (checkoutLoading) {
-      // Prevent duplicate payment requests
       return;
     }
 
-    addNotification('Verifying your billing profile details...', 'info');
+    setCheckoutLoading(true);
+    setIsRedirectingToRazorpay(false);
+    addNotification('Initializing secure manual activation booking...', 'info');
+
     try {
-      // 1. Fetch customer profile info directly from Supabase DB to verify completion status
-      console.log("App: Querying customer profile completion indices for ID:", user.id);
-      const { data: profile, error } = await supabase
-        .from('customer_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 means no profile rows found
-        throw new Error(error.message);
-      }
-      
-      // Determine if profile fields are completed
-      const isProfileCompleted = profile && 
-        profile.client_name && 
-        profile.business_name && 
-        profile.contact_number && 
-        profile.business_address && 
-        profile.city && 
-        profile.state && 
-        profile.pincode;
-
-      if (!isProfileCompleted) {
-        addNotification('Please complete your billing profile details before proceeding to purchase.', 'error');
-        setPortalInitialView('profile');
-        handleNavigatePage('portal');
-        return;
-      }
-
-      // 2. Profile is completed! Start secure checkout sequence
-      setCheckoutLoading(true);
-      addNotification('Loading secure Razorpay gateway module...', 'info');
-
       // Resolve product pricing locally
       let resolvedName = '';
-      let resolvedPrice = 1999;
+      let resolvedPrice = 3000;
       
       const selectedProduct = products.find((p: any) => p.id === productId);
       if (selectedProduct) {
@@ -761,10 +778,10 @@ export default function App() {
         const selectedSol = solutions.find((s: any) => s.id === productId);
         if (selectedSol) {
           resolvedName = selectedSol.title;
-          resolvedPrice = Number(selectedSol.price?.replace(/[^0-9]/g, '')) || 1999;
+          resolvedPrice = Number(selectedSol.price?.replace(/[^0-9]/g, '')) || 3000;
         } else {
           resolvedName = productId === 'prod-billing-enterprise' ? 'BSP Suryatech GST Enterprise Suite' : 'BSP Suryatech Retail Billing Pro';
-          resolvedPrice = 1999;
+          resolvedPrice = 3000;
         }
       }
 
@@ -782,130 +799,186 @@ export default function App() {
         } catch (_) {}
       }
 
-      // Load Razorpay checkout.js script dynamically
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        throw new Error('Could not load Razorpay payment gateway script. Please verify your internet connection.');
-      }
+      // 1. Create the pending order on the backend to obtain a secure Order Reference
+      const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || '';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json; charset=utf-8' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      // Calculate amount in Paise
-      const amountInPaise = Math.round(finalAmount * 100);
+      let generatedOrderId = 'ORD-BSP-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      
+      try {
+        const res = await fetch('/api/orders/create', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            productId,
+            couponCode: couponCode || '',
+            quantity: 1,
+            customerName: currentUser.name || currentUser.email?.split('@')[0] || '',
+            customerEmail: currentUser.email,
+            customerMobile: extraBillingDetails?.customerMobile || '',
+            customerCompany: extraBillingDetails?.customerCompany || '',
+            customerGst: extraBillingDetails?.customerGst || '',
+          })
+        });
 
-      // Call Supabase Edge Function to generate the Razorpay Order
-      addNotification('Requesting secure order signature from bank gateways...', 'info');
-      const orderResponse = await createRazorpayOrder(amountInPaise);
-
-      // Validate returned order response properties
-      const orderId = orderResponse.id || orderResponse.order_id;
-      if (!orderId) {
-        throw new Error('Failed to retrieve a valid transaction order reference from server.');
-      }
-
-      // Initialize billing prefills
-      const prefillName = profile.client_name || user.name || user.email?.split('@')[0] || '';
-      const prefillEmail = user.email || '';
-      const prefillContact = profile.contact_number || '9999999999';
-
-      addNotification('Opening secure payment gateway desk...', 'success');
-
-      const options: any = {
-        key: orderResponse.key || orderResponse.key_id || 'rzp_test_placeholder',
-        amount: orderResponse.amount || amountInPaise,
-        currency: orderResponse.currency || 'INR',
-        name: 'BSP Suryatech',
-        description: resolvedName,
-        order_id: orderId,
-        handler: async (response: any) => {
-          try {
-            setCheckoutLoading(true);
-            addNotification('Payment authorized successfully. Generating license certificates...', 'info');
-            console.log('[RAZORPAY SUCCESS] Response payload:', response);
-
-            const gatewayPaymentId = response.razorpay_payment_id || `pay_rzp_${Date.now()}`;
-            const gatewayOrderId = response.razorpay_order_id || orderId;
-
-            // Save transaction and generate products license keys inside database
-            await verifyOrderInDatabase(
-              gatewayOrderId,
-              productId,
-              resolvedName,
-              finalAmount,
-              gatewayPaymentId,
-              'success',
-              'Razorpay',
-              couponCode
-            );
-
-            // Populate state for the success receipt display
-            setSuccessPaymentState({
-              orderId: gatewayOrderId,
-              paymentId: gatewayPaymentId,
-              amount: finalAmount,
-              productName: resolvedName
-            });
-
-            setCheckoutLoading(false);
-            handleNavigatePage('payment-success');
-            addNotification('License serial activated and dispatched successfully!', 'success');
-          } catch (handlerErr: any) {
-            console.error('[RAZORPAY HANDLER ERROR]', handlerErr);
-            setFailureErrorMessage(handlerErr.message || 'Transaction was successful but we could not write back the active license details. Please contact helpline support with your payment ID.');
-            setCheckoutLoading(false);
-            handleNavigatePage('payment-failure');
+        if (res.ok) {
+          const orderData = await res.json();
+          if (orderData && orderData.orderId) {
+            generatedOrderId = orderData.orderId;
+            console.log('[CHECKOUT LOG] Order registered on backend successfully:', generatedOrderId);
           }
-        },
-        prefill: {
-          name: prefillName,
-          email: prefillEmail,
-          contact: prefillContact
-        },
-        theme: {
-          color: '#2563EB'
-        },
-        modal: {
-          ondismiss: () => {
-            console.log('[RAZORPAY MODAL DISMISSED] Checkout closed before completion.');
-            addNotification('Payment checkout cancelled.', 'info');
-            setCheckoutLoading(false);
-          }
+        } else {
+          console.warn('[CHECKOUT WARNING] Backend order creation returned non-ok. Falling back to local offline-friendly ID.');
         }
-      };
+      } catch (fetchErr: any) {
+        console.warn('[CHECKOUT EXCEPTION] Backend order creation unreachable or offline. Falling back to safe offline-friendly ID:', fetchErr.message || fetchErr);
+      }
 
-      // Instantiates Razorpay modal
-      const rzp = new (window as any).Razorpay(options);
+      // 2. Clear previous draft and save the draft transaction pre-fill logs to localStorage
+      localStorage.setItem('bsp_pending_manual_activation', JSON.stringify({
+        orderId: generatedOrderId,
+        amount: finalAmount,
+        productId,
+        productName: resolvedName,
+        customerName: currentUser.name || currentUser.email?.split('@')[0] || '',
+        customerEmail: currentUser.email,
+        customerMobile: extraBillingDetails?.customerMobile || '',
+        customerCompany: extraBillingDetails?.customerCompany || '',
+        customerGst: extraBillingDetails?.customerGst || '',
+        timestamp: new Date().toISOString()
+       }));
 
-      // Listen for runtime payment errors or banking blockages
-      rzp.on('payment.failed', (failResponse: any) => {
-        console.error('[RAZORPAY TRANSACTION FAILURE]', failResponse.error);
-        const reason = failResponse.error.description || failResponse.error.reason || 'Payment failed on gateway client.';
-        
-        // Save failed record for safety/audit tracking
-        verifyOrderInDatabase(
-          orderId,
-          productId,
-          resolvedName,
-          finalAmount,
-          failResponse.error.metadata?.payment_id || `failed_${Date.now()}`,
-          'failed',
-          'Razorpay',
-          couponCode
-        ).catch(() => {});
+      // 3. Try integrating the REAL Razorpay Checkout Overlay dynamically (Dual-Mode Overlay System)
+      try {
+        addNotification('Loading secure transactional interface...', 'info');
+        const scriptLoaded = await loadRazorpayScript();
+        if (scriptLoaded) {
+          const amountInPaise = finalAmount * 100;
+          let rzpOrderId: string | undefined = undefined;
+          let razorpayKey = 'rzp_live_T1nYz3RnnW4F0o'; // User provided gateway key for Luxemarket/BSP Suryatech
 
-        setFailureErrorMessage(reason);
-        setCheckoutLoading(false);
-        handleNavigatePage('payment-failure');
-        addNotification(`Payment failed: ${reason}`, 'error');
-      });
+          try {
+            const orderResponse = await createRazorpayOrder(amountInPaise);
+            if (orderResponse && (orderResponse.id || orderResponse.order_id)) {
+              rzpOrderId = orderResponse.id || orderResponse.order_id;
+              razorpayKey = orderResponse.key || orderResponse.key_id || razorpayKey;
+              console.log('[RAZORPAY SUCCESS] Backend pre-checkout order initiated:', rzpOrderId);
+            }
+          } catch (fetchErr: any) {
+            console.warn('[RAZORPAY FALLBACK] Backend order pre-creation failed. Launching Razorpay direct checkout mode: ', fetchErr.message || fetchErr);
+          }
 
-      rzp.open();
-      // Remove overlay spinner while the user interacts with the payment dialog iframe
-      setCheckoutLoading(false);
+          addNotification(rzpOrderId ? 'Payment order generated. Opening secure overlay...' : 'Opening secure payment overlay...', 'success');
+          
+          const options: any = {
+            key: razorpayKey,
+            amount: amountInPaise,
+            currency: 'INR',
+            name: 'LUXEMARKET',
+            description: 'Order Payment',
+            prefill: {
+              name: currentUser.name || currentUser.username || '',
+              email: currentUser.email || '',
+              contact: extraBillingDetails?.customerMobile || '',
+            },
+            theme: {
+              color: '#3b82f6',
+            },
+            handler: async (response: any) => {
+              console.log('[RAZORPAY DIRECT SUCCESS]', response);
+              addNotification('Payment received! Instantly activating your license...', 'success');
+              
+              try {
+                // Re-fetch current user:
+                const { data: authData } = await supabase.auth.getUser();
+                const freshUser = authData?.user;
+                if (!freshUser) {
+                  throw new Error('Authenticated user profile was not found.');
+                }
+
+                const updatedUser = {
+                  id: freshUser.id,
+                  email: freshUser.email,
+                  name: freshUser.user_metadata?.full_name || freshUser.user_metadata?.name || freshUser.email?.split('@')[0],
+                  role: 'customer'
+                };
+                setUser(updatedUser);
+
+                // Call direct serverless order validation helper to insert order and license directly:
+                await verifyOrderInDatabase(
+                  generatedOrderId,
+                  productId,
+                  resolvedName,
+                  finalAmount,
+                  response.razorpay_payment_id || response.razorpay_order_id || 'manual',
+                  'success',
+                  'Razorpay Online Payment',
+                  couponCode,
+                  updatedUser
+                );
+                
+                addNotification('License instantly approved & generated! Look below.', 'success');
+                setPortalInitialView('licenses');
+                handleNavigatePage('portal');
+              } catch (apiErr: any) {
+                console.error('[INSTANT VERIFY API ERROR]', apiErr);
+                addNotification('Payment captured, but transaction registration failed: ' + apiErr.message, 'error');
+                setPortalInitialView('orders');
+                handleNavigatePage('portal');
+              }
+              
+              setCheckoutLoading(false);
+              setIsRedirectingToRazorpay(false);
+            },
+            modal: {
+              ondismiss: () => {
+                console.log('[RAZORPAY DISMISSED BY USER]');
+                addNotification('Checkout cancelled by user.', 'info');
+                setCheckoutLoading(false);
+                setIsRedirectingToRazorpay(false);
+              }
+            }
+          };
+
+          // If standard backend pre-order succeeded, pass 'order_id'
+          if (rzpOrderId) {
+            options.order_id = rzpOrderId;
+          }
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.on('payment.failed', (resp: any) => {
+            console.error('[RAZORPAY FAILURE]', resp.error);
+            addNotification(`Payment unsuccessful: ${resp.error.description || 'Decline'}`, 'error');
+          });
+          rzp.open();
+          setCheckoutLoading(false);
+          return; // Successfully handled via Live Pop-up Overlay!
+        }
+      } catch (sdkError: any) {
+        console.warn('[RAZORPAY AUTOMATIC MODAL SYSTEM UNAVAILABLE - FALLBACK TRIGGERED]', sdkError);
+      }
+
+      // 4. Elegant Fallback to Hosted Custom Payment Link & Manual Activation Code Submission
+      addNotification('Instant popup unavailable. Redirecting to manual UPI/card secure receipt gateway...', 'success');
+      
+      // Mark as redirecting to render secure redirection layout helper inside modal
+      setIsRedirectingToRazorpay(true);
+
+      // Delay briefly so the notification can be read, then redirect securely
+      setTimeout(() => {
+        try {
+          window.location.href = 'https://razorpay.me/@bspsuryatech';
+        } catch (redirectErr) {
+          console.error('[REDIRECT FAILURE]', redirectErr);
+        }
+      }, 1200);
 
     } catch (e: any) {
-      console.error('[RAZORPAY INITIATION PROCESS EXCEPTION]', e);
+      console.error('[ACTIVATION REDIRECT ERROR]', e);
+      addNotification(e.message || 'Verification connection issues. Please try again.', 'error');
+      setIsRedirectingToRazorpay(false);
       setCheckoutLoading(false);
-      setFailureErrorMessage(e.message || 'Verification connection issues. Please try again.');
-      addNotification('Error initiating Razorpay transaction: ' + (e.message || 'network connection timeout'), 'error');
     }
   };
 
@@ -1109,15 +1182,92 @@ export default function App() {
               }}
             />
           )}
+
+          {currentPage === 'payment-verification' && (
+            <PaymentVerification 
+              user={user}
+              onPageChange={handleNavigatePage}
+              onAddNotification={addNotification}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
 
       {checkoutLoading && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in" id="full-page-instant-activation-loader">
-          <div className="flex flex-col items-center bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center space-y-4">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <h3 className="font-bold text-white text-lg font-sans tracking-tight">Activating License</h3>
-            <p className="text-xs text-slate-400 font-mono">Syncing database & generating license serial keys...</p>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md animate-fade-in" id="full-page-instant-activation-loader">
+          <div className="flex flex-col items-center bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl text-center space-y-6">
+            {isRedirectingToRazorpay ? (
+              <>
+                <div className="w-16 h-16 bg-blue-600/10 border border-blue-500/30 rounded-2xl flex items-center justify-center text-blue-400">
+                  <svg className="w-8 h-8 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="font-sans font-black text-white text-xl tracking-tight">Redirecting to Razorpay Secure Portal</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-sans max-w-sm mx-auto">
+                    We are initiating your secure license booking record. You will be redirected to complete payment with UPI, Card, Netbanking, or Wallet.
+                  </p>
+                </div>
+
+                {/* Secure Redirection Direct Fallback Link */}
+                <div className="w-full space-y-3">
+                  <a 
+                    href="https://razorpay.me/@bspsuryatech"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      addNotification('Opening Razorpay secure portal...', 'info');
+                    }}
+                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-mono text-xs font-black uppercase tracking-wider rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    <span>Proceed to Razorpay Link</span>
+                  </a>
+                  
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText('https://razorpay.me/@bspsuryatech');
+                      addNotification('URL copied. You can paste and pay on any browser tab!', 'success');
+                    }}
+                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-350 border border-slate-750 text-[10px] font-mono font-bold uppercase rounded-xl transition cursor-pointer"
+                  >
+                    🔗 Copy Payment Link URL
+                  </button>
+                </div>
+
+                <div className="w-full border-t border-slate-800/80 pt-4 flex flex-col gap-2 font-sans">
+                  <button 
+                    onClick={() => {
+                      setIsRedirectingToRazorpay(false);
+                      setCheckoutLoading(false);
+                      handleNavigatePage('portal');
+                    }}
+                    className="text-xs text-blue-400 hover:text-blue-300 font-extrabold hover:underline cursor-pointer"
+                  >
+                    I have completed my payment. Go to My Orders & Submit Proof
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsRedirectingToRazorpay(false);
+                      setCheckoutLoading(false);
+                    }}
+                    className="text-[10px] text-slate-500 hover:text-red-400 font-mono font-bold uppercase tracking-wider transition cursor-pointer"
+                  >
+                    ⚠️ Cancel Activation Redirection
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <h3 className="font-bold text-white text-lg font-sans tracking-tight">Booking Lifetime License</h3>
+                <p className="text-xs text-slate-400 font-mono">Preregistering secure system activation booking order...</p>
+              </>
+            )}
           </div>
         </div>
       )}

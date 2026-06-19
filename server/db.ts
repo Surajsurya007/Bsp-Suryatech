@@ -144,7 +144,7 @@ const defaultProducts: Product[] = [
     name: 'BSP Suryatech Retail Billing Pro',
     version: 'v4.2.1',
     size: '14.8 MB',
-    price: 1999,
+    price: 3000,
     originalPrice: 6999,
     features: [
       'Retail & Wholesale Billing',
@@ -180,7 +180,7 @@ const defaultProducts: Product[] = [
     name: 'BSP Suryatech GST Enterprise Suite',
     version: 'v5.0.3',
     size: '22.4 MB',
-    price: 1999,
+    price: 3000,
     originalPrice: 6999,
     features: [
       'All features of Retail Billing Pro',
@@ -354,7 +354,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'BESTSELLER FOR SHOPS',
     description: 'Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.',
-    price: 'INR 1,999',
+    price: '₹3,000',
     features: ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State', 'Supplier & Client Ledgers'],
     icon: '🛍️',
     badge: 'Billing',
@@ -368,7 +368,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'COMPLETE POS PACK',
     description: 'High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.',
-    price: 'INR 1,999',
+    price: '₹3,000',
     features: ['High-Speed POS Checkout', 'Integrated Barcode Printing', 'Customer Loyalty Points', 'Multi-Terminal Syncing', 'Automatic Reorder Limits'],
     icon: '🏪',
     badge: 'Billing',
@@ -382,7 +382,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'FAST GROCERY STORE SPECIAL',
     description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
-    price: 'INR 1,999',
+    price: '₹3,000',
     features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
     icon: '🍎',
     badge: 'Billing',
@@ -396,7 +396,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'PHARMACY BATCH SPECIAL',
     description: 'Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.',
-    price: 'INR 1,999',
+    price: '₹3,000',
     features: ['Batch Code Expiry tracking', 'Drug License verification', 'Salt-wise generic lookup', 'Supplier Invoice Sync', 'Doctor referrals lists'],
     icon: '💊',
     badge: 'Billing',
@@ -410,7 +410,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'KITCHEN & HOTEL SPECIAL',
     description: 'Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.',
-    price: 'INR 1,999',
+    price: '₹3,000',
     features: ['Kitchen Order Tickets (KOT)', 'Table Mapping & Status', 'Recipe Ingredient Control', 'Split Bill Settlements', 'Waiter Android App link'],
     icon: '🍽️',
     badge: 'Billing',
@@ -424,7 +424,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'IMEI & SERIAL TRACKER',
     description: 'Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.',
-    price: 'INR 1,999',
+    price: '₹3,000',
     features: ['Unique IMEI/Serial logging', 'Dynamic Repairs Tracker', 'Warranty Status Records', 'Brand & Model Catalog', 'Customer AMC reminders'],
     icon: '📱',
     badge: 'Billing',
@@ -438,7 +438,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'APPLIANCE SPECIAL',
     description: 'Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.',
-    price: 'INR 1,999',
+    price: '₹3,000',
     features: ['Dual-Serial Code validation', 'Manufacturer Warranty link', 'Installations Scheduler', 'Commission Agent ledger', 'Multi-Godown Stock check'],
     icon: '📺',
     badge: 'Billing',
@@ -452,7 +452,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     category: 'Transport Software',
     subtitle: 'LOGISTICS & FLEET STANDARD',
     description: 'Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.',
-    price: 'INR 1,999',
+    price: '₹3,000',
     features: ['Fleet Management', 'Vehicle Tracking', 'Trip Sheet expense logs', 'Driver Commission accounts', 'Client & Consignee Ledgers'],
     icon: '🚚',
     badge: 'Transport',
@@ -465,7 +465,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Hospital & Clinic Software',
     category: 'Hospital Software',
     subtitle: 'HEALTHCARE INTEGRATED',
-    price: 'INR 1,999',
+    price: '₹3,000',
     icon: '🏥',
     badge: 'Hospital',
     badgeColor: 'red',
@@ -479,7 +479,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Diagnostic Lab Manager',
     category: 'Hospital Software',
     subtitle: 'PATHOLOGY LABORATORY',
-    price: 'INR 1,999',
+    price: '₹3,000',
     icon: '🔬',
     badge: 'Hospital',
     badgeColor: 'red',
@@ -493,7 +493,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'School ERP Management Suite',
     category: 'School Software',
     subtitle: 'ACADEMIC INSTITUTIONS',
-    price: 'INR 1,999',
+    price: '₹3,000',
     icon: '🏫',
     badge: 'School',
     badgeColor: 'indigo',
@@ -507,7 +507,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Enterprise ERP Suite',
     category: 'ERP Software',
     subtitle: 'SUPPLY CHAIN SUITE',
-    price: 'INR 1,999',
+    price: '₹3,000',
     icon: '🏭',
     badge: 'ERP',
     badgeColor: 'purple',
@@ -832,7 +832,8 @@ export const dbActions = {
   getOrders: () => db.orders,
   getOrdersByUser: (userId: string) => db.orders.filter(o => o.userId === userId),
   createOrder: (order: Omit<Order, 'id' | 'createdAt'>) => {
-    const id = 'ord-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    const seqNum = String(db.orders.length + 1).padStart(6, '0');
+    const id = `BSP-2026-${seqNum}`;
     const newOrder: Order = {
       ...order,
       id,
@@ -855,11 +856,8 @@ export const dbActions = {
   getLicenses: () => db.licenses,
   getLicensesByUser: (userId: string) => db.licenses.filter(l => l.userId === userId),
   createLicense: (userId: string, userEmail: string, orderId: string, productId: string, productName: string) => {
-    // Generate secure Indian format license code: BSPS-RETL-[RandomHex-XXXX-XXXX]
-    const segment1 = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const segment2 = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const segment3 = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const key = `BSPS-RETL-${segment1}-${segment2}-${segment3}-LIFE`;
+    const seqNum = String(db.licenses.length + 1).padStart(6, '0');
+    const key = `BSP-LIC-2026-${seqNum}`;
 
     const newKey: License = {
       id: 'lic-' + Math.random().toString(36).substr(2, 9),
