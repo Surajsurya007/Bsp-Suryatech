@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, SoftwareSolution } from '../src/types';
+import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, CouponRedemption, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, SoftwareSolution } from '../src/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
@@ -78,6 +78,7 @@ interface DatabaseSchema {
   downloads: DownloadInfo[];
   tickets: SupportTicket[];
   coupons: Coupon[];
+  couponRedemptions: CouponRedemption[];
   testimonials: Testimonial[];
   blogs: Blog[];
   reviews: Review[];
@@ -116,6 +117,7 @@ export let db: DatabaseSchema = {
   downloads: [],
   tickets: [],
   coupons: [],
+  couponRedemptions: [],
   testimonials: [],
   blogs: [],
   reviews: [],
@@ -212,9 +214,90 @@ const defaultProducts: Product[] = [
 ];
 
 const defaultCoupons: Coupon[] = [
-  { code: 'SURYA20', discountPercent: 20, active: true, expiresBy: '2027-12-31' },
-  { code: 'INDIA50', discountPercent: 50, active: true, expiresBy: '2026-12-31' },
-  { code: 'STARTUP10', discountPercent: 10, active: true, expiresBy: '2026-08-30' }
+  {
+    id: 'cp-surya001',
+    coupon_code: 'SURYA001',
+    coupon_name: 'Special ₹1.00 Override Promo',
+    description: 'Forces total cart bill payable to exactly ₹1.00 regardless of original price.',
+    discount_type: 'fixed',
+    discount_value: 0,
+    max_discount: null,
+    min_order_value: 0,
+    valid_from: '2026-01-01',
+    valid_to: '2029-12-31',
+    usage_limit: 9999,
+    used_count: 0,
+    per_user_limit: 999,
+    status: 'active',
+    created_at: '2026-06-20T12:00:00Z',
+    code: 'SURYA001',
+    discountPercent: 100,
+    active: true,
+    expiresBy: '2029-12-31'
+  },
+  {
+    id: 'cp-1',
+    coupon_code: 'SURYA20',
+    coupon_name: 'Surya Holiday Special',
+    description: 'Get an instant 20% discount on all software licenses.',
+    discount_type: 'percentage',
+    discount_value: 20,
+    max_discount: 1000,
+    min_order_value: 499,
+    valid_from: '2026-01-01',
+    valid_to: '2027-12-31',
+    usage_limit: 100,
+    used_count: 0,
+    per_user_limit: 1,
+    status: 'active',
+    created_at: '2026-01-01T12:00:00Z',
+    code: 'SURYA20',
+    discountPercent: 20,
+    active: true,
+    expiresBy: '2027-12-31'
+  },
+  {
+    id: 'cp-2',
+    coupon_code: 'INDIA50',
+    coupon_name: 'India Independence Celebration',
+    description: 'Special 50% discount on Enterprise and Retail versions.',
+    discount_type: 'percentage',
+    discount_value: 50,
+    max_discount: 5000,
+    min_order_value: 2000,
+    valid_from: '2026-01-01',
+    valid_to: '2026-12-31',
+    usage_limit: 500,
+    used_count: 0,
+    per_user_limit: 2,
+    status: 'active',
+    created_at: '2026-01-01T12:00:00Z',
+    code: 'INDIA50',
+    discountPercent: 50,
+    active: true,
+    expiresBy: '2026-12-31'
+  },
+  {
+    id: 'cp-3',
+    coupon_code: 'STARTUP10',
+    coupon_name: 'Small Business Incentive Program',
+    description: '10% discount to empower local Indian software setups.',
+    discount_type: 'percentage',
+    discount_value: 10,
+    max_discount: 300,
+    min_order_value: 100,
+    valid_from: '2026-01-01',
+    valid_to: '2026-08-30',
+    usage_limit: 1000,
+    used_count: 0,
+    per_user_limit: 5,
+    status: 'active',
+    created_at: '2026-01-01T12:00:00Z',
+    code: 'STARTUP10',
+    discountPercent: 10,
+    active: true,
+    expiresBy: '2026-08-30'
+  }
 ];
 
 const defaultTestimonials: Testimonial[] = [
@@ -531,6 +614,37 @@ export function initDB() {
       // Ensure seed lists exist if structural updates occurred
       if (!db.products || db.products.length === 0) db.products = defaultProducts;
       if (!db.coupons || db.coupons.length === 0) db.coupons = defaultCoupons;
+      if (!db.couponRedemptions) db.couponRedemptions = [];
+
+      // Map loaded coupons to rich form if any legacy entries are found
+      db.coupons = db.coupons.map(c => {
+        if (!c.coupon_code) {
+          const mainCode = c.code || 'COUPON';
+          return {
+            ...c,
+            id: c.id || `cp-${Math.random().toString(36).substr(2, 9)}`,
+            coupon_code: mainCode,
+            coupon_name: c.coupon_name || `${mainCode} Promo`,
+            description: c.description || 'Promo discount code',
+            discount_type: 'percentage',
+            discount_value: c.discountPercent || 10,
+            max_discount: 1000,
+            min_order_value: 0,
+            valid_from: '2026-01-01',
+            valid_to: c.expiresBy || '2027-12-31',
+            usage_limit: 1000,
+            used_count: c.used_count || 0,
+            per_user_limit: 1,
+            status: c.active ? 'active' : 'disabled',
+            created_at: c.created_at || new Date().toISOString(),
+            code: mainCode,
+            discountPercent: c.discountPercent || 10,
+            active: c.active === undefined ? true : c.active,
+            expiresBy: c.expiresBy || '2027-12-31'
+          };
+        }
+        return c;
+      });
       if (!db.testimonials || db.testimonials.length === 0) db.testimonials = defaultTestimonials;
       if (!db.blogs || db.blogs.length === 0) db.blogs = defaultBlogs;
       if (!db.downloads || db.downloads.length === 0) db.downloads = defaultDownloads;
@@ -586,6 +700,7 @@ function seedDB() {
     downloads: defaultDownloads,
     tickets: [],
     coupons: defaultCoupons,
+    couponRedemptions: [],
     testimonials: defaultTestimonials,
     blogs: defaultBlogs,
     reviews: defaultReviews,
@@ -687,9 +802,9 @@ function seedDB() {
     businessName: 'Surya Enterprises POS Solutions',
     contactNumber: '9988776655',
     emailAddress: 'test@gmail.com',
-    businessAddress: 'Sector 62, Noida POS Terminal Block B',
-    city: 'Noida',
-    state: 'Uttar Pradesh',
+    businessAddress: 'Sector 62, Raipur POS Terminal Block B',
+    city: 'Raipur',
+    state: 'Chhattisgarh',
     pincode: '201301',
     gstNumber: '09AAACS1234A1Z5',
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
@@ -846,7 +961,38 @@ export const dbActions = {
   updateOrder: (id: string, updates: Partial<Order>) => {
     const idx = db.orders.findIndex(o => o.id === id);
     if (idx > -1) {
-      db.orders[idx] = { ...db.orders[idx], ...updates };
+      const order = db.orders[idx];
+      const previousStatus = order.status;
+      const targetStatus = updates.status || previousStatus;
+
+      // If transition is moving to a successful payment confirmed state
+      const wasSucc = previousStatus === 'success' || previousStatus === 'Verified' || previousStatus === 'License Activated';
+      const isNowSucc = targetStatus === 'success' || targetStatus === 'Verified' || targetStatus === 'License Activated';
+
+      if (!wasSucc && isNowSucc && order.couponCode) {
+        const couponCode = order.couponCode;
+        const cp = db.coupons.find(c => (c.coupon_code && c.coupon_code.toUpperCase() === couponCode.toUpperCase()) || (c.code && c.code.toUpperCase() === couponCode.toUpperCase()));
+        if (cp) {
+          if (!db.couponRedemptions) db.couponRedemptions = [];
+          const exists = db.couponRedemptions.some(r => r.order_id === order.id);
+          if (!exists) {
+            const discountAmt = Math.max(0, Math.round(order.amount)); // order.amount already has the discount factored
+            const newRedemption: CouponRedemption = {
+              id: 'cr-' + Math.random().toString(36).substr(2, 9),
+              coupon_id: cp.id || cp.coupon_code || couponCode,
+              user_id: order.userId,
+              order_id: order.id,
+              discount_amount: discountAmt,
+              redeemed_at: new Date().toISOString()
+            };
+            db.couponRedemptions.push(newRedemption);
+            cp.used_count = (cp.used_count || 0) + 1;
+            console.log(`[COUPON REDEMPTION AUTOMATED] Coupon ${couponCode} consumed for verified payment of Order ${order.id}. New count: ${cp.used_count}`);
+          }
+        }
+      }
+
+      db.orders[idx] = { ...order, ...updates };
       saveDB();
       return db.orders[idx];
     }
@@ -952,23 +1098,98 @@ export const dbActions = {
   },
 
   getCoupons: () => db.coupons,
-  getCouponByCode: (code: string) => db.coupons.find(c => c.code.toUpperCase() === code.toUpperCase() && c.active),
+  getCouponByCode: (code: string) => {
+    return db.coupons.find(c => {
+      const matchNew = c.coupon_code && c.coupon_code.toUpperCase() === code.toUpperCase();
+      const matchOld = c.code && c.code.toUpperCase() === code.toUpperCase();
+      return matchNew || matchOld;
+    });
+  },
   createCoupon: (coupon: Coupon) => {
-    db.coupons.push(coupon);
+    const fresh: Coupon = {
+      ...coupon,
+      id: coupon.id || 'cp-' + Math.random().toString(36).substr(2, 9),
+      created_at: coupon.created_at || new Date().toISOString(),
+      // Keep legacy support sync:
+      code: coupon.coupon_code || coupon.code,
+      discountPercent: coupon.discount_type === 'percentage' ? coupon.discount_value : 10,
+      active: coupon.status === 'active',
+      expiresBy: coupon.valid_to || '2027-12-31'
+    };
+    db.coupons.push(fresh);
     saveDB();
-    return coupon;
+    return fresh;
+  },
+  updateCoupon: (id: string, couponData: Partial<Coupon>) => {
+    const idx = db.coupons.findIndex(c => c.id === id || c.coupon_code === id || c.code === id);
+    if (idx !== -1) {
+      const existing = db.coupons[idx];
+      const updated = {
+        ...existing,
+        ...couponData,
+        // Make sure legacy values are synchronized
+        code: couponData.coupon_code || existing.coupon_code || existing.code,
+        discountPercent: (couponData.discount_type || existing.discount_type) === 'percentage' 
+          ? (couponData.discount_value || existing.discount_value) 
+          : 10,
+        active: (couponData.status || existing.status) === 'active',
+        expiresBy: couponData.valid_to || existing.valid_to || '2027-12-31'
+      };
+      db.coupons[idx] = updated;
+      saveDB();
+      return updated;
+    }
+    return null;
   },
   toggleCouponActive: (code: string) => {
-    const cp = db.coupons.find(c => c.code.toUpperCase() === code.toUpperCase());
+    const cp = db.coupons.find(c => {
+      const cId = c.id && c.id === code;
+      const cCode = c.coupon_code && c.coupon_code.toUpperCase() === code.toUpperCase();
+      const legacyCode = c.code && c.code.toUpperCase() === code.toUpperCase();
+      return cId || cCode || legacyCode;
+    });
+
     if (cp) {
-      cp.active = !cp.active;
+      if (cp.status === 'active') {
+        cp.status = 'disabled';
+        cp.active = false;
+      } else {
+        cp.status = 'active';
+        cp.active = true;
+      }
       saveDB();
     }
     return cp;
   },
   deleteCoupon: (code: string) => {
-    db.coupons = db.coupons.filter(c => c.code.toUpperCase() !== code.toUpperCase());
+    db.coupons = db.coupons.filter(c => {
+      const isIdMatch = c.id && c.id === code;
+      const isCodeMatch = c.coupon_code && c.coupon_code.toUpperCase() === code.toUpperCase();
+      const isLegacyMatch = c.code && c.code.toUpperCase() === code.toUpperCase();
+      return !(isIdMatch || isCodeMatch || isLegacyMatch);
+    });
     saveDB();
+  },
+  getCouponRedemptions: () => db.couponRedemptions || [],
+  createCouponRedemption: (red: Omit<CouponRedemption, 'id' | 'redeemed_at'>) => {
+    if (!db.couponRedemptions) {
+      db.couponRedemptions = [];
+    }
+    const fresh: CouponRedemption = {
+      ...red,
+      id: 'cr-' + Math.random().toString(36).substr(2, 9),
+      redeemed_at: new Date().toISOString()
+    };
+    db.couponRedemptions.push(fresh);
+    
+    // Increment used_count on the associated coupon
+    const cp = db.coupons.find(c => c.id === red.coupon_id || c.coupon_code === red.coupon_id);
+    if (cp) {
+      cp.used_count = (cp.used_count || 0) + 1;
+    }
+    
+    saveDB();
+    return fresh;
   },
 
   getTestimonials: () => db.testimonials,

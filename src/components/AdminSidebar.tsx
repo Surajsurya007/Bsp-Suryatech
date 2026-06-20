@@ -31,12 +31,15 @@ export const AdminSidebar: React.FC = () => {
     setActiveModule, 
     sidebarCollapsed, 
     setSidebarCollapsed,
-    adminRole
+    adminRole,
+    adminContactMessages
   } = useAdmin();
   const { canAccessModule } = usePermission();
   const [filterQuery, setFilterQuery] = useState('');
 
-  // Declare 17 modules clearly with names, descriptions and iconic representations
+  const newMessagesCount = adminContactMessages ? adminContactMessages.filter((msg: any) => msg.status === 'New').length : 0;
+
+  // Declare 18 modules clearly with names, descriptions and iconic representations
   const modulesList = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, category: 'Main', desc: 'Overview performance registers' },
     { id: 'customers', name: 'Customer Manager', icon: Users, category: 'CRM', desc: 'Edit corporate entities database' },
@@ -48,13 +51,15 @@ export const AdminSidebar: React.FC = () => {
     { id: 'email-system', name: 'Email System', icon: Mail, category: 'System', desc: 'SMTP servers & notification dispatch' },
     { id: 'invoices', name: 'GST Invoices', icon: FileSpreadsheet, category: 'Finance', desc: 'CGST / SGST breakdown tax billing' },
     { id: 'tickets', name: 'Support Tickets', icon: Ticket, category: 'CRM', desc: 'Helpdesk ticketing server logs' },
+    { id: 'contact-messages', name: 'Contact Messages', icon: Mail, category: 'CRM', desc: 'Inbox of customer inquiries' },
     { id: 'reports', name: 'Financial Reports', icon: BarChart3, category: 'Finance', desc: 'Download quarterly GST ledgers' },
     { id: 'notifications', name: 'Internal Alerts', icon: Bell, category: 'System', desc: 'Telemetry dashboard announcements' },
     { id: 'roles-permissions', name: 'Roles & RBAC', icon: ShieldAlert, category: 'Security', desc: 'Grant granular privileges' },
     { id: 'authentication', name: 'Auth Registry', icon: Key, category: 'Security', desc: 'Brute force & session metadata' },
     { id: 'database-manager', name: 'Database Manager', icon: Database, category: 'Security', desc: 'Raw SQL schema browser console' },
     { id: 'settings', name: 'Settings Hub', icon: Settings, category: 'System', desc: 'Define backup & company address' },
-    { id: 'gst-ledger', name: 'GST Ledger Control', icon: Percent, category: 'Finance', desc: 'Configure HSN 998314 registry' }
+    { id: 'gst-ledger', name: 'GST Ledger Control', icon: Percent, category: 'Finance', desc: 'Configure HSN 998314 registry' },
+    { id: 'coupons', name: 'Coupon Manager', icon: Percent, category: 'Finance', desc: 'Manage promotional discounts & coupon campaigns' }
   ];
 
   const filteredModules = modulesList.filter(m => 
@@ -110,9 +115,12 @@ export const AdminSidebar: React.FC = () => {
                   }`}
                 >
                   <Icon size={18} />
+                  {m.id === 'contact-messages' && newMessagesCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-600 rounded-full animate-pulse border border-slate-900" />
+                  )}
                   {/* Tooltip on right hover */}
                   <span className="absolute left-12 top-2 scale-0 group-hover:scale-100 px-2 py-1 bg-slate-950 border border-slate-800 text-white text-[10px] rounded shadow-lg whitespace-nowrap z-50 font-black font-mono transition-all">
-                    {m.name} {!allowed && '🔒'}
+                    {m.name} {!allowed && '🔒'} {m.id === 'contact-messages' && newMessagesCount > 0 && `(${newMessagesCount} New)`}
                   </span>
                 </button>
               );
@@ -146,9 +154,14 @@ export const AdminSidebar: React.FC = () => {
                               : 'hover:bg-slate-800 hover:text-slate-100 border-transparent text-slate-400'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <Icon size={15} className="shrink-0" />
                           <span className="truncate">{m.name}</span>
+                          {m.id === 'contact-messages' && newMessagesCount > 0 && (
+                            <span className="ml-[3px] px-1.5 py-0.2 bg-red-600 text-[8px] font-black font-mono text-white rounded-full shrink-0" title={`${newMessagesCount} new unread inquiries`}>
+                              {newMessagesCount}
+                            </span>
+                          )}
                         </div>
                         {!allowed && <span className="text-[9px]">🔒</span>}
                       </button>

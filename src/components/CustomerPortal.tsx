@@ -42,6 +42,26 @@ import {
 } from 'lucide-react';
 import { useAdmin } from './AdminContext';
 
+const deserializeTicketDescription = (desc: string) => {
+  if (desc && desc.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(desc);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          text: parsed.text || desc,
+          priority: parsed.priority || 'medium',
+          attachments: parsed.attachments || []
+        };
+      }
+    } catch {}
+  }
+  return {
+    text: desc || '',
+    priority: 'medium',
+    attachments: []
+  };
+};
+
 interface CustomerPortalProps {
   user: any;
   onLoginSuccess: (token: string, user: any) => void;
@@ -241,6 +261,25 @@ export default function CustomerPortal({
   const [ticketDescription, setTicketDescription] = useState('');
   const [ticketCategory, setTicketCategory] = useState<'License Issue' | 'Billing & Invoice' | 'Technical Bug' | 'Feature Request' | 'Other'>('License Issue');
   const [ticketSubmitting, setTicketSubmitting] = useState(false);
+  const [ticketPriority, setTicketPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [ticketAttachment, setTicketAttachment] = useState<string>('');
+  const [ticketAttachmentName, setTicketAttachmentName] = useState<string>('');
+
+  const handleTicketAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      onAddNotification('File size exceeds the 8MB limit. Please upload a smaller file.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setTicketAttachment(reader.result as string);
+      setTicketAttachmentName(file.name);
+      onAddNotification('File attached successfully!', 'success');
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Active Chat ticket detail
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
@@ -949,13 +988,19 @@ export default function CustomerPortal({
     console.log("CustomerPortal: Creating support ticket directly in Supabase...");
     try {
       const ticketId = 'tic_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      const serializedDescription = JSON.stringify({
+        text: ticketDescription,
+        priority: ticketPriority,
+        attachments: ticketAttachment ? [{ name: ticketAttachmentName || 'screenshot.png', data: ticketAttachment }] : []
+      });
+      
       const { error: sbWriteErr } = await supabase.from('support_tickets').insert({
         id: ticketId,
         user_id: user.id,
         user_email: user.email,
         user_name: user.name || user.email.split('@')[0],
         title: ticketTitle,
-        description: ticketDescription,
+        description: serializedDescription,
         category: ticketCategory,
         status: 'open',
         created_at: new Date().toISOString(),
@@ -969,6 +1014,9 @@ export default function CustomerPortal({
       onAddNotification('Support ticket opened successfully!', 'success');
       setTicketTitle('');
       setTicketDescription('');
+      setTicketPriority('medium');
+      setTicketAttachment('');
+      setTicketAttachmentName('');
       setActivePortalView('tickets');
       await fetchCustomerData();
     } catch (err: any) {
@@ -1037,7 +1085,29 @@ export default function CustomerPortal({
     setTimeout(() => setCopiedKeyId(null), 3000);
   };
 
-  const getActiveTicket = () => tickets.find(t => t.id === activeTicketId);
+  const getActiveTicket = () => {
+    const tk = tickets.find(t => t.id === activeTicketId);
+    if (!tk) return null;
+    const unpacked = deserializeTicketDescription(tk.description);
+    
+    let parsedReplies: any[] = [];
+    if (tk.replies) {
+      try {
+        parsedReplies = typeof tk.replies === 'string' ? JSON.parse(tk.replies) : tk.replies;
+      } catch {
+        parsedReplies = [];
+      }
+    }
+    const publicReplies = parsedReplies.filter((r: any) => !r.isInternal && !r.isInternalNote);
+    
+    return {
+      ...tk,
+      description: unpacked.text,
+      priority: unpacked.priority || 'medium',
+      attachments: unpacked.attachments || [],
+      replies: publicReplies
+    };
+  };
 
   // --- RENDERING GATEWAY AUTHENTICATION IF NOT SIGNED IN ---
   if (!user) {
@@ -3805,7 +3875,7 @@ export default function CustomerPortal({
                 <div className="border-b border-slate-200 pb-4 flex items-center justify-between gap-4 justify-between">
                   <div>
                     <h2 className="text-2xl font-black text-slate-900 leading-none">Support Tickets Workspace</h2>
-                    <p className="text-xs text-slate-400 mt-1.5 font-medium">Create hardware tickets queries or communicate live with Noida desk.</p>
+                    <p className="text-xs text-slate-400 mt-1.5 font-medium">Create hardware tickets queries or communicate live with Raipur desk.</p>
                   </div>
                   <button
                     onClick={() => setActivePortalView('new-ticket')}
@@ -3877,17 +3947,46 @@ export default function CustomerPortal({
                                {/* Chat Header info */}
                                <div className="border-b border-slate-100 pb-4">
                                  <div className="flex justify-between items-center mb-2">
-                                   <span className="text-[10px] text-slate-400 font-mono font-bold uppercase tracking-wide">Category: {activeTk.category}</span>
+                                   <div className="flex items-center gap-2">
+                                     <span className="text-[10px] text-slate-400 font-mono font-bold uppercase tracking-wide">Category: {activeTk.category}</span>
+                                     <span className={`px-2 py-0.5 rounded font-black text-[9.5px] font-mono uppercase ${
+                                       activeTk.priority === 'urgent' ? 'bg-red-50 text-red-600 border border-red-100' :
+                                       activeTk.priority === 'high' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
+                                       activeTk.priority === 'medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                                       'bg-slate-50 text-slate-600 border border-slate-200'
+                                     }`}>
+                                       {activeTk.priority} Priority
+                                     </span>
+                                   </div>
                                    <span className="text-xs text-slate-450 font-medium font-mono">{new Date(activeTk.createdAt).toLocaleString()}</span>
                                  </div>
                                  <h4 className="font-black text-slate-800 text-base leading-snug">{activeTk.title}</h4>
-                                 <p className="text-slate-600 text-xs mt-2 bg-slate-50 border p-3.5 rounded-xl leading-normal italic">{activeTk.description}</p>
+                                 <p className="text-slate-600 text-xs mt-2 bg-slate-50 border p-3.5 rounded-xl leading-normal italic whitespace-pre-wrap">{activeTk.description}</p>
+                                 
+                                 {activeTk.attachments && activeTk.attachments.length > 0 && (
+                                   <div className="mt-3">
+                                     <span className="text-[9px] font-bold font-mono text-slate-450 block uppercase tracking-wider mb-1.5">CLIENT ATTACHMENTS:</span>
+                                     <div className="flex flex-wrap gap-2">
+                                       {activeTk.attachments.map((file: any, fidx: number) => (
+                                         <a
+                                           key={fidx}
+                                           href={file.data}
+                                           download={file.name}
+                                           className="inline-flex items-center gap-1.5 bg-blue-50/50 hover:bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl text-blue-700 text-xs font-bold transition-all"
+                                         >
+                                           <FileText size={12} className="text-blue-500 shrink-0" />
+                                           <span className="max-w-[200px] truncate">{file.name}</span>
+                                         </a>
+                                       ))}
+                                     </div>
+                                   </div>
+                                 )}
                                </div>
 
                                {/* Chat message timeline listing */}
                                <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
                                  {activeTk.replies.length === 0 ? (
-                                   <span className="text-xs text-slate-400 text-center block py-10 font-medium">Waiting for technical support response from Noida desk...</span>
+                                   <span className="text-xs text-slate-400 text-center block py-10 font-medium">Waiting for technical support response from Raipur desk...</span>
                                  ) : (
                                    activeTk.replies.map((rep: any) => {
                                      const isAdmin = rep.authorRole === 'admin';
@@ -3990,6 +4089,53 @@ export default function CustomerPortal({
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Incident Priority</label>
+                      <select
+                        value={ticketPriority}
+                        onChange={(e) => setTicketPriority(e.target.value as any)}
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
+                      >
+                        <option value="low">Low - Routine Question</option>
+                        <option value="medium">Medium - Standard Operational issue</option>
+                        <option value="high">High - Software bug obstructing business</option>
+                        <option value="urgent">Urgent - Workstation / Billing is down</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Attachment (Optional Image/Screenshot)</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={handleTicketAttachmentChange}
+                          className="hidden"
+                          id="ticket-attachment-upload"
+                        />
+                        <label
+                          htmlFor="ticket-attachment-upload"
+                          className="flex bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-3 rounded-xl text-xs text-slate-700 font-bold tracking-tight transition-colors cursor-pointer w-full text-center justify-center items-center gap-2"
+                        >
+                          <Upload size={14} className="text-slate-500 shrink-0" />
+                          <span className="truncate">{ticketAttachmentName || 'Choose Screenshot / Image'}</span>
+                        </label>
+                        {ticketAttachment && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTicketAttachment('');
+                              setTicketAttachmentName('');
+                            }}
+                            className="bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-3 rounded-xl text-red-600 hover:text-red-750 text-xs font-bold cursor-pointer shrink-0"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-600 font-mono tracking-wider uppercase block">Problem Description *</label>
                     <textarea
@@ -4058,7 +4204,7 @@ export default function CustomerPortal({
                 <div className="space-y-1">
                   <span className="text-xs font-extrabold text-blue-600 block uppercase tracking-widest font-mono">BSP Suryatech Solutions</span>
                   <p className="text-xl font-black text-slate-900 tracking-tight">TAX INVOICE / RECEIPTS</p>
-                  <span className="text-[10px] text-slate-450 block font-mono">BSP-SURYATECH Noida Sector 62, Pos Terminal Block-B</span>
+                  <span className="text-[10px] text-slate-450 block font-mono">BSP-SURYATECH Raipur Sector 62, Pos Terminal Block-B</span>
                 </div>
                 <div className="sm:text-right space-y-0.5">
                   <span className="text-xs uppercase font-bold text-slate-450 block font-mono">Invoice Number</span>
@@ -4119,7 +4265,7 @@ export default function CustomerPortal({
 
               {/* Invoicing footer guidance */}
               <div className="text-center text-[10px] py-4 text-slate-400 leading-normal max-w-md mx-auto no-print">
-                <span className="font-semibold block text-slate-500">Subject to Noida Court Jurisdiction</span>
+                <span className="font-semibold block text-slate-500">Subject to Raipur Court Jurisdiction</span>
                 <p className="mt-1">This is a dynamic computer generated invoice. No physical signature is required. Delivered securely under BSP Suryatech Desktop-First software packages agreements.</p>
               </div>
 

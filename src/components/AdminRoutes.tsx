@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAdmin } from './AdminContext';
 import { usePermission } from './PermissionProvider';
+import AdminContactMessages from './AdminContactMessages';
 import { RoleGuard } from './RoleGuard';
 import { supabase } from '../supabaseClient';
 import { 
@@ -21,6 +22,7 @@ import {
   Search,
   Plus,
   Trash2,
+  Edit,
   CheckCircle2,
   XCircle,
   Copy,
@@ -38,9 +40,56 @@ interface AdminRoutesProps {
   onAddNotification: (text: string, type: 'success' | 'info' | 'error') => void;
 }
 
+const deserializeTicketDescription = (desc: string) => {
+  if (desc && desc.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(desc);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          text: parsed.text || desc,
+          priority: parsed.priority || 'medium',
+          attachments: parsed.attachments || []
+        };
+      }
+    } catch {}
+  }
+  return {
+    text: desc || '',
+    priority: 'medium',
+    attachments: []
+  };
+};
+
+const safeFormatDate = (dateStr: any) => {
+  if (!dateStr) return 'N/A';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+      return String(dateStr);
+    }
+    return d.toLocaleDateString();
+  } catch {
+    return String(dateStr);
+  }
+};
+
+const safeFormatTime = (dateStr: any) => {
+  if (!dateStr) return 'N/A';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+      return String(dateStr);
+    }
+    return d.toLocaleTimeString();
+  } catch {
+    return String(dateStr);
+  }
+};
+
 export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) => {
   const { 
     activeModule, 
+    setActiveModule,
     searchQuery,
     adminCustomers, 
     setAdminCustomers,
@@ -56,6 +105,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
     setAdminPayments,
     adminInvoices,
     setAdminInvoices,
+    adminContactMessages,
     adminSettings,
     updateAdminSettings,
     telemetryLogs,
@@ -70,6 +120,65 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [adminReplyText, setAdminReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [adminTicketTab, setAdminTicketTab] = useState<'reply' | 'internal'>('reply');
+
+  const getSelectedTicketDetails = () => {
+    if (!selectedTicket) return null;
+    const t = adminTickets.find(tk => tk.id === selectedTicket.id);
+    if (!t) {
+      const unpacked = deserializeTicketDescription(selectedTicket.description);
+      let parsedReplies: any[] = [];
+      if (selectedTicket.replies) {
+        if (Array.isArray(selectedTicket.replies)) {
+          parsedReplies = selectedTicket.replies;
+        } else if (typeof selectedTicket.replies === 'string') {
+          try {
+            parsedReplies = JSON.parse(selectedTicket.replies);
+          } catch {
+            parsedReplies = [];
+          }
+        }
+      }
+      return {
+        ...selectedTicket,
+        description: unpacked.text,
+        priority: unpacked.priority || 'medium',
+        attachments: unpacked.attachments || [],
+        replies: parsedReplies,
+        customerDetails: null
+      };
+    }
+    
+    const unpacked = deserializeTicketDescription(t.description);
+    
+    let parsedReplies: any[] = [];
+    if (t.replies) {
+      if (Array.isArray(t.replies)) {
+        parsedReplies = t.replies;
+      } else if (typeof t.replies === 'string') {
+        try {
+          parsedReplies = JSON.parse(t.replies);
+        } catch {
+          parsedReplies = [];
+        }
+      }
+    }
+
+    const clientEmail = t.user_email || t.userEmail || '';
+    const customer = adminCustomers.find((c: any) => 
+      (c.email_address && c.email_address.toLowerCase() === clientEmail.toLowerCase()) ||
+      (c.userId && c.userId === t.user_id)
+    );
+
+    return {
+      ...t,
+      description: unpacked.text,
+      priority: unpacked.priority || 'medium',
+      attachments: unpacked.attachments || [],
+      replies: parsedReplies,
+      customerDetails: customer || null
+    };
+  };
 
   // Forms states
   const [newCustomer, setNewCustomer] = useState({ client_name: '', business_name: '', email_address: '', contact_number: '', gst_number: '', state: '', city: '' });
@@ -87,6 +196,194 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
     { id: '2', name: 'BSP Suryatech GST Enterprise Suite', version: 'v2.1.0', size: '108.5 MB', changelog: 'Multi-device GST ledger compilation', status: 'Stable', downloadUrl: 'https://bspsuryatech.in/downloads/gst-setup.exe' }
   ]);
 
+  // --- MODULE 5-B: MASTER SOFTWARE CATALOG STATE ---
+  const [adminProducts, setAdminProducts] = useState<any[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [productForm, setProductForm] = useState({
+    id: '',
+    name: '',
+    version: 'v4.2.1',
+    size: '14.8 MB',
+    price: 999,
+    original_price: 2499,
+    features: '',
+    description: '',
+    download_url: '',
+    connected_plan: '',
+    category: 'Retail & POS Billing',
+    full_description: '',
+    system_requirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
+    license_info: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
+    demo_video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: '',
+    manual_url: '',
+    status: 'active'
+  });
+
+  const fetchAdminProducts = async () => {
+    setProductsLoading(true);
+    try {
+      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      if (error) {
+        console.error("Error fetching products:", error);
+      } else if (data) {
+        const parsed = data.map(item => ({
+          ...item,
+          price: item.price ? Number(item.price) : 0,
+          original_price: item.original_price ? Number(item.original_price) : 0,
+          features: typeof item.features === 'string' ? JSON.parse(item.features) : (Array.isArray(item.features) ? item.features : []),
+          gallery: typeof item.gallery === 'string' ? JSON.parse(item.gallery) : (Array.isArray(item.gallery) ? item.gallery : []),
+        }));
+        setAdminProducts(parsed);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productForm.id || !productForm.name) {
+      onAddNotification("Software Slug ID and Product Name are mandatory!", "error");
+      return;
+    }
+
+    try {
+      const idVal = productForm.id.trim();
+      const payload = {
+        id: idVal,
+        name: productForm.name.trim(),
+        version: productForm.version.trim(),
+        size: productForm.size.trim(),
+        price: Number(productForm.price),
+        original_price: productForm.original_price ? Number(productForm.original_price) : null,
+        description: productForm.description.trim(),
+        download_url: productForm.download_url.trim(),
+        connected_plan: productForm.connected_plan.trim() || idVal,
+        category: productForm.category.trim(),
+        full_description: productForm.full_description.trim(),
+        system_requirements: productForm.system_requirements.trim(),
+        license_info: productForm.license_info.trim(),
+        demo_video_url: productForm.demo_video_url.trim(),
+        manual_url: productForm.manual_url.trim() || null,
+        status: productForm.status,
+        features: productForm.features.split('\n').map(f => f.trim()).filter(Boolean),
+        gallery: productForm.gallery.split('\n').map(u => u.trim()).filter(Boolean)
+      };
+
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(payload)
+          .eq('id', editingProduct.id);
+
+        if (error) throw error;
+        onAddNotification(`Software product "${payload.name}" updated successfully!`, "success");
+        addTelemetryLog(`Edited software product: ${payload.id}`, 'success');
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .insert([payload]);
+
+        if (error) throw error;
+        onAddNotification(`New software "${payload.name}" created successfully!`, "success");
+        addTelemetryLog(`Created software product: ${payload.id}`, 'success');
+      }
+
+      setEditingProduct(null);
+      setIsAddingProduct(false);
+      resetProductForm();
+      fetchAdminProducts();
+
+      // Trigger automatic update events in frontend
+      window.dispatchEvent(new Event('products_updated'));
+    } catch (err: any) {
+      console.error("Error saving product:", err);
+      onAddNotification(`Failed to save software product: ${err.message || err}`, "error");
+    }
+  };
+
+  const handleEditProductClick = (prod: any) => {
+    setEditingProduct(prod);
+    setIsAddingProduct(false);
+    setProductForm({
+      id: prod.id,
+      name: prod.name,
+      version: prod.version || '',
+      size: prod.size || '',
+      price: prod.price || 0,
+      original_price: prod.original_price || 0,
+      features: Array.isArray(prod.features) ? prod.features.join('\n') : '',
+      description: prod.description || '',
+      download_url: prod.download_url || '',
+      connected_plan: prod.connected_plan || '',
+      category: prod.category || 'Retail & POS Billing',
+      full_description: prod.full_description || '',
+      system_requirements: prod.system_requirements || '',
+      license_info: prod.license_info || '',
+      demo_video_url: prod.demo_video_url || '',
+      gallery: Array.isArray(prod.gallery) ? prod.gallery.join('\n') : '',
+      manual_url: prod.manual_url || '',
+      status: prod.status || 'active'
+    });
+  };
+
+  const handleDeleteProduct = async (prodId: string) => {
+    if (!window.confirm("Are you absolutely sure you want to delete this software product? All details, pricing, downloads, and video reference links will be removed from the store page.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', prodId);
+
+      if (error) throw error;
+
+      onAddNotification(`Deleted software product ID: ${prodId}`, "success");
+      addTelemetryLog(`Deleted product from active catalog: ${prodId}`, 'warning');
+      fetchAdminProducts();
+      window.dispatchEvent(new Event('products_updated'));
+    } catch (err: any) {
+      console.error(err);
+      onAddNotification(`Failed to delete software: ${err.message || err}`, "error");
+    }
+  };
+
+  const resetProductForm = () => {
+    setProductForm({
+      id: '',
+      name: '',
+      version: 'v4.2.1',
+      size: '14.8 MB',
+      price: 999,
+      original_price: 2499,
+      features: '',
+      description: '',
+      download_url: '',
+      connected_plan: '',
+      category: 'Retail & POS Billing',
+      full_description: '',
+      system_requirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
+      license_info: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
+      demo_video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      gallery: '',
+      manual_url: '',
+      status: 'active'
+    });
+  };
+
+  useEffect(() => {
+    if (activeModule === 'software') {
+      fetchAdminProducts();
+    }
+  }, [activeModule]);
+
   // Module 8 email composer
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
@@ -102,6 +399,212 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
   const [sqlRunning, setSqlRunning] = useState(false);
 
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+
+  // --- DISCOUNT COUPON CAMPAIGNS STATE & IMPLEMENTATIONS ---
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [redemptions, setRedemptions] = useState<any[]>([]);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponSearch, setCouponSearch] = useState('');
+  const [couponFilterStatus, setCouponFilterStatus] = useState<'all' | 'active' | 'disabled' | 'expired'>('all');
+  const [couponFilterType, setCouponFilterType] = useState<'all' | 'percentage' | 'fixed'>('all');
+
+  const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<any | null>(null);
+
+  const [formCouponName, setFormCouponName] = useState('');
+  const [formCouponCode, setFormCouponCode] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formDiscountType, setFormDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [formDiscountValue, setFormDiscountValue] = useState(10);
+  const [formMaxDiscount, setFormMaxDiscount] = useState<number | undefined>(undefined);
+  const [formValidFrom, setFormValidFrom] = useState('');
+  const [formValidTo, setFormValidTo] = useState('');
+  const [formUsageLimit, setFormUsageLimit] = useState<number | undefined>(undefined);
+  const [formPerUserLimit, setFormPerUserLimit] = useState<number | undefined>(undefined);
+  const [formMinOrderValue, setFormMinOrderValue] = useState<number | undefined>(undefined);
+  const [formApplicability, setFormApplicability] = useState<string>('all');
+
+  const loadCouponsCampaigns = async () => {
+    setCouponLoading(true);
+    try {
+      const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+
+      const resC = await fetch('/api/admin/coupons', { headers });
+      if (resC.ok) {
+        const cData = await resC.ok ? await resC.json() : [];
+        setCoupons(cData);
+      }
+
+      const resR = await fetch('/api/admin/coupon-redemptions', { headers });
+      if (resR.ok) {
+        const rData = await resR.ok ? await resR.json() : [];
+        setRedemptions(rData);
+      }
+    } catch (err: any) {
+      console.error("Coupons loader failed:", err);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeModule === 'coupons') {
+      loadCouponsCampaigns();
+    }
+  }, [activeModule]);
+
+  const openCouponModal = (couponToEdit?: any, isDuplicate: boolean = false) => {
+    if (couponToEdit) {
+      setEditingCoupon(isDuplicate ? null : couponToEdit);
+      setFormCouponName(couponToEdit.coupon_name || couponToEdit.name || '');
+      setFormCouponCode(isDuplicate ? `${couponToEdit.coupon_code || couponToEdit.code || ''}_COPY` : (couponToEdit.coupon_code || couponToEdit.code || ''));
+      setFormDescription(couponToEdit.description || '');
+      setFormDiscountType(couponToEdit.discount_type || 'percentage');
+      setFormDiscountValue(couponToEdit.discount_value || couponToEdit.discountPercent || 10);
+      setFormMaxDiscount(couponToEdit.max_discount || undefined);
+      setFormValidFrom(couponToEdit.valid_from || '');
+      setFormValidTo(couponToEdit.valid_to || '');
+      setFormUsageLimit(couponToEdit.usage_limit || undefined);
+      setFormPerUserLimit(couponToEdit.per_user_limit || undefined);
+      setFormMinOrderValue(couponToEdit.min_order_value || undefined);
+      setFormApplicability(couponToEdit.applicability || 'all');
+    } else {
+      setEditingCoupon(null);
+      setFormCouponName('');
+      setFormCouponCode('');
+      setFormDescription('');
+      setFormDiscountType('percentage');
+      setFormDiscountValue(10);
+      setFormMaxDiscount(undefined);
+      setFormValidFrom(new Date().toISOString().split('T')[0]);
+      setFormValidTo('');
+      setFormUsageLimit(undefined);
+      setFormPerUserLimit(1);
+      setFormMinOrderValue(undefined);
+      setFormApplicability('all');
+    }
+    setIsCouponModalOpen(true);
+  };
+
+  const generateRandomCouponCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = 'BSP';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setFormCouponCode(code);
+  };
+
+  const handleSaveCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formCouponCode.trim()) {
+      onAddNotification('Coupon Campaign Code is required.', 'error');
+      return;
+    }
+
+    const payload = {
+      coupon_name: formCouponName.trim() || `Campaign ${formCouponCode}`,
+      coupon_code: formCouponCode.trim().toUpperCase(),
+      description: formDescription.trim(),
+      discount_type: formDiscountType,
+      discount_value: Number(formDiscountValue) || 0,
+      max_discount: formMaxDiscount ? Number(formMaxDiscount) : null,
+      valid_from: formValidFrom || null,
+      valid_to: formValidTo || null,
+      usage_limit: formUsageLimit ? Number(formUsageLimit) : null,
+      per_user_limit: formPerUserLimit ? Number(formPerUserLimit) : null,
+      min_order_value: formMinOrderValue ? Number(formMinOrderValue) : null,
+      status: editingCoupon ? (editingCoupon.status || 'active') : 'active',
+      active: editingCoupon ? (editingCoupon.active !== false) : true,
+      applicability: formApplicability
+    };
+
+    try {
+      const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || '';
+      const headers = { 
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': `Bearer ${token}`
+      };
+
+      let res;
+      if (editingCoupon) {
+        res = await fetch(`/api/admin/coupons/${editingCoupon.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch('/api/admin/coupons', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      }
+
+      if (res.ok) {
+        onAddNotification(editingCoupon ? 'Coupon campaign details updated securely.' : 'New coupon campaign initialized.', 'success');
+        setIsCouponModalOpen(false);
+        loadCouponsCampaigns();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        onAddNotification(err.error || 'Failed to persist coupon campaign.', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      onAddNotification('Transient database communication error.', 'error');
+    }
+  };
+
+  const handleToggleCouponActive = async (cp: any) => {
+    const targetStatus = cp.status === 'active' ? 'disabled' : 'active';
+    try {
+      const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || '';
+      const res = await fetch(`/api/admin/coupons/${cp.id || cp.coupon_code}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          status: targetStatus,
+          active: targetStatus === 'active'
+        })
+      });
+
+      if (res.ok) {
+        onAddNotification(`Coupon ${cp.coupon_code || cp.code} status set to ${targetStatus}.`, 'success');
+        loadCouponsCampaigns();
+      } else {
+        onAddNotification('Failed to change status.', 'error');
+      }
+    } catch (err) {
+      onAddNotification('Transient communication error.', 'error');
+    }
+  };
+
+  const handleDeleteCoupon = async (id: string, code: string) => {
+    if (!window.confirm(`Are you absolutely sure you want to permanently delete coupon campaign: "${code}"?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('bsp_token') || localStorage.getItem('supabase_token') || '';
+      const res = await fetch(`/api/admin/coupons/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        onAddNotification(`Coupon campaign ${code} permanently terminated from registries.`, 'success');
+        loadCouponsCampaigns();
+      } else {
+        onAddNotification('Failed to delete coupon.', 'error');
+      }
+    } catch (err) {
+      onAddNotification('Transient communication error.', 'error');
+    }
+  };
 
   // Function to copy text helper
   const handleCopyText = (text: string, id: string) => {
@@ -284,31 +787,63 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
 
   // Module 10 replies ticket
   const handleSendTicketReply = async () => {
-    if (!adminReplyText) return;
+    if (!adminReplyText || !selectedTicket) return;
     setSubmittingReply(true);
     try {
+      const isInternal = adminTicketTab === 'internal';
       const replyObj = {
         id: `rep-${Date.now()}`,
-        authorName: 'BSP Support desk Office',
+        authorName: isInternal ? 'Admin (Internal Note)' : 'BSP Support desk Office',
         authorRole: 'admin',
         message: adminReplyText,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isInternal: isInternal
       };
 
-      const updatedReplies = [...(selectedTicket.replies || []), replyObj];
+      let currentReplies = [];
+      if (selectedTicket.replies) {
+        if (Array.isArray(selectedTicket.replies)) {
+          currentReplies = selectedTicket.replies;
+        } else if (typeof selectedTicket.replies === 'string') {
+          try {
+            currentReplies = JSON.parse(selectedTicket.replies);
+          } catch {
+            currentReplies = [];
+          }
+        }
+      }
+
+      const updatedReplies = [...currentReplies, replyObj];
       
       // Write locally
-      setAdminTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, replies: updatedReplies } : t));
+      setAdminTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, replies: JSON.stringify(updatedReplies) } : t));
       setSelectedTicket(prev => ({ ...prev, replies: updatedReplies }));
 
       // Write to supabase
       await supabase.from('support_tickets').update({
-        replies: updatedReplies
+        replies: JSON.stringify(updatedReplies)
       }).eq('id', selectedTicket.id);
 
-      addTelemetryLog(`Replied support desk ticket: "${selectedTicket.title}"`, 'success');
+      // Create notification only for public customer reply!
+      if (!isInternal) {
+        const clientUserId = selectedTicket.user_id || selectedTicket.userId;
+        if (clientUserId) {
+          const notificationRecord = {
+            id: 'notif_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+            user_id: clientUserId,
+            title: 'New Reply on Ticket: ' + selectedTicket.title,
+            message: `BSP Support Support Executive replied: "${adminReplyText.substring(0, 60)}${adminReplyText.length > 60 ? '...' : ''}"`,
+            type: 'security',
+            read: false,
+            created_at: new Date().toISOString()
+          };
+          await supabase.from('notifications').insert(notificationRecord);
+        }
+      }
+
+      addTelemetryLog(`${isInternal ? 'Added internal notes' : 'Replied support desk ticket'} on: "${selectedTicket.title}"`, 'success');
       setAdminReplyText('');
-      onAddNotification("Ticketing reply sent successfully.", "success");
+      onAddNotification(isInternal ? "Internal staff note saved." : "Ticketing response successfully dispatched to client stream.", "success");
     } catch (err: any) {
       onAddNotification(`Failed: ${err.message}`, "error");
     } finally {
@@ -316,18 +851,38 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
     }
   };
 
-  const handleCloseTicket = async (ticketId: string) => {
+  const handleUpdateTicketStatus = async (ticketId: string, newStatus: string) => {
     try {
-      setAdminTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 'resolved' } : t));
+      setAdminTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: newStatus } : t));
       if (selectedTicket && selectedTicket.id === ticketId) {
-        setSelectedTicket(prev => ({ ...prev, status: 'resolved' }));
+        setSelectedTicket(prev => ({ ...prev, status: newStatus }));
       }
-      await supabase.from('support_tickets').update({ status: 'resolved' }).eq('id', ticketId);
-      onAddNotification(`Support ticket resolved. Email trigger sent to lead source.`, "success");
-      addTelemetryLog(`Support ticket resolved: ID ${ticketId}`, 'success');
+      await supabase.from('support_tickets').update({ status: newStatus }).eq('id', ticketId);
+      
+      // Create notification for customer
+      const clientUserId = selectedTicket?.user_id || selectedTicket?.userId;
+      if (clientUserId && (newStatus === 'resolved' || newStatus === 'closed')) {
+        const notificationRecord = {
+          id: 'notif_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+          user_id: clientUserId,
+          title: `Ticket ID ${ticketId} status update`,
+          message: `Your Ticket: "${selectedTicket?.title}" was updated to ${newStatus.replace('_', ' ')} by technical helpdesk.`,
+          type: 'security',
+          read: false,
+          created_at: new Date().toISOString()
+        };
+        await supabase.from('notifications').insert(notificationRecord);
+      }
+
+      onAddNotification(`Support ticket status updated to ${newStatus.toUpperCase()}`, "success");
+      addTelemetryLog(`Ticket status updated: ID ${ticketId} to ${newStatus}`, 'info');
     } catch (e: any) {
       onAddNotification(e.message, "error");
     }
+  };
+
+  const handleCloseTicket = async (ticketId: string) => {
+    await handleUpdateTicketStatus(ticketId, 'resolved');
   };
 
   // Module 5 version release publisher
@@ -461,7 +1016,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
             </div>
 
             {/* Quick KPIs Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-white border p-4 rounded-2xl shadow-sm text-left">
                 <span className="text-[10px] font-bold text-slate-500 font-mono tracking-widest block uppercase">Quarterly Indian Revenue</span>
                 <div className="flex items-baseline gap-1.5 mt-2">
@@ -496,6 +1051,28 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                   <span className="text-[10.5px] font-mono text-red-600 font-bold bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded">SLA Desk</span>
                 </div>
                 <p className="text-[10px] text-slate-455 mt-2.5 font-mono">Avg ticket response time: 24m</p>
+              </div>
+
+              <div 
+                onClick={() => setActiveModule('contact-messages')}
+                className="bg-white border p-4 rounded-2xl shadow-sm text-left hover:border-red-650 transition-all cursor-pointer relative overflow-hidden group select-none hover:shadow-md"
+              >
+                {adminContactMessages && adminContactMessages.filter((m: any) => m.status === 'New').length > 0 && (
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-rose-600 rounded-full m-4.5 animate-pulse" />
+                )}
+                <span className="text-[10px] font-bold text-slate-500 font-mono tracking-widest block uppercase">Visitor Inquiry Inbox</span>
+                <div className="flex items-baseline gap-1 mt-2">
+                  <span className="text-2xl font-black text-slate-800 leading-none group-hover:text-red-750 transition-colors">
+                    {adminContactMessages ? adminContactMessages.filter((m: any) => m.status === 'New').length : 0} New
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-550 font-bold bg-slate-50 border px-1 py-0.5 rounded">
+                    {adminContactMessages ? adminContactMessages.length : 0} Inq
+                  </span>
+                </div>
+                <p className="text-[9.5px] text-slate-400 mt-3 font-mono flex items-center gap-1 group-hover:text-slate-850 transition-colors">
+                  <span>Open Inquiry Inbox</span>
+                  <span className="text-[8px] group-hover:translate-x-1 transition-transform inline-block font-black">→</span>
+                </p>
               </div>
             </div>
 
@@ -992,7 +1569,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
               <h4 className="text-xs font-black font-mono uppercase text-slate-500">Live Production Installer Builds</h4>
               <div className="space-y-2.5">
                 {softwareReleases.map((r, idx) => (
-                  <div key={r.id || idx} className="bg-slate-50 border p-3 rounded-xl flex items-start justify-between text-xs text-slate-800 font-mono">
+                   <div key={r.id || idx} className="bg-slate-50 border p-3 rounded-xl flex items-start justify-between text-xs text-slate-800 font-mono">
                     <div className="space-y-1 max-w-[70%]">
                       <div className="flex items-center gap-2">
                         <span className="font-sans font-black text-slate-800 text-[13px]">{r.name}</span>
@@ -1010,6 +1587,393 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* --- MODULE 5-B: SOFTWARE PRODUCT CATALOG MANAGER --- */}
+            <div className="border-t border-slate-200 pt-6 mt-6 space-y-6" id="admin-module-5b-catalog">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h4 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <Disc size={18} className="text-blue-600 animate-spin-slow" />
+                    <span>Module 5-B: Software Master Product Catalog</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">Add, edit, or configure separate softwares, pricing policies, executable download links, video demos, and screenshot galleries.</p>
+                </div>
+                {!isAddingProduct && !editingProduct ? (
+                  <button
+                    onClick={() => {
+                      resetProductForm();
+                      setIsAddingProduct(true);
+                      setEditingProduct(null);
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-lg tracking-wider flex items-center gap-1.5 shadow-sm transition cursor-pointer self-start"
+                  >
+                    <Plus size={14} />
+                    <span>CREATE NEW SOFTWARE</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsAddingProduct(false);
+                      setEditingProduct(null);
+                      resetProductForm();
+                    }}
+                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg tracking-wider flex items-center gap-1.5 transition cursor-pointer self-start"
+                  >
+                    <span>CANCEL FORM</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Product Add/Edit Form section */}
+              {(isAddingProduct || editingProduct) && (
+                <form onSubmit={handleSaveProduct} className="bg-blue-50/50 border border-blue-200 rounded-2xl p-5 space-y-4 text-xs text-slate-800 animate-fade-in text-left">
+                  <div className="flex items-center justify-between border-b border-blue-200 pb-3 mb-2">
+                    <span className="font-extrabold text-blue-900 uppercase tracking-wider font-mono">
+                      {editingProduct ? '✏️ EDIT SOFTWARE CATALOG DETAILS' : '🚀 REGISTER NEW SOFTWARE PRODUCT'}
+                    </span>
+                    <span className="text-[10px] text-blue-600 font-medium">Real-time synchronization with Supabase datastore</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Column 1: Core Identifiers */}
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Product Slug ID (Mandatory, No spacing)</label>
+                        <input
+                          type="text"
+                          placeholder="E.g., prod-billing-pro"
+                          value={productForm.id}
+                          onChange={(e) => setNewVersion(prev => {
+                            // Update slug
+                            return prev;
+                          })}
+                          onInput={(e: any) => {
+                            const val = e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '');
+                            setProductForm(p => ({ ...p, id: val }));
+                          }}
+                          disabled={!!editingProduct}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-mono font-bold disabled:bg-slate-100 disabled:text-slate-500"
+                          required
+                        />
+                        {!editingProduct && <p className="text-[10px] text-slate-400">Must be unique and match standard billing plans. Lowercase alphanumeric and hyphens only.</p>}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Software / Product Name</label>
+                        <input
+                          type="text"
+                          placeholder="E.g., BSP Suryatech Pharma Billing Suite"
+                          value={productForm.name}
+                          onChange={(e) => setProductForm(p => ({ ...p, name: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-sans font-bold"
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 block">Offer Price (INR ₹)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="999"
+                            value={productForm.price}
+                            onChange={(e) => setProductForm(p => ({ ...p, price: Number(e.target.value) }))}
+                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-sans font-extrabold text-blue-700"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 block">Original Price (INR ₹)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="2499"
+                            value={productForm.original_price}
+                            onChange={(e) => setProductForm(p => ({ ...p, original_price: Number(e.target.value) }))}
+                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 text-slate-500 line-through"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Direct Download URL (Setup.exe payload)</label>
+                        <input
+                          type="text"
+                          placeholder="E.g., /api/downloads/setup/prod-billing-pro or direct https link"
+                          value={productForm.download_url}
+                          onChange={(e) => setProductForm(p => ({ ...p, download_url: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-mono text-[11px]"
+                          required
+                        />
+                        <p className="text-[10px] text-slate-400">Path or direct binary link to downlading setup wizard executable.</p>
+                      </div>
+                    </div>
+
+                    {/* Column 2: Specs & Metadata */}
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 block">Version Code</label>
+                          <input
+                            type="text"
+                            placeholder="E.g., v4.2.1"
+                            value={productForm.version}
+                            onChange={(e) => setProductForm(p => ({ ...p, version: e.target.value }))}
+                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 block">Binary Size tag</label>
+                          <input
+                            type="text"
+                            placeholder="E.g., 14.8 MB"
+                            value={productForm.size}
+                            onChange={(e) => setProductForm(p => ({ ...p, size: e.target.value }))}
+                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Product Category</label>
+                        <input
+                          type="text"
+                          placeholder="E.g., Retail & POS Billing"
+                          value={productForm.category}
+                          onChange={(e) => setProductForm(p => ({ ...p, category: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Demo Video URL (YouTube Embed Link)</label>
+                        <input
+                          type="text"
+                          placeholder="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                          value={productForm.demo_video_url}
+                          onChange={(e) => setProductForm(p => ({ ...p, demo_video_url: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-mono text-[11px]"
+                        />
+                        <p className="text-[10px] text-slate-400">Needs to be embed format: /embed/ID</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Status</label>
+                        <select
+                          value={productForm.status}
+                          onChange={(e) => setProductForm(p => ({ ...p, status: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-bold"
+                        >
+                          <option value="active">Active (Visible in Catalog)</option>
+                          <option value="inactive">Archived / Hidden</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Column 3: Large Texts (Description & Specs) */}
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Short Description</label>
+                        <textarea
+                          rows={2}
+                          placeholder="Lightweight, ultra-fast, and runs 100% offline desktop billing ERP..."
+                          value={productForm.description}
+                          onChange={(e) => setProductForm(p => ({ ...p, description: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none text-[11px] leading-relaxed"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Screenshot/Sample Image Links (One URL per line)</label>
+                        <textarea
+                          rows={3}
+                          placeholder="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format..."
+                          value={productForm.gallery}
+                          onChange={(e) => setProductForm(p => ({ ...p, gallery: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono text-[10px]"
+                        />
+                        <p className="text-[10px] text-slate-400">URLs representing screenshot images of software UI.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Deep Configuration collapse sections */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-blue-200/50 pt-3">
+                    <div className="space-y-11">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Bullet Features list (One feature per line)</label>
+                        <textarea
+                          rows={4}
+                          placeholder="Retail & Wholesale Billing&#10;GST Invoice Generation&#10;Barcode Creation & Printing&#10;Lightweight offline-first SQLite files..."
+                          value={productForm.features}
+                          onChange={(e) => setProductForm(p => ({ ...p, features: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none font-sans text-[11px] leading-relaxed"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">Full Detailed Description (HTML/Rich-text support)</label>
+                        <textarea
+                          rows={4}
+                          placeholder="Provide a long narrative detailing module properties, tax structures, and business utilities..."
+                          value={productForm.full_description}
+                          onChange={(e) => setProductForm(p => ({ ...p, full_description: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none text-[11px] leading-relaxed"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-11">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">System Operational Requirements</label>
+                        <textarea
+                          rows={4}
+                          placeholder="E.g., OS: Windows 7, 8, 10 or 11&#10;Memory: 2 GB RAM minimum&#10;Storage: 100 MB free space..."
+                          value={productForm.system_requirements}
+                          onChange={(e) => setProductForm(p => ({ ...p, system_requirements: e.target.value }))}
+                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none font-sans text-[11px] leading-relaxed"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2.5">
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 block">License Policy Details</label>
+                          <input
+                            type="text"
+                            placeholder="Single-Terminal Lifetime License Key with 1 Year free security support"
+                            value={productForm.license_info}
+                            onChange={(e) => setProductForm(p => ({ ...p, license_info: e.target.value }))}
+                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-700 block">Manual Setup Guide / Documentation Link (Optional PDF)</label>
+                          <input
+                            type="text"
+                            placeholder="E.g., /manuals/retail-billing-manual.pdf"
+                            value={productForm.manual_url}
+                            onChange={(e) => setProductForm(p => ({ ...p, manual_url: e.target.value }))}
+                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none font-mono text-[11px]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 border-t border-blue-200/50 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingProduct(false);
+                        setEditingProduct(null);
+                        resetProductForm();
+                      }}
+                      className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg tracking-wide hover:shadow transition cursor-pointer"
+                    >
+                      {editingProduct ? 'UPDATE SOFTWARE DETAILS' : 'SAVE SOFTWARE PRODUCT'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Products List Grid */}
+              <div className="space-y-3">
+                <h5 className="text-xs font-black font-mono uppercase text-slate-500">Live Configured Software Catalog Products ({adminProducts.length})</h5>
+
+                {productsLoading ? (
+                  <div className="py-8 text-center text-slate-500 font-mono text-[11px]">
+                    <span className="animate-pulse">Retrieving catalog records from Supabase...</span>
+                  </div>
+                ) : adminProducts.length === 0 ? (
+                  <div className="py-12 text-center rounded-2xl bg-slate-50 border border-dashed text-slate-500 text-xs">
+                    No custom software products registered in database. Active defaults will be shown on frontend until added here.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {adminProducts.map((p) => {
+                      const sampleImagesCount = Array.isArray(p.gallery) ? p.gallery.length : 0;
+                      return (
+                        <div key={p.id} className="bg-slate-50 hover:bg-slate-50/80 border p-4 rounded-2xl flex flex-col justify-between hover:shadow-sm transition text-xs text-slate-800" id={`admin-product-card-${p.id}`}>
+                          <div className="space-y-2.5 text-left">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-mono">
+                                  {p.category || 'POS Utility'}
+                                </span>
+                                <h4 className="text-sm font-extrabold text-slate-900 mt-1">{p.name}</h4>
+                                <p className="font-mono text-[10px] text-slate-500 font-medium">Slug Target: #{p.id} • Status: <span className={p.status === 'active' ? 'text-green-650 font-bold' : 'text-red-500'}>{p.status}</span></p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <span className="text-slate-555 line-through block text-[10px]">₹{p.original_price || (p.price * 2)}</span>
+                                <span className="text-blue-750 font-mono font-black text-sm block">₹{p.price}</span>
+                              </div>
+                            </div>
+
+                            <p className="text-slate-600 line-clamp-2 text-[11px] leading-relaxed">{p.description}</p>
+
+                            <div className="bg-white p-2.5 border border-slate-200/80 rounded-xl space-y-1.5 font-mono text-[10px] text-slate-500">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-600">Binary Installer (setup.exe):</span>
+                                <span className="text-slate-800 break-all font-semibold max-w-[65%] text-right">{p.download_url}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-600">Specs / Capacity:</span>
+                                <span className="text-slate-800 font-semibold">{p.version} • {p.size}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-600">Video Demonstration Link:</span>
+                                <span className="text-slate-800 truncate font-semibold max-w-[65%] text-right" title={p.demo_video_url}>{p.demo_video_url || 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-600">Screenshots/Sample Images:</span>
+                                <span className="text-slate-800 font-bold">{sampleImagesCount} connected link(s)</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between border-t border-slate-200/60 pt-3 mt-4">
+                            <button
+                              onClick={() => {
+                                handleCopyText(p.download_url, `dl-p-${p.id}`);
+                              }}
+                              className="text-[10px] text-slate-500 font-mono hover:text-slate-800 font-bold"
+                            >
+                              {copiedKeyId === `dl-p-${p.id}` ? 'COPIED LINK!' : 'COPY EXE LINK'}
+                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleEditProductClick(p)}
+                                className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg shadow-sm transition flex items-center gap-1 text-[10px] font-extrabold cursor-pointer"
+                              >
+                                <Edit size={11} />
+                                <span>Edit Software</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(p.id)}
+                                className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-650 border border-red-100 rounded-lg shadow-sm transition flex items-center gap-1 text-[10px] font-extrabold cursor-pointer"
+                              >
+                                <Trash2 size={11} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1285,126 +2249,272 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* Tickets List Left */}
+               {/* Tickets List Left */}
               <div className="lg:col-span-1 border rounded-2xl overflow-hidden bg-slate-50 flex flex-col max-h-[550px] overflow-y-auto">
-                <span className="text-[9.5px] font-bold text-slate-500 font-mono tracking-widest block uppercase p-3 border-b bg-white">OPEN TICKETS POOL</span>
-                <div className="divide-y">
+                <span className="text-[9.5px] font-bold text-slate-500 font-mono tracking-widest block uppercase p-3 border-b bg-white">SUPPORT TICKETS POOL</span>
+                <div className="divide-y bg-white">
                   {filteredTickets.length === 0 ? (
                     <p className="p-4 text-center text-xs text-slate-400 font-mono">No active ticket issues open.</p>
                   ) : (
-                    filteredTickets.map((t, idx) => (
-                      <div 
-                        key={t.id || idx}
-                        onClick={() => setSelectedTicket(t)}
-                        className={`p-3.5 text-left cursor-pointer transition-colors ${
-                          selectedTicket && selectedTicket.id === t.id 
-                            ? 'bg-rose-50 border-r-4 border-red-750' 
-                            : 'hover:bg-slate-100 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-[10px] font-mono mb-1">
-                          <span className="font-extrabold text-slate-500 uppercase">{t.category}</span>
-                          <span className={`px-1 rounded text-[8.5px] font-black uppercase ${
-                            t.status === 'open' ? 'bg-amber-100 text-amber-800 border-amber-150 border' : 'bg-slate-200 text-slate-700'
-                          }`}>{t.status}</span>
+                    filteredTickets.map((t, idx) => {
+                      const unpacked = deserializeTicketDescription(t.description);
+                      const priority = unpacked.priority || 'medium';
+                      return (
+                        <div 
+                          key={t.id || idx}
+                          onClick={() => setSelectedTicket(t)}
+                          className={`p-3.5 text-left cursor-pointer transition-colors ${
+                            selectedTicket && selectedTicket.id === t.id 
+                              ? 'bg-rose-50 border-r-4 border-red-700' 
+                              : 'hover:bg-slate-55 bg-white border-b border-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[9px] font-mono mb-1 gap-2 flex-wrap">
+                            <span className="font-extrabold text-slate-500 uppercase">{t.category}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-1 py-0.2 rounded text-[8px] font-black uppercase ${
+                                priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                                priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                                priority === 'medium' ? 'bg-amber-100 text-amber-700' :
+                                'bg-slate-105 text-slate-600'
+                              }`}>{priority}</span>
+                              <span className={`px-1 py-0.2 rounded text-[8px] font-black uppercase ${
+                                t.status === 'open' ? 'bg-blue-105 text-blue-700' :
+                                t.status === 'in_progress' ? 'bg-amber-100 text-amber-900' :
+                                t.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' :
+                                'bg-slate-205 text-slate-700'
+                              }`}>{t.status.replace('_', ' ')}</span>
+                            </div>
+                          </div>
+                          <h4 className="text-xs font-sans font-black text-slate-800 leading-tight line-clamp-1">{t.title}</h4>
+                          <span className="text-[9.5px] text-slate-433 mt-1.5 block font-mono truncate leading-none">{t.userEmail || t.user_email}</span>
                         </div>
-                        <h4 className="text-xs font-sans font-black text-slate-800 leading-tight line-clamp-1">{t.title}</h4>
-                        <span className="text-[9.5px] text-slate-433 mt-1.5 block font-mono truncate leading-none">{t.userEmail}</span>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
 
               {/* Chat Thread Right */}
-              <div className="lg:col-span-2 border rounded-2xl bg-white p-5 flex flex-col justify-between min-h-[400px]">
-                {selectedTicket ? (
-                  <div className="space-y-4 flex flex-col flex-1 text-xs">
-                    
-                    {/* Header */}
-                    <div className="border-b pb-3 flex items-start justify-between flex-wrap gap-2">
-                      <div>
-                        <div className="text-[10px] font-mono text-slate-400 block tracking-widest uppercase">TICKET WORKSPACE ID: {selectedTicket.id}</div>
-                        <h3 className="text-sm font-sans font-black text-slate-800 leading-tight mt-1">{selectedTicket.title}</h3>
-                        <span className="text-[11px] font-mono text-slate-500 mt-0.5 block font-extrabold">Client: {selectedTicket.userName} ({selectedTicket.userEmail})</span>
+              <div className="lg:col-span-2 border rounded-2xl bg-white p-5 flex flex-col justify-between min-h-[500px]">
+                {(() => {
+                  const activeTk = getSelectedTicketDetails();
+                  if (!activeTk) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-12 text-slate-400 font-mono">
+                        <MessageSquare size={28} className="mb-2 text-slate-300" />
+                        <span>Select an unresolved support ticket from the list to launch SLA workspace.</span>
                       </div>
-                      <div className="space-x-1.5 flex shrink-0">
-                        {selectedTicket.status !== 'resolved' && (
-                          <button 
-                            onClick={() => handleCloseTicket(selectedTicket.id)}
-                            className="px-2.5 py-1 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-150 font-black font-mono text-[10px] rounded-lg cursor-pointer"
-                          >
-                            SOLVED/CLOSE
-                          </button>
-                        )}
-                        <span className={`px-2 py-1 rounded font-black text-[9.5px] font-mono uppercase ${selectedTicket.status === 'resolved' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-700'}`}>
-                          {selectedTicket.status}
-                        </span>
-                      </div>
-                    </div>
+                    );
+                  }
 
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto space-y-3.5 max-h-[300px] p-2 bg-slate-50 rounded-xl font-mono">
-                      {/* Initial query */}
-                      <div className="bg-white border p-3 rounded-xl space-y-1.5 shadow-sm text-left">
-                        <div className="flex items-center justify-between text-[10px] text-slate-433">
-                          <span className="font-extrabold text-blue-700">Client Statement Context</span>
-                          <span>{new Date(selectedTicket.created_at || selectedTicket.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-slate-700 leading-relaxed italic">{selectedTicket.description}</p>
-                      </div>
+                  const custInfo = activeTk.customerDetails;
 
-                      {/* Replies */}
-                      {(selectedTicket.replies || []).map((r: any, idx: number) => (
-                        <div 
-                          key={r.id || idx} 
-                          className={`p-3 rounded-xl border space-y-1 ${
-                            r.authorRole === 'admin' 
-                              ? 'bg-red-50 border-rose-100 text-slate-800 ml-6 text-left' 
-                              : 'bg-white border-slate-100 text-slate-700 mr-6 text-left'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-[10px] text-slate-400">
-                            <span className="font-black text-slate-600">{r.authorName} [{r.authorRole.toUpperCase()}]</span>
-                            <span>{new Date(r.createdAt || r.created_at).toLocaleTimeString()}</span>
+                  return (
+                    <div className="space-y-4 flex flex-col flex-1 text-xs">
+                      
+                      {/* Rich Action & Status Header */}
+                      <div className="border-b pb-3 flex items-start justify-between flex-wrap gap-3">
+                        <div className="space-y-1 max-w-[70%]">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[9px] font-mono text-slate-400 block tracking-widest uppercase font-bold">ID: {activeTk.id}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase ${
+                              activeTk.priority === 'urgent' ? 'bg-red-50 text-red-600 border border-red-100' :
+                              activeTk.priority === 'high' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
+                              activeTk.priority === 'medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                              'bg-slate-50 text-slate-600 border border-slate-200'
+                            }`}>
+                              {activeTk.priority} priority
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">Category: {activeTk.category}</span>
                           </div>
-                          <p className="leading-relaxed leading-normal">{r.message}</p>
+                          <h3 className="text-sm font-sans font-black text-slate-900 leading-tight">{activeTk.title}</h3>
+                          <span className="text-[11px] font-mono text-slate-550 block font-bold leading-none">
+                            Sender: {activeTk.user_name || activeTk.userName || 'Unknown'} ({activeTk.user_email || activeTk.userEmail})
+                          </span>
                         </div>
-                      ))}
+
+                        {/* Interactive Status Selector & Solved quick buttons */}
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1">
+                            <label className="text-[9px] font-bold text-slate-400 font-mono uppercase">Status:</label>
+                            <select
+                              value={activeTk.status}
+                              onChange={(e) => handleUpdateTicketStatus(activeTk.id, e.target.value)}
+                              className="bg-slate-50 border border-slate-200 px-2 py-1 rounded text-[10px] font-black uppercase text-slate-800 focus:outline-none"
+                            >
+                              <option value="open">Open</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="resolved">Resolved</option>
+                              <option value="closed">Closed</option>
+                            </select>
+                          </div>
+                          
+                          <div className="flex gap-1">
+                            {activeTk.status !== 'resolved' && activeTk.status !== 'closed' ? (
+                              <button 
+                                onClick={() => handleUpdateTicketStatus(activeTk.id, 'resolved')}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold font-mono text-[9px] uppercase tracking-wide rounded cursor-pointer transition-colors"
+                              >
+                                Solve Ticket
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleUpdateTicketStatus(activeTk.id, 'open')}
+                                className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold font-mono text-[9px] uppercase tracking-wide rounded cursor-pointer transition-colors"
+                              >
+                                Reopen
+                              </button>
+                            )}
+                            {(activeTk.status !== 'closed') && (
+                              <button 
+                                onClick={() => handleUpdateTicketStatus(activeTk.id, 'closed')}
+                                className="px-2 py-1 bg-slate-700 hover:bg-slate-800 text-white font-bold font-mono text-[9px] uppercase tracking-wide rounded cursor-pointer transition-colors"
+                              >
+                                Close
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Customer Profile CRM Widget */}
+                      <div className="bg-slate-100/50 border border-slate-200 p-3 rounded-2xl space-y-1.5 text-[10.5px]">
+                        <span className="text-[9px] font-bold text-slate-500 font-mono tracking-wider block uppercase">CRM CLIENT CONTACT PROFILE</span>
+                        {custInfo ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700 font-mono leading-normal">
+                            <div>
+                              <span className="font-bold text-slate-500">FullName:</span> {custInfo.client_name || custInfo.clientName}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-500">Business:</span> {custInfo.business_name || custInfo.businessName}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-500">Contact #:</span> {custInfo.contact_number || custInfo.contactNumber}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-450">GSTIN:</span> {custInfo.gst_number || custInfo.gstNumber || 'N/A'}
+                            </div>
+                            <div className="sm:col-span-2">
+                              <span className="font-bold text-slate-500">Address:</span> {custInfo.city || 'N/A'}, {custInfo.state || 'N/A'} 
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-slate-450 italic font-mono text-[9.5px]">No matching CRM client profile found in local registries. Displaying verified email: {activeTk.user_email || activeTk.userEmail}</p>
+                        )}
+                      </div>
+
+                      {/* Messages Stream */}
+                      <div className="flex-1 overflow-y-auto space-y-3.5 max-h-[300px] p-3 bg-slate-50 rounded-xl font-mono">
+                        
+                        {/* Initial client raise text */}
+                        <div className="bg-white border p-3 rounded-xl space-y-2 shadow-sm text-left">
+                          <div className="flex items-center justify-between text-[9px] text-slate-400">
+                            <span className="font-extrabold text-blue-700 uppercase">Original Raising Query</span>
+                            <span>{safeFormatDate(activeTk.created_at || activeTk.createdAt)} {safeFormatTime(activeTk.created_at || activeTk.createdAt)}</span>
+                          </div>
+                          <p className="text-slate-750 leading-relaxed italic whitespace-pre-wrap">{activeTk.description}</p>
+                          
+                          {/* Client attachments if any */}
+                          {activeTk.attachments && activeTk.attachments.length > 0 && (
+                            <div className="border-t pt-2 mt-2">
+                              <span className="text-[8.5px] font-bold text-slate-400 block mb-1 uppercase tracking-wider">SECURE ATTACHMENTS</span>
+                              <div className="flex flex-wrap gap-2">
+                                {activeTk.attachments.map((file: any, fidx: number) => (
+                                  <a
+                                    key={fidx}
+                                    href={file.data}
+                                    download={file.name}
+                                    className="inline-flex items-center gap-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-1 rounded text-red-700 text-[10px] font-bold transition-all"
+                                  >
+                                    <FileText size={10} className="text-red-500 shrink-0" />
+                                    <span className="max-w-[150px] truncate">{file.name}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Conversational timeline stream */}
+                        {activeTk.replies.map((r: any, idx: number) => {
+                          const isNote = r.isInternal || r.isInternalNote;
+                          return (
+                            <div 
+                              key={r.id || idx} 
+                              className={`p-3 rounded-xl border space-y-1.5 ${
+                                isNote 
+                                  ? 'bg-amber-50 border-amber-200 text-slate-800 ml-6 text-left border-dashed'
+                                  : r.authorRole === 'admin' 
+                                    ? 'bg-red-50 border-rose-100 text-slate-800 ml-6 text-left' 
+                                    : 'bg-white border-slate-100 text-slate-700 mr-6 text-left'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between text-[9px] text-slate-450 border-b pb-1">
+                                <span className={`font-black ${isNote ? 'text-amber-700' : 'text-slate-600'}`}>
+                                  {r.authorName} {isNote ? '[INTERNAL NOTE]' : `[${r.authorRole.toUpperCase()}]`}
+                                </span>
+                                <span>{safeFormatDate(r.createdAt || r.created_at)} {safeFormatTime(r.createdAt || r.created_at)}</span>
+                              </div>
+                              <p className="leading-relaxed leading-normal whitespace-pre-wrap">{r.message}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Typing response console with Reply vs Internal tabs */}
+                      <div className="border border-slate-200 rounded-xl p-2 bg-slate-50 space-y-2">
+                        <div className="flex gap-2 border-b pb-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setAdminTicketTab('reply')}
+                            className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors cursor-pointer ${
+                              adminTicketTab === 'reply' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
+                            }`}
+                          >
+                            Reply to Customer (App Notification Triggered)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAdminTicketTab('internal')}
+                            className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors cursor-pointer ${
+                              adminTicketTab === 'internal' ? 'bg-amber-500 text-white' : 'text-slate-500 hover:bg-slate-100'
+                            }`}
+                          >
+                            Staff Internal Note
+                          </button>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            required
+                            placeholder={
+                              adminTicketTab === 'internal' 
+                                ? "Write technical notes or private reminders visible ONLY inside the admin team console..."
+                                : "Write public resolution update visible to customer..."
+                            }
+                            value={adminReplyText}
+                            onChange={(e) => setAdminReplyText(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSendTicketReply()}
+                            className="flex-grow p-2.5 bg-white border rounded-xl text-slate-800 text-xs focus:outline-none focus:border-red-650 font-mono"
+                          />
+                          <button 
+                            type="button"
+                            onClick={handleSendTicketReply}
+                            disabled={submittingReply}
+                            className={`px-4 py-2.5 rounded-xl font-black uppercase shrink-0 cursor-pointer text-[10px] tracking-wider text-white transition-colors ${
+                              adminTicketTab === 'internal' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-950 hover:bg-slate-800'
+                            }`}
+                          >
+                            {submittingReply ? 'SAVING...' : adminTicketTab === 'internal' ? 'SAVE NOTE' : 'DISPATCH'}
+                          </button>
+                        </div>
+                      </div>
+
                     </div>
-
-                    {/* Input Reply Box */}
-                    {selectedTicket.status !== 'resolved' ? (
-                      <div className="pt-2 flex gap-2">
-                        <input 
-                          type="text" 
-                          placeholder="Type support reply or solution coupon..."
-                          value={adminReplyText}
-                          onChange={(e) => setAdminReplyText(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSendTicketReply()}
-                          className="flex-1 p-2.5 border bg-slate-50 focus:bg-white rounded-xl focus:outline-none focus:border-red-650"
-                        />
-                        <button 
-                          onClick={handleSendTicketReply}
-                          disabled={submittingReply}
-                          className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black shrink-0 cursor-pointer"
-                        >
-                          {submittingReply ? 'SENDING...' : 'REPLY'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="p-3 text-center bg-emerald-50 text-emerald-800 rounded-xl font-mono border border-emerald-150">
-                        This customer ticket thread is resolved and locked for compliance.
-                      </div>
-                    )}
-
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-slate-400 font-mono">
-                    <MessageSquare size={28} className="mb-2 text-slate-300" />
-                    <span>Select an unresolved support ticket from the list to launch SLA workspace.</span>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
             </div>
@@ -1782,6 +2892,529 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                 </p>
               </div>
             </div>
+          </div>
+        </RoleGuard>
+      )}
+
+      {/* -------------------- DISCOUNT COUPON CAMPAIGNS MANAGER -------------------- */}
+      {activeModule === 'coupons' && (
+        <RoleGuard moduleId="coupons">
+          <div className="space-y-6 animate-fade-in text-left bg-white p-6 border rounded-2xl shadow-sm" id="admin-module-coupons">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                  <Percent size={20} className="text-[#2563EB]" />
+                  <span>Module 19: Discount Coupon Campaigns</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Configure active promotional discounts, customer acquisition incentives, and special cart overrides.</p>
+              </div>
+              <button
+                onClick={() => openCouponModal()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 self-start sm:self-center"
+              >
+                <Plus size={14} />
+                <span>Initialize Campaign</span>
+              </button>
+            </div>
+
+            {/* STATS SECTION */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-slate-50 border p-4.5 rounded-xl space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Total Campaigns</span>
+                <div className="text-2xl font-black text-slate-800">{coupons.length}</div>
+                <p className="text-[9.5px] text-slate-500 font-mono text-left">Registered promo codes</p>
+              </div>
+              <div className="bg-slate-50 border p-4.5 rounded-xl space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Active Campaigns</span>
+                <div className="text-2xl font-black text-emerald-600">
+                  {coupons.filter(c => c.status === 'active' || c.active === true).length}
+                </div>
+                <p className="text-[9.5px] text-slate-500 font-mono text-left">Live on checkout panels</p>
+              </div>
+              <div className="bg-slate-50 border p-4.5 rounded-xl space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Total Redemptions</span>
+                <div className="text-2xl font-black text-blue-600">{redemptions.length}</div>
+                <p className="text-[9.5px] text-slate-500 font-mono text-left">Successful checkout uses</p>
+              </div>
+              <div className="bg-slate-50 border p-4.5 rounded-xl space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Developer Override</span>
+                <div className="text-lg font-black text-indigo-600 font-mono">
+                  SURYA001
+                </div>
+                <p className="text-[9.5px] text-slate-500 font-mono text-left">Forces cart charge to ₹1.00</p>
+              </div>
+            </div>
+
+            {/* SEARCH AND FILTERS */}
+            <div className="bg-slate-50 p-4 border rounded-2xl flex flex-col md:flex-row gap-3">
+              <div className="relative flex-grow">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                <input
+                  type="text"
+                  placeholder="Search campaigns by code or name..."
+                  value={couponSearch}
+                  onChange={e => setCouponSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-white border rounded-xl text-xs font-bold outline-none focus:border-blue-500"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  value={couponFilterStatus}
+                  onChange={e => setCouponFilterStatus(e.target.value as any)}
+                  className="px-3 py-2 bg-white border rounded-xl text-xs font-bold outline-none"
+                >
+                  <option value="all">Status: All</option>
+                  <option value="active">Active</option>
+                  <option value="disabled">Disabled</option>
+                  <option value="expired">Expired</option>
+                </select>
+                <select
+                  value={couponFilterType}
+                  onChange={e => setCouponFilterType(e.target.value as any)}
+                  className="px-3 py-2 bg-white border rounded-xl text-xs font-bold outline-none"
+                >
+                  <option value="all">Type: All Discounts</option>
+                  <option value="percentage">Percentage (%)</option>
+                  <option value="fixed">Fixed Price</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={loadCouponsCampaigns}
+                  className="p-2 bg-white border hover:bg-slate-50 rounded-xl transition-all cursor-pointer flex items-center justify-center text-slate-700"
+                  title="Reload campaigns"
+                >
+                  <RefreshCw size={14} className={couponLoading ? "animate-spin" : ""} />
+                </button>
+              </div>
+            </div>
+
+            {/* TABS VIEW: CAMPAIGNS VS REDEMPTIONS */}
+            <div className="space-y-4">
+              <div className="border-b flex gap-4">
+                <button 
+                  className="py-2.5 border-b-2 border-blue-600 text-xs font-black text-slate-800 uppercase tracking-wider"
+                >
+                  Campaign Configurations
+                </button>
+              </div>
+
+              {couponLoading ? (
+                <div className="py-20 text-center font-mono text-xs text-slate-400">
+                  <RefreshCw className="animate-spin inline-block mr-2 text-slate-500" size={14} />
+                  Loading coupon campaign databases...
+                </div>
+              ) : (
+                <div className="border rounded-2xl overflow-hidden bg-white shadow-sm overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[900px]">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 font-mono text-[10px] text-slate-400 uppercase tracking-wider">
+                        <th className="py-3 px-4.5">Campaign Code</th>
+                        <th className="py-3 px-4">Title / Scope</th>
+                        <th className="py-3 px-4">Discount Applied</th>
+                        <th className="py-3 px-4">Validity Range</th>
+                        <th className="py-3 px-4">Usage Tracker</th>
+                        <th className="py-3 px-4">Limits & Floor</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4.5 text-right font-mono">Actions Console</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                      {coupons
+                        .filter(c => {
+                          const code = (c.coupon_code || c.code || '').toUpperCase();
+                          const name = (c.coupon_name || c.name || '').toLowerCase();
+                          const desc = (c.description || '').toLowerCase();
+                          const matchesSearch = code.includes(couponSearch.toUpperCase()) || name.includes(couponSearch.toLowerCase()) || desc.includes(couponSearch.toLowerCase());
+                          
+                          let matchesStatus = true;
+                          const isAct = c.status === 'active' || c.active === true;
+                          if (couponFilterStatus === 'active') matchesStatus = isAct;
+                          else if (couponFilterStatus === 'disabled') matchesStatus = c.status === 'disabled';
+                          else if (couponFilterStatus === 'expired') matchesStatus = c.status === 'expired';
+
+                          let matchesType = true;
+                          if (couponFilterType === 'percentage') matchesType = c.discount_type === 'percentage';
+                          else if (couponFilterType === 'fixed') matchesType = c.discount_type === 'fixed';
+
+                          return matchesSearch && matchesStatus && matchesType;
+                        })
+                        .map(cp => {
+                          const isActive = cp.status === 'active' || cp.active === true;
+                          const codeStr = cp.coupon_code || cp.code || '';
+                          const isSpecial = codeStr === 'SURYA001';
+                          
+                          return (
+                            <tr key={cp.id} className="hover:bg-slate-50/60 transition-colors">
+                              <td className="py-3.5 px-4.5 font-bold font-mono">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`px-2.5 py-1 rounded-lg text-[11px] uppercase tracking-wider font-extrabold border ${isSpecial ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-800'}`}>
+                                    {codeStr}
+                                  </span>
+                                  <button
+                                    onClick={() => handleCopyText(codeStr, cp.id)}
+                                    className="p-1 hover:bg-slate-200 rounded text-slate-450 transition-colors cursor-pointer"
+                                    title="Copy Promo Code"
+                                  >
+                                    <Copy size={11} />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <div className="font-extrabold text-slate-800">{cp.coupon_name || cp.name || 'Unnamed Campaigns'}</div>
+                                <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{cp.description || 'No description listed'}</div>
+                              </td>
+                              <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                                {isSpecial ? (
+                                  <span className="text-violet-700 font-extrabold">₹1.00 Override ⭐</span>
+                                ) : cp.discount_type === 'percentage' ? (
+                                  <div>
+                                    <span className="text-rose-600">{cp.discount_value || cp.discountPercent}% OFF</span>
+                                    {cp.max_discount && <div className="text-[9px] text-slate-400 font-normal mt-0.5">Max: ₹{cp.max_discount}</div>}
+                                  </div>
+                                ) : (
+                                  <span className="text-emerald-600">₹{cp.discount_value} OFF</span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500 whitespace-nowrap">
+                                <div>From: {cp.valid_from || 'Anytime'}</div>
+                                <div className="mt-0.5">To: {cp.valid_to || 'Never Expire'}</div>
+                              </td>
+                              <td className="py-3.5 px-4 font-mono">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-extrabold text-slate-800">{cp.used_count || 0}</span>
+                                  <span className="text-slate-400">/</span>
+                                  <span className="text-slate-400 text-[10px]">{cp.usage_limit || '∞'}</span>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500 whitespace-nowrap">
+                                <div>Min Order: ₹{cp.min_order_value || '0'}</div>
+                                <div className="mt-0.5">Per User: {cp.per_user_limit || '∞'}</div>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : cp.status === 'expired' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : cp.status === 'expired' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
+                                  <span>{cp.status || (cp.active ? 'active' : 'disabled')}</span>
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4.5 text-right font-mono whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleToggleCouponActive(cp)}
+                                    className={`px-2 py-1 border rounded-lg text-[9.5px] font-black uppercase tracking-wide transition-all cursor-pointer ${isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'}`}
+                                  >
+                                    {isActive ? 'Disable' : 'Enable'}
+                                  </button>
+                                  <button
+                                    onClick={() => openCouponModal(cp, true)}
+                                    className="p-1 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg cursor-pointer"
+                                    title="Duplicate Campaign"
+                                  >
+                                    <Copy size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openCouponModal(cp)}
+                                    className="p-1 hover:bg-slate-100 text-blue-600 border border-slate-200 rounded-lg cursor-pointer animate-none"
+                                    title="Edit Campaign"
+                                  >
+                                    <Edit size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCoupon(cp.id || cp.coupon_code || cp.code, cp.coupon_code || cp.code)}
+                                    className="p-1 hover:bg-red-50 text-red-600 border border-slate-200 rounded-lg cursor-pointer"
+                                    title="Delete Campaign"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* REDEMPTION LOGS VIEW */}
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-widest font-sans flex items-center gap-1.5 mb-3.5">
+                <FileText size={15} className="text-slate-500" />
+                <span>Campaign Redemptions Ledger Records</span>
+              </h4>
+
+              {redemptions.length === 0 ? (
+                <div className="p-8 border border-dashed rounded-2xl text-center text-xs font-mono text-slate-400">
+                  No promotional redemptions currently recorded on full-stack client checkouts.
+                </div>
+              ) : (
+                <div className="border rounded-2xl bg-white overflow-hidden overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 font-mono text-[9px] text-slate-400 uppercase tracking-wider">
+                        <th className="py-2.5 px-4">Redemption Time</th>
+                        <th className="py-2.5 px-4">Applied Promo Code</th>
+                        <th className="py-2.5 px-4">Client email</th>
+                        <th className="py-2.5 px-4">Order Reference</th>
+                        <th className="py-2.5 px-4 text-right">Discount Benefit Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono text-[11px] text-slate-700">
+                      {redemptions.map(r => (
+                        <tr key={r.id} className="hover:bg-slate-50/50">
+                          <td className="py-2 px-4 text-slate-400">
+                            {new Date(r.redeemed_at || r.redeemedAt || '').toLocaleDateString('en-IN', {
+                              day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </td>
+                          <td className="py-2 px-4 uppercase font-bold text-slate-900">{r.coupon_id}</td>
+                          <td className="py-2 px-4 text-slate-600 font-sans">{r.user_id || 'unknown@bspsuryatech.in'}</td>
+                          <td className="py-2 px-4">
+                            <span className="bg-slate-50 border px-1.5 py-0.5 rounded text-[10px] text-slate-500">{r.order_id}</span>
+                          </td>
+                          <td className="py-2 px-4 text-right font-bold text-emerald-600">
+                            {r.coupon_id === 'SURYA001' ? (
+                              <span className="text-violet-700">Bill Overridden ⭐</span>
+                            ) : (
+                              <span>-₹{r.discount_amount || r.discountValue || 0}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </RoleGuard>
+      )}
+
+      {/* Initialize / Edit Coupon Modal */}
+      {isCouponModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/65 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white border rounded-3xl w-full max-w-xl shadow-2xl p-6 md:p-8 space-y-6 text-left my-8 scale-in max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 uppercase tracking-widest font-sans">
+                  {editingCoupon ? 'Modify Campaign configurations' : 'Initialize Promotion campaign'}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Secure registration of coupon parameters on standard checkout flow rules.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCouponModalOpen(false)}
+                className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCoupon} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Campaign Code <span className="text-red-500">*</span></label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold font-mono text-slate-800 uppercase tracking-wider outline-none focus:border-blue-500"
+                      placeholder="e.g. EXTRA50"
+                      value={formCouponCode}
+                      onChange={e => setFormCouponCode(e.target.value.replace(/[^a-zA-Z0-9_\-]/g, ''))}
+                      disabled={!!editingCoupon}
+                      required
+                    />
+                    {!editingCoupon && (
+                      <button
+                        type="button"
+                        onClick={generateRandomCouponCode}
+                        className="px-3 bg-slate-100 hover:bg-slate-200 border rounded-xl text-[10px] font-bold text-slate-600 transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        Random
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Campaign Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500"
+                    placeholder="e.g. Festival Launch"
+                    value={formCouponName}
+                    onChange={e => setFormCouponName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Campaign Description</label>
+                <textarea
+                  rows={2}
+                  className="w-full bg-slate-50 border p-2.5 rounded-xl font-medium text-slate-805 outline-none focus:border-blue-500 text-xs text-left"
+                  placeholder="Provide parameters context for customers support reference..."
+                  value={formDescription}
+                  onChange={e => setFormDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4">
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Discount Type</label>
+                  <select
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold outline-none focus:border-blue-500"
+                    value={formDiscountType}
+                    onChange={e => {
+                      const type = e.target.value as 'percentage' | 'fixed';
+                      setFormDiscountType(type);
+                    }}
+                  >
+                    <option value="percentage">Percentage OFF (%)</option>
+                    <option value="fixed">Fixed Price Amount (₹)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Discount Value</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold font-mono text-slate-800 outline-none focus:border-blue-500"
+                    placeholder="e.g. 20"
+                    value={formDiscountValue}
+                    onChange={e => setFormDiscountValue(Number(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Max Discount Cap (₹) <span className="text-slate-400 font-normal">(Optional)</span></label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold font-mono text-slate-800 outline-none focus:border-blue-500"
+                    placeholder="e.g. 1000"
+                    value={formMaxDiscount || ''}
+                    onChange={e => setFormMaxDiscount(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Min Purchase Cart Floor (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold font-mono text-slate-800 outline-none focus:border-blue-500"
+                    placeholder="e.g. 499"
+                    value={formMinOrderValue || ''}
+                    onChange={e => setFormMinOrderValue(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4">
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Valid Action From Date</label>
+                  <input
+                    type="date"
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-medium font-mono text-slate-800 outline-none focus:border-blue-500"
+                    value={formValidFrom}
+                    onChange={e => setFormValidFrom(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Expiry End Date</label>
+                  <input
+                    type="date"
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-medium font-mono text-slate-800 outline-none focus:border-blue-500"
+                    value={formValidTo}
+                    onChange={e => setFormValidTo(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Campaign Usage Limit</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold font-mono text-slate-800 outline-none focus:border-blue-500"
+                    placeholder="e.g. 500 (Blank for infinite)"
+                    value={formUsageLimit || ''}
+                    onChange={e => setFormUsageLimit(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">User Frequency Cap</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold font-mono text-slate-800 outline-none focus:border-blue-500"
+                    placeholder="e.g. 1"
+                    value={formPerUserLimit || ''}
+                    onChange={e => setFormPerUserLimit(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">App Solution Applicability</label>
+                <select
+                  className="w-full bg-slate-50 border p-2.5 rounded-xl font-bold outline-none focus:border-blue-500"
+                  value={formApplicability}
+                  onChange={e => setFormApplicability(e.target.value)}
+                >
+                  <option value="all">Apply to All Products & plans</option>
+                  <option value="monthly">Exclusive to Monthly billing packages (Keywords Match)</option>
+                  <option value="annual">Exclusive to Annual billing packages (Keywords Match)</option>
+                </select>
+              </div>
+
+              {formCouponCode.toUpperCase() === 'SURYA001' && (
+                <div className="p-3 bg-slate-900 border border-slate-700 rounded-2xl text-slate-100 space-y-1 animate-pulse">
+                  <span className="font-extrabold text-[10px] text-blue-400 uppercase tracking-widest block font-mono">⚡ SYSTEM CRITICAL CORE OVERRIDE DETECTED</span>
+                  <p className="text-[10px] text-slate-300 font-mono leading-normal">
+                    You have selected code <strong className="text-white">SURYA001</strong>. This code is bound dynamically inside our core secure payment validation pipeline: implementing checkout bypass forcing actual payable amount to <strong className="text-yellow-400">exactly ₹1.00</strong> regardless of plan selection.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4 border-t justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsCouponModalOpen(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-205 text-slate-750 font-extrabold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all shadow-md cursor-pointer animate-none"
+                >
+                  {editingCoupon ? 'Update Campaign' : 'Initialize Campaign'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* -------------------- MODULE 18: CONTACT MESSAGES INBOX -------------------- */}
+      {activeModule === 'contact-messages' && (
+        <RoleGuard moduleId="contact-messages">
+          <div className="space-y-6 animate-fade-in text-left bg-white p-6 border rounded-2xl shadow-sm" id="admin-module-18">
+            <h3 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2 border-b pb-4">
+              <Mail size={17} className="text-red-750" />
+              <span>Module 18: Inquiry Inbox Administration Ledger</span>
+            </h3>
+            <AdminContactMessages />
           </div>
         </RoleGuard>
       )}

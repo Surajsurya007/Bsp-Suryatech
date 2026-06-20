@@ -233,13 +233,22 @@ export default function App() {
     fetchVideos();
     fetchSolutions();
 
+    // Custom event listener for instant updates when edited in admin panel
+    const handleProductsUpdated = () => {
+      fetchProducts();
+    };
+    window.addEventListener('products_updated', handleProductsUpdated);
+
     const pollInterval = setInterval(() => {
       fetchProducts();
       fetchVideos();
       fetchSolutions();
     }, 8000); // Polling index catalogs periodically
 
-    return () => clearInterval(pollInterval);
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('products_updated', handleProductsUpdated);
+    };
   }, []);
 
   // Fetch latest downloads automatically when navigating to the Download Center page
@@ -791,15 +800,32 @@ export default function App() {
       let finalAmount = resolvedPrice;
       if (couponCode) {
         try {
-          const { data: couponData } = await supabase
-            .from('coupons')
-            .select('*')
-            .eq('code', couponCode)
-            .maybeSingle();
-          if (couponData && couponData.discountPercent) {
-            finalAmount = Math.ceil(resolvedPrice * (1 - couponData.discountPercent / 100));
+          const resVal = await fetch('/api/coupons/validate-checkout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            body: JSON.stringify({
+              code: couponCode,
+              productId,
+              orderAmount: resolvedPrice,
+              email: currentUser.email
+            })
+          });
+          if (resVal.ok) {
+            const valData = await resVal.json();
+            finalAmount = valData.finalAmount;
+            console.log('[CHECKOUT LOG] Verified coupon discount applied. Final price: INR ', finalAmount);
+          } else {
+            const errData = await resVal.json().catch(() => ({}));
+            const errMsg = errData.error || 'The applied coupon code is invalid or has expired.';
+            addNotification(`Coupon Error: ${errMsg}`, 'error');
+            setCheckoutLoading(false);
+            return;
           }
-        } catch (_) {}
+        } catch (valErr: any) {
+          console.warn('[CHECKOUT WARNING] Coupon verification error:', valErr);
+        }
       }
 
       // 1. Create the pending order on the backend to obtain a secure Order Reference

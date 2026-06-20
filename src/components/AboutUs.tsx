@@ -36,7 +36,7 @@ export default function AboutUs() {
   ];
 
   const milestones = [
-    { year: '2019', title: 'Company Inception Noida', text: 'BSP Suryatech starts as custom software developers assisting local Kirana stores with automated barcode tracking sheets.' },
+    { year: '2019', title: 'Company Inception Raipur', text: 'BSP Suryatech starts as custom software developers assisting local Kirana stores with automated barcode tracking sheets.' },
     { year: '2021', title: 'Standard Offline Billing launch', text: 'Released our first standard offline billing setup package (v1.0.0) supporting ESC/POS thermal command printers.' },
     { year: '2023', title: 'GST Compliant Export Edition', text: 'Launches full compliance schemes in version 3.0, enabling direct ledger tables exports and GST government JSON file generators.' },
     { year: '2026', title: '14,000+ Active Outlets milestones', text: 'Reaches a landmark target supporting retail registers, pharmacies and hardware dealers across all major states in India.' }
@@ -51,7 +51,7 @@ export default function AboutUs() {
           Empowering Indian Retail Since 2019
         </p>
         <p className="text-slate-500 text-sm max-w-2xl mx-auto">
-          BSP Suryatech is a dedicated software development firm located in Noida, India. We are passionate about eliminating manual ledger log mistakes and boosting checkout counter transactional speeds.
+          BSP Suryatech is a dedicated software development firm located in Raipur, India. We are passionate about eliminating manual ledger log mistakes and boosting checkout counter transactional speeds.
         </p>
       </section>
 

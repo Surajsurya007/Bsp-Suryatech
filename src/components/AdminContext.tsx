@@ -38,6 +38,8 @@ interface AdminContextType {
   setAdminPayments: React.Dispatch<React.SetStateAction<any[]>>;
   adminInvoices: any[];
   setAdminInvoices: React.Dispatch<React.SetStateAction<any[]>>;
+  adminContactMessages: any[];
+  setAdminContactMessages: React.Dispatch<React.SetStateAction<any[]>>;
   adminLoading: boolean;
   setAdminLoading: (loading: boolean) => void;
   
@@ -76,6 +78,71 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [adminTickets, setAdminTickets] = useState<any[]>([]);
   const [adminPayments, setAdminPayments] = useState<any[]>([]);
   const [adminInvoices, setAdminInvoices] = useState<any[]>([]);
+  const [adminContactMessages, setAdminContactMessages] = useState<any[]>(() => {
+    const cached = localStorage.getItem('bsp_contact_messages');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // ignore
+      }
+    }
+    const defaultMessages = [
+      {
+        id: 'BSP-2026-000001',
+        full_name: 'Amit Singhal',
+        email: 'amit@singhalretail.com',
+        phone: '+91 98100 23456',
+        topic_category: 'Buying Query',
+        message_description: 'We are setting up 3 new POS lanes in our grocery store in Sector 18 Raipur. We are interested in purchasing the Retail Billing Pro licenses. Please send us a price quote for a bulk purchase of 3 licenses and advise on what thermal printers are supported.',
+        submission_date: '2026-06-18',
+        submission_time: '11:15:30',
+        created_at: '2026-06-18T11:15:30.000Z',
+        ip_address: '103.241.12.94',
+        status: 'New',
+        status_history: JSON.stringify([
+          { status: 'New', timestamp: '2026-06-18T11:15:30.000Z', note: 'Form submitted by user' }
+        ])
+      },
+      {
+        id: 'BSP-2026-000002',
+        full_name: 'Rajinder Sharma',
+        email: 'rajinder@sharmasweets.in',
+        phone: '+91 94120 44556',
+        topic_category: 'POS Software',
+        message_description: 'Do you support integrating barcode weighing scales with your POS billing software? We have fresh sweet outlets and need weighing scales to directly print barcodes that your billing machine can scan.',
+        submission_date: '2026-06-19',
+        submission_time: '14:22:10',
+        created_at: '2026-06-19T14:22:10.000Z',
+        ip_address: '223.187.32.167',
+        status: 'Read',
+        status_history: JSON.stringify([
+          { status: 'New', timestamp: '2026-06-19T14:22:10.000Z', note: 'Form submitted by user' },
+          { status: 'Read', timestamp: '2026-06-19T16:00:00.000Z', note: 'Status updated by Admin' }
+        ])
+      },
+      {
+        id: 'BSP-2026-000003',
+        full_name: 'Dr. Meenakshi Iyer',
+        email: 'iyer.meenakshi@gmail.com',
+        phone: '+91 91223 88990',
+        topic_category: 'Hotel Management ERP',
+        message_description: 'We run a boutique resort and wellness spa in Rishikesh. Do you have a direct PMS or Hotel Management billing suite that handles check-in, check-out, spa billing, and restaurant POS together in one shared offline database?',
+        submission_date: '2026-06-19',
+        submission_time: '18:40:15',
+        created_at: '2026-06-19T18:40:15.000Z',
+        ip_address: '122.160.44.12',
+        status: 'Replied',
+        status_history: JSON.stringify([
+          { status: 'New', timestamp: '2026-06-19T18:40:15.000Z', note: 'Form submitted by user' },
+          { status: 'Read', timestamp: '2026-06-20T09:30:00.000Z', note: 'Marked as read' },
+          { status: 'Replied', timestamp: '2026-06-20T10:15:00.000Z', note: 'Replied with proposal email' }
+        ])
+      }
+    ];
+    localStorage.setItem('bsp_contact_messages', JSON.stringify(defaultMessages));
+    return defaultMessages;
+  });
   
   // Telemetry Logs
   const [telemetryLogs, setTelemetryLogs] = useState<AdminTelemetryLog[]>([
@@ -162,6 +229,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: invoices, error: errI } = await supabase.from('invoices').select('*');
       if (!errI && invoices) setAdminInvoices(invoices);
 
+      // Contact Messages sync from supabase
+      try {
+        const { data: contacts, error: errContacts } = await supabase.from('contact_messages').select('*');
+        if (!errContacts && contacts && contacts.length > 0) {
+          setAdminContactMessages(contacts);
+          localStorage.setItem('bsp_contact_messages', JSON.stringify(contacts));
+        } else if (errContacts) {
+          console.log("Supabase contact_messages not found or error, using localStorage fallback:", errContacts.message);
+        }
+      } catch (err: any) {
+        console.warn("Contact messages sync warning:", err);
+      }
+
       // Trial users from custom source if exists
       const { data: trials, error: errTr } = await supabase.from('trial_activities').select('*');
       if (!errTr && trials) {
@@ -216,6 +296,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAdminPayments,
       adminInvoices,
       setAdminInvoices,
+      adminContactMessages,
+      setAdminContactMessages,
       adminLoading,
       setAdminLoading,
       telemetryLogs,

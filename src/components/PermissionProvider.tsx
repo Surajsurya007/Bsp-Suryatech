@@ -32,7 +32,8 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           'gst',
           'invoices',
           'reports',
-          'software'
+          'software',
+          'contact-messages'
         ].includes(moduleId);
         
       case 'support':
@@ -44,7 +45,8 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           'trials',
           'downloads',
           'notifications',
-          'software'
+          'software',
+          'contact-messages'
         ].includes(moduleId);
         
       case 'customer':

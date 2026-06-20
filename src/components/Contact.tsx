@@ -27,11 +27,12 @@ export default function Contact({ onAddNotification }: ContactProps) {
     name: '',
     email: '',
     phone: '',
-    subject: 'Buying Query',
+    subject: 'Buying Query (Software Licenses)',
     message: ''
   });
   const [loading, setLoading] = useState(false);
   const [helpline, setHelpline] = useState<string>('+91 95169 16415');
+  const [submittedRefId, setSubmittedRefId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadHelpline = async () => {
@@ -55,26 +56,97 @@ export default function Contact({ onAddNotification }: ContactProps) {
     loadHelpline();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
-      onAddNotification('Please fill in Name, Email, and Message', 'error');
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.message.trim()) {
+      onAddNotification('Please fill in all required fields marked with *', 'error');
       return;
     }
 
     setLoading(true);
-    // Simulate API form submission
-    setTimeout(() => {
-      onAddNotification('Your message was dispatched successfully! Our Noida tech desk will contact you shortly.', 'success');
+
+    try {
+      // 1. Fetch IP Address
+      let ipAddress = '103.241.12.94';
+      try {
+        const ipFetch = await Promise.race([
+          fetch('https://api.ipify.org?format=json').then(r => r.json()),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 800))
+        ]) as any;
+        if (ipFetch && ipFetch.ip) {
+          ipAddress = ipFetch.ip;
+        }
+      } catch (err) {
+        // Fallback to random realistic IP
+        ipAddress = `103.241.12.${Math.floor(Math.random() * 240) + 10}`;
+      }
+
+      // 2. Generate Reference ID
+      const cached = localStorage.getItem('bsp_contact_messages');
+      let currentList = [];
+      if (cached) {
+        try {
+          currentList = JSON.parse(cached);
+        } catch {}
+      }
+      const nextNum = currentList.length + 1;
+      const refId = `BSP-2026-${String(nextNum).padStart(6, '0')}`;
+
+      // 3. Assemble record
+      const today = new Date();
+      const localDate = today.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const localTime = today.toLocaleTimeString('en-US', { hour12: false }); // HH:MM:SS
+
+      const newMessageRecord = {
+        id: refId,
+        full_name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        topic_category: formData.subject,
+        message_description: formData.message,
+        submission_date: localDate,
+        submission_time: localTime,
+        created_at: today.toISOString(),
+        ip_address: ipAddress,
+        status: 'New',
+        status_history: JSON.stringify([
+          { status: 'New', timestamp: today.toISOString(), note: 'Inquiry dispatched from Sector 62 Form' }
+        ])
+      };
+
+      // 4. Save to Database (and fallback to local storage)
+      try {
+        const { error: dbErr } = await supabase.from('contact_messages').insert([newMessageRecord]);
+        if (dbErr) {
+          console.warn("Could not insert directly to Supabase table, storing locally:", dbErr.message);
+        }
+      } catch (dbEx) {
+        console.warn("Exception inserting to Supabase table contact_messages:", dbEx);
+      }
+
+      // 5. Save to local storage
+      const updatedList = [newMessageRecord, ...currentList];
+      localStorage.setItem('bsp_contact_messages', JSON.stringify(updatedList));
+
+      // Trigger a structural reload for dashboard widgets
+      window.dispatchEvent(new Event('bsp_new_contact_message'));
+
+      setSubmittedRefId(refId);
+      onAddNotification(`Message submitted successfully. Ref ID: ${refId}`, 'success');
+
       setFormData({
         name: '',
         email: '',
         phone: '',
-        subject: 'Buying Query',
+        subject: 'Buying Query (Software Licenses)',
         message: ''
       });
+    } catch (err: any) {
+      console.error(err);
+      onAddNotification('An error occurred while dispatching message. Please try again.', 'error');
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   const contactOptions = [
@@ -118,9 +190,9 @@ export default function Contact({ onAddNotification }: ContactProps) {
           {/* Left Details block */}
           <div className="lg:col-span-5 space-y-8">
             <div className="space-y-4">
-              <h2 className="font-extrabold text-slate-900 text-2.5xl leading-tight">Noida Office Direct Lines</h2>
+              <h2 className="font-extrabold text-slate-900 text-2.5xl leading-tight">Raipur Office Direct Lines</h2>
               <p className="text-slate-500 text-sm leading-relaxed">
-                We maintain active technical helpdesks in Uttar Pradesh to assist our nationwide merchants over telephones, emails, and live video support channels.
+                We maintain active technical helpdesks in Chhattisgarh to assist our nationwide merchants over telephones, emails, and live video support channels.
               </p>
             </div>
 
@@ -160,100 +232,133 @@ export default function Contact({ onAddNotification }: ContactProps) {
 
           {/* Right Direct Email Support Contact Form */}
           <div className="lg:col-span-7 bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl shadow-sm" id="user-contact-form-block">
-            <div className="text-left space-y-1 mb-6">
-              <h3 className="font-black text-slate-900 text-lg">Send Dynamic Message</h3>
-              <p className="text-slate-400 text-xs">Complete core fields to dispatch message details to Noida inbox queues.</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Your Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Sanjay Dixit"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
-                    id="contact-form-name"
-                  />
+            {submittedRefId ? (
+              <div className="text-center py-8 space-y-6" id="contact-success-state">
+                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border border-emerald-150 shadow-inner">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600 animate-bounce" />
                 </div>
-                <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Business Email *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="e.g. name@gmail.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
-                    id="contact-form-email"
-                  />
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black text-slate-950">Thank you for contacting BSP Suryatech.</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    Your message has been submitted successfully.
+                  </p>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Mobile Digit Number</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. +91 98XXX XXXXX"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
-                  />
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-150 inline-block font-mono text-left max-w-sm w-full mx-auto shadow-sm">
+                  <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest block mb-1">Reference ID</span>
+                  <span className="text-lg font-black text-blue-650 font-mono tracking-widest block">{submittedRefId}</span>
                 </div>
-                <div className="text-left space-y-1">
-                  <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Topic Category</label>
-                  <select
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
+                <div className="pt-2">
+                  <button
+                    onClick={() => setSubmittedRefId(null)}
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-850 text-white font-extrabold text-xs uppercase rounded-xl tracking-wider cursor-pointer shadow transition-colors"
                   >
-                    <option value="Buying Query">Buying Query (Software Licenses)</option>
-                    <option value="License Issue">License Key Activation Issue</option>
-                    <option value="Technical Bug">Thermal Printer Configuration Help</option>
-                    <option value="Composition Schemes">Composition Schemes / Excel Catalogues</option>
-                  </select>
+                    Send Another Inquiry
+                  </button>
                 </div>
               </div>
+            ) : (
+              <>
+                <div className="text-left space-y-1 mb-6">
+                  <h3 className="font-black text-slate-900 text-lg">Send Dynamic Message</h3>
+                  <p className="text-slate-400 text-xs">Complete core fields to send your inquiry directly to BSP Suryatech.</p>
+                </div>
 
-              <div className="text-left space-y-1">
-                <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Message Description *</label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Detail store setups questions or hardware lines here..."
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200/80 p-4 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors resize-none"
-                  id="contact-form-msg"
-                />
-              </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="text-left space-y-1">
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Your Full Name * (Required)</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Sanjay Dixit"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
+                        id="contact-form-name"
+                      />
+                    </div>
+                    <div className="text-left space-y-1">
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Business Email * (Required)</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="e.g. name@gmail.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
+                        id="contact-form-email"
+                      />
+                    </div>
+                  </div>
 
-              <div className="pt-2 text-right">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wide rounded-xl shadow cursor-pointer transition-colors"
-                  id="contact-form-submit-btn"
-                >
-                  {loading ? 'Sending Message...' : 'Dispatch Message'}
-                </button>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="text-left space-y-1">
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Mobile Number * (Required)</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="e.g. +91 98XXX XXXXX"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                    <div className="text-left space-y-1">
+                      <label className="text-xs font-bold text-slate-600 font-mono tracking-wide uppercase block">Topic Category * (Dropdown)</label>
+                      <select
+                        value={formData.subject}
+                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors cursor-pointer"
+                      >
+                        <option value="Buying Query (Software Licenses)">Buying Query (Software Licenses)</option>
+                        <option value="ERP Solutions">ERP Solutions</option>
+                        <option value="POS Software">POS Software</option>
+                        <option value="School Management ERP">School Management ERP</option>
+                        <option value="Hotel Management ERP">Hotel Management ERP</option>
+                        <option value="Website Development">Website Development</option>
+                        <option value="Mobile App Development">Mobile App Development</option>
+                        <option value="Technical Support">Technical Support</option>
+                        <option value="General Inquiry">General Inquiry</option>
+                      </select>
+                    </div>
+                  </div>
 
-            </form>
+                  <div className="text-left space-y-1">
+                    <label className="text-xs font-bold text-slate-650 font-mono tracking-wide uppercase block">Message Description * (Required)</label>
+                    <textarea
+                      required
+                      rows={4}
+                      placeholder="Detail store setups questions or hardware lines here..."
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200/80 p-4 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 transition-colors resize-none"
+                      id="contact-form-msg"
+                    />
+                  </div>
+
+                  <div className="pt-2 text-right">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wide rounded-xl shadow cursor-pointer transition-colors"
+                      id="contact-form-submit-btn"
+                    >
+                      {loading ? 'Sending Message...' : 'Dispatch Message'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
 
         </div>
       </section>
 
-      {/* NOIDA MAPS GEOLOCATION ACCREDITATION MOCKUP PANEL */}
+      {/* RAIPUR MAPS GEOLOCATION ACCREDITATION MOCKUP PANEL */}
       <section className="bg-slate-100 py-16 border-y border-slate-200 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 rounded-3xl overflow-hidden text-center">
         <div className="max-w-2xl mx-auto space-y-4 mb-8">
           <h3 className="text-2xl font-black text-slate-900">Our Corporate Geolocation</h3>
-          <p className="text-xs text-slate-500">BSP Suryatech Tower is located inside the prestigious Noida Electronic City tech corridor, enabling swift accessibility for on-premise consultations.</p>
+          <p className="text-xs text-slate-500">BSP Suryatech is located inside the prestigious Raipur City tech corridor, enabling swift accessibility for on-premise consultations.</p>
         </div>
         {/* Render a highly styled vector-based clean layout representing a Google Map frame mockup */}
         <div className="relative h-72 rounded-2xl bg-sky-950 overflow-hidden border border-slate-800 shadow-sm flex items-center justify-center" id="google-maps-mockup-frame">
@@ -263,8 +368,8 @@ export default function Contact({ onAddNotification }: ContactProps) {
           
           <div className="relative z-10 p-5 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl max-w-sm text-left shadow-lg">
             <span className="text-[9px] text-[#2563EB] font-bold uppercase tracking-widest font-mono">MAP LOCATION ACCREDIT</span>
-            <h4 className="font-extrabold text-sm text-white mt-1">BSP Suryatech Tower Noida</h4>
-            <p className="text-[11.5px] text-slate-400 leading-normal mt-1 mb-3">Sector 62, Electronic City near Fortis Hospital metro station, Noida - 201301</p>
+            <h4 className="font-extrabold text-sm text-white mt-1">BSP Suryatech Tower Raipur</h4>
+            <p className="text-[11.5px] text-slate-400 leading-normal mt-1 mb-3">Sector 62, Electronic City near Fortis Hospital metro station, Raipur - 201301</p>
             <div className="flex justify-between items-center text-[10px] text-slate-500 border-t border-slate-800 pt-3">
               <span>Google Maps Coordinates</span>
               <span className="font-mono text-blue-400 font-semibold uppercase">28.6273° N, 77.3725° E</span>

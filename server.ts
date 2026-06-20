@@ -1033,9 +1033,9 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
               businessName: 'Google Connected Business',
               contactNumber: '9111111111',
               emailAddress: user.email,
-              businessAddress: 'Sector 62, Noida, UP',
-              city: 'Noida',
-              state: 'Uttar Pradesh',
+              businessAddress: 'Sector 62, Raipur, C.G.',
+              city: 'Raipur',
+              state: 'Chhattisgarh',
               pincode: '201301',
               gstNumber: ''
             });
@@ -1155,9 +1155,9 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
             businessName: 'GitHub Dev Portfolio POS',
             contactNumber: '9111111111',
             emailAddress: dummyEmail,
-            businessAddress: 'Sector 62, Noida, UP',
-            city: 'Noida',
-            state: 'Uttar Pradesh',
+            businessAddress: 'Sector 62, Raipur, C.G.',
+            city: 'Raipur',
+            state: 'Chhattisgarh',
             pincode: '201301',
             gstNumber: '09AAACS1234A1Z5'
           });
@@ -1478,11 +1478,230 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.status(201).json(newRev);
   });
 
-  // Coupons code validation
+  // Coupons code validation helper
+  const validateCoupon = (code: string, productId: string | undefined, orderAmount: number | undefined, email: string | undefined) => {
+    let coupon = dbActions.getCouponByCode(code);
+    
+    // In case SURYA001 is missing or deleted, use virtual template so it is guaranteed to work
+    if (!coupon && code.toUpperCase() === 'SURYA001') {
+      coupon = {
+        id: 'cp-surya001',
+        coupon_code: 'SURYA001',
+        coupon_name: 'Special ₹1.00 Override Promo',
+        description: 'Super override key. Resets total cart bill payable to exactly ₹1.00 regardless of the products selected.',
+        discount_type: 'fixed',
+        discount_value: 0,
+        max_discount: null,
+        min_order_value: 0,
+        valid_from: '2026-01-01',
+        valid_to: '2029-12-31',
+        usage_limit: 9999,
+        used_count: 0,
+        per_user_limit: 999,
+        status: 'active',
+        created_at: '2026-06-20T12:00:00Z',
+        code: 'SURYA001',
+        discountPercent: 100,
+        active: true,
+        expiresBy: '2029-12-31'
+      };
+    }
+
+    if (!coupon) {
+      return { valid: false, error: 'Invalid Coupon Code' };
+    }
+
+    // 1. Check coupon status
+    if (coupon.status === 'disabled' || coupon.status === 'draft') {
+      return { valid: false, error: 'Coupon Disabled' };
+    }
+    if (coupon.status === 'expired') {
+      return { valid: false, error: 'Coupon Expired' };
+    }
+
+    // 2. Validity period dates check
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    if (coupon.valid_from && todayStr < coupon.valid_from) {
+      return { valid: false, error: 'Coupon Not Applicable' }; // Not active yet
+    }
+    if (coupon.valid_to && todayStr > coupon.valid_to) {
+      // Automatically update the status in background
+      coupon.status = 'expired';
+      coupon.active = false;
+      return { valid: false, error: 'Coupon Expired' };
+    }
+
+    // 3. Coupon total usage limit
+    if (coupon.usage_limit && coupon.usage_limit > 0) {
+      if ((coupon.used_count || 0) >= coupon.usage_limit) {
+        return { valid: false, error: 'Coupon Usage Limit Reached' };
+      }
+    }
+
+    // 4. Per user usage limit
+    if (email && coupon.per_user_limit && coupon.per_user_limit > 0) {
+      const redemptions = dbActions.getCouponRedemptions();
+      const userRedeemedCount = redemptions.filter(r => 
+        (r.coupon_id === coupon.id || r.coupon_id === coupon.coupon_code) && 
+        (r.user_id && r.user_id.toLowerCase() === email.toLowerCase())
+      ).length;
+
+      if (userRedeemedCount >= coupon.per_user_limit) {
+        return { valid: false, error: 'Coupon Already Used' };
+      }
+    }
+
+    // 5. Minimum order amount (skip min check for SURYA001 super override)
+    if (coupon.coupon_code !== 'SURYA001' && coupon.code !== 'SURYA001') {
+      if (orderAmount !== undefined && coupon.min_order_value && coupon.min_order_value > 0) {
+        if (Number(orderAmount) < coupon.min_order_value) {
+          return { valid: false, error: 'Minimum Purchase Amount Not Met' };
+        }
+      }
+    }
+
+    // 6. Applicability checks based on keywords inside coupon names/descriptions
+    if (coupon.coupon_code !== 'SURYA001' && coupon.code !== 'SURYA001') {
+      if (coupon.coupon_name || coupon.description) {
+        const textContext = `${coupon.coupon_name || ''} ${coupon.description || ''}`.toLowerCase();
+        if (productId) {
+          const pIdLower = productId.toLowerCase();
+          
+          if (textContext.includes('monthly') && !pIdLower.includes('monthly') && !pIdLower.includes('month')) {
+            return { valid: false, error: 'Coupon Not Applicable' };
+          }
+          if (textContext.includes('annual') && !pIdLower.includes('annual') && !pIdLower.includes('yearly') && !pIdLower.includes('year')) {
+            return { valid: false, error: 'Coupon Not Applicable' };
+          }
+        }
+      }
+    }
+
+    // Calculate details
+    let discountAmount = 0;
+    const baseAmt = orderAmount !== undefined ? Number(orderAmount) : 1000;
+    
+    if (coupon.coupon_code === 'SURYA001' || coupon.code === 'SURYA001') {
+      discountAmount = Math.max(0, baseAmt - 1);
+    } else if (coupon.discount_type === 'percentage') {
+      discountAmount = Math.round((baseAmt * Number(coupon.discount_value)) / 100);
+      if (coupon.max_discount && discountAmount > coupon.max_discount) {
+        discountAmount = coupon.max_discount;
+      }
+    } else {
+      discountAmount = Number(coupon.discount_value);
+    }
+
+    if (discountAmount > baseAmt) {
+      discountAmount = baseAmt;
+    }
+
+    const finalAmount = Math.max(0, baseAmt - discountAmount);
+
+    return {
+      valid: true,
+      coupon,
+      discountAmount,
+      finalAmount
+    };
+  };
+
+  // Coupons code validation (REST GET with parameters)
   app.get('/api/coupons/validate/:code', (req, res) => {
-    const coupon = dbActions.getCouponByCode(req.params.code);
-    if (!coupon) return res.status(404).json({ error: 'Invalid or expired coupon code' });
-    res.json(coupon);
+    const code = req.params.code;
+    const { productId, orderAmount, email } = req.query;
+    
+    const result = validateCoupon(
+      code, 
+      productId ? String(productId) : undefined, 
+      orderAmount ? Number(orderAmount) : undefined, 
+      email ? String(email) : undefined
+    );
+
+    if (!result.valid) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json({
+      code: result.coupon?.coupon_code || result.coupon?.code || code,
+      discountPercent: result.coupon?.discount_type === 'percentage' ? result.coupon?.discount_value : 0,
+      discountAmount: result.discountAmount,
+      finalAmount: result.finalAmount,
+      coupon: result.coupon
+    });
+  });
+
+  // Coupons code validation POST
+  app.post('/api/coupons/validate-checkout', (req, res) => {
+    const { code, productId, orderAmount, email } = req.body;
+    
+    const result = validateCoupon(
+      code, 
+      productId ? String(productId) : undefined, 
+      orderAmount ? Number(orderAmount) : undefined, 
+      email ? String(email) : undefined
+    );
+
+    if (!result.valid) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json({
+      valid: true,
+      code: result.coupon?.coupon_code || result.coupon?.code || code,
+      discountAmount: result.discountAmount,
+      finalAmount: result.finalAmount,
+      coupon: result.coupon
+    });
+  });
+
+  // --- SUPER ADMIN COUPON MANAGEMENT API ---
+  app.get('/api/admin/coupons', authenticateToken, (req: any, res: any) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
+    }
+    res.json(dbActions.getCoupons());
+  });
+
+  app.post('/api/admin/coupons', authenticateToken, (req: any, res: any) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
+    }
+    const coupon = req.body;
+    coupon.created_by = req.user.email;
+    const fresh = dbActions.createCoupon(coupon);
+    console.log(`[AUDIT LOG] Admin ${req.user.email} created new promotion coupon: ${fresh.coupon_code}`);
+    res.status(201).json(fresh);
+  });
+
+  app.put('/api/admin/coupons/:id', authenticateToken, (req: any, res: any) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
+    }
+    const id = req.params.id;
+    const updates = req.body;
+    const updated = dbActions.updateCoupon(id, updates);
+    if (!updated) {
+      return res.status(404).json({ error: 'Promotion coupon code not registered.' });
+    }
+    console.log(`[AUDIT LOG] Admin ${req.user.email} updated promotion coupon: ${id}`);
+    res.json(updated);
+  });
+
+  app.delete('/api/admin/coupons/:id', authenticateToken, (req: any, res: any) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
+    }
+    const id = req.params.id;
+    dbActions.deleteCoupon(id);
+    console.log(`[AUDIT LOG] Admin ${req.user.email} terminated coupon from master database: ${id}`);
+    res.json({ success: true });
+  });
+
+  app.get('/api/admin/coupon-redemptions', authenticateToken, (req: any, res: any) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
+    }
+    res.json(dbActions.getCouponRedemptions());
   });
 
   // Testimonials & Blogs

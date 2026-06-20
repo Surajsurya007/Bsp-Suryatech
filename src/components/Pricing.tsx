@@ -64,6 +64,7 @@ export default function Pricing({
 }: PricingProps) {
   const [coupon, setCoupon] = useState('');
   const [validatedDiscount, setValidatedDiscount] = useState<number | null>(null);
+  const [couponObject, setCouponObject] = useState<any | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<string>('');
   const [couponError, setCouponError] = useState('');
   const [validationLoading, setValidationLoading] = useState(false);
@@ -73,7 +74,7 @@ export default function Pricing({
   const [company, setCompany] = useState('');
   const [gst, setGst] = useState('');
 
-  // Validate coupon code via server / Supabase
+  // Validate coupon code via secure server backend
   const handleValidateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCoupon = coupon.trim().toUpperCase();
@@ -81,50 +82,39 @@ export default function Pricing({
 
     setValidationLoading(true);
     setCouponError('');
-    console.log("Pricing: Validating coupon via Supabase direct query: ", cleanCoupon);
+    console.log("Pricing: Validating coupon via server API: ", cleanCoupon);
     try {
-      const { data, error } = await supabase
-        .from('coupons')
-        .select('*')
-        .eq('code', cleanCoupon)
-        .single();
+      const activeProductId = cartItem?.selectedPlanId || cartItem?.id || 'prod-billing-pro';
+      const activePrice = cartItem?.price || 999;
+      const userEmail = user?.email || undefined;
 
-      if (data && !error) {
-        if (!data.active) {
-          setCouponError('This coupon is no longer active');
-          setValidatedDiscount(null);
-          setAppliedCoupon('');
-        } else if (data.expires_by && new Date(data.expires_by) < new Date()) {
-          setCouponError('This coupon has expired');
-          setValidatedDiscount(null);
-          setAppliedCoupon('');
-        } else {
-          console.log("Pricing: Successfully validated coupon via Supabase:", data);
-          setValidatedDiscount(data.discount_percent || data.discountPercent || 20);
-          setAppliedCoupon(data.code);
-          setCoupon('');
-        }
+      const res = await fetch('/api/coupons/validate-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify({
+          code: cleanCoupon,
+          productId: activeProductId,
+          orderAmount: activePrice,
+          email: userEmail
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Pricing: Successfully validated coupon via secure server-side:", data);
+        setCouponObject(data.coupon);
+        setValidatedDiscount(data.coupon?.discount_type === 'percentage' ? Number(data.coupon?.discount_value) : null);
+        setAppliedCoupon(data.code);
+        setCoupon('');
       } else {
-        if (error) {
-          console.error("Pricing: Supabase coupon query failed:", error.message);
-        }
-        // Fallback or Try local codes validation
-        const localCoupons = [
-          { code: 'SURYA20', discountPercent: 20 },
-          { code: 'INDIA50', discountPercent: 50 },
-          { code: 'STARTUP10', discountPercent: 10 }
-        ];
-        const matched = localCoupons.find(c => c.code === cleanCoupon);
-        if (matched) {
-          console.log("Pricing: Coupon validated via local fallback system:", matched);
-          setValidatedDiscount(matched.discountPercent);
-          setAppliedCoupon(matched.code);
-          setCoupon('');
-        } else {
-          setCouponError('Invalid coupon code');
-          setValidatedDiscount(null);
-          setAppliedCoupon('');
-        }
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.error || 'Invalid or expired coupon code';
+        setCouponError(errMsg);
+        setValidatedDiscount(null);
+        setCouponObject(null);
+        setAppliedCoupon('');
       }
     } catch (err: any) {
       console.error("Pricing: Coupon validation exception:", err);
@@ -136,6 +126,7 @@ export default function Pricing({
 
   const handleClearCoupon = () => {
     setValidatedDiscount(null);
+    setCouponObject(null);
     setAppliedCoupon('');
     setCouponError('');
   };
@@ -155,10 +146,34 @@ export default function Pricing({
   const resolvedDescription = cartItem?.description || matchedProduct?.description || '';
   const resolvedIcon = cartItem?.icon || '🛍️';
 
-  // Coupon discount computation
-  const discountPercent = validatedDiscount || 0;
-  const discountAmount = Math.ceil(rawPrice * (discountPercent / 100));
-  const netAmount = rawPrice - discountAmount;
+  // Coupon discount computation with secure fixed/percentage validation
+  let discountAmount = 0;
+  const isSuryaOverride = (appliedCoupon || '').toUpperCase() === 'SURYA001' || (couponObject && ((couponObject.coupon_code || '').toUpperCase() === 'SURYA001' || (couponObject.code || '').toUpperCase() === 'SURYA001'));
+
+  if (isSuryaOverride) {
+    discountAmount = Math.max(0, rawPrice - 1);
+  } else if (couponObject) {
+    if (couponObject.discount_type === 'percentage') {
+      discountAmount = Math.ceil((rawPrice * Number(couponObject.discount_value)) / 100);
+      if (couponObject.max_discount && discountAmount > couponObject.max_discount) {
+        discountAmount = couponObject.max_discount;
+      }
+    } else {
+      discountAmount = Number(couponObject.discount_value);
+    }
+  } else if (validatedDiscount) {
+    discountAmount = Math.ceil(rawPrice * (validatedDiscount / 100));
+  }
+
+  if (discountAmount > rawPrice) {
+    discountAmount = rawPrice;
+  }
+  const netAmount = isSuryaOverride ? 1 : Math.max(0, rawPrice - discountAmount);
+  const discountPercent = isSuryaOverride
+    ? 100
+    : couponObject 
+      ? (couponObject.discount_type === 'percentage' ? couponObject.discount_value : Math.round((discountAmount / rawPrice) * 100))
+      : (validatedDiscount || 0);
   
   // Tax breakdown (18% inclusive GST calculation)
   const gstInclusiveAmount = Math.ceil(netAmount * 0.18);

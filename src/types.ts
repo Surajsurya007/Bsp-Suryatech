@@ -166,10 +166,37 @@ export interface SupportTicket {
 }
 
 export interface Coupon {
-  code: string;
-  discountPercent: number;
-  active: boolean;
-  expiresBy: string;
+  id?: string;
+  coupon_code: string;
+  coupon_name: string;
+  description?: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  max_discount?: number;
+  min_order_value?: number;
+  valid_from?: string;
+  valid_to?: string;
+  usage_limit?: number;
+  used_count: number;
+  per_user_limit?: number;
+  status: 'draft' | 'active' | 'scheduled' | 'expired' | 'disabled';
+  created_by?: string;
+  created_at?: string;
+
+  // Compatibility fields for any legacy simple lookups
+  code?: string;
+  discountPercent?: number;
+  active?: boolean;
+  expiresBy?: string;
+}
+
+export interface CouponRedemption {
+  id: string;
+  coupon_id: string;
+  user_id?: string;
+  order_id: string;
+  discount_amount: number;
+  redeemed_at: string;
 }
 
 export interface Testimonial {
