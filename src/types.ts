@@ -188,6 +188,7 @@ export interface Coupon {
   discountPercent?: number;
   active?: boolean;
   expiresBy?: string;
+  applicability?: string;
 }
 
 export interface CouponRedemption {

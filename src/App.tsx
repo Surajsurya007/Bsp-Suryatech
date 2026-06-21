@@ -515,7 +515,7 @@ export default function App() {
     localStorage.setItem('bsp_token', token);
     const updatedUser = {
       ...userData,
-      role: 'customer'
+      role: userData.role || 'customer'
     };
     setUser(updatedUser);
 

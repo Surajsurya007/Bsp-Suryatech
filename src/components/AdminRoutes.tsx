@@ -432,13 +432,13 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
 
       const resC = await fetch('/api/admin/coupons', { headers });
       if (resC.ok) {
-        const cData = await resC.ok ? await resC.json() : [];
+        const cData = await resC.json();
         setCoupons(cData);
       }
 
       const resR = await fetch('/api/admin/coupon-redemptions', { headers });
       if (resR.ok) {
-        const rData = await resR.ok ? await resR.json() : [];
+        const rData = await resR.json();
         setRedemptions(rData);
       }
     } catch (err: any) {

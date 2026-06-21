@@ -1106,14 +1106,17 @@ export const dbActions = {
     });
   },
   createCoupon: (coupon: Coupon) => {
+    const codeVal = (coupon.coupon_code || coupon.code || '').trim().toUpperCase();
     const fresh: Coupon = {
       ...coupon,
       id: coupon.id || 'cp-' + Math.random().toString(36).substr(2, 9),
+      coupon_code: codeVal,
       created_at: coupon.created_at || new Date().toISOString(),
+      used_count: coupon.used_count || 0,
       // Keep legacy support sync:
-      code: coupon.coupon_code || coupon.code,
-      discountPercent: coupon.discount_type === 'percentage' ? coupon.discount_value : 10,
-      active: coupon.status === 'active',
+      code: codeVal,
+      discountPercent: coupon.discount_type === 'percentage' ? Number(coupon.discount_value) : 10,
+      active: coupon.status === 'active' || coupon.active === true,
       expiresBy: coupon.valid_to || '2027-12-31'
     };
     db.coupons.push(fresh);
@@ -1124,15 +1127,17 @@ export const dbActions = {
     const idx = db.coupons.findIndex(c => c.id === id || c.coupon_code === id || c.code === id);
     if (idx !== -1) {
       const existing = db.coupons[idx];
+      const codeVal = (couponData.coupon_code || couponData.code || existing.coupon_code || existing.code || '').trim().toUpperCase();
       const updated = {
         ...existing,
         ...couponData,
+        coupon_code: codeVal,
         // Make sure legacy values are synchronized
-        code: couponData.coupon_code || existing.coupon_code || existing.code,
+        code: codeVal,
         discountPercent: (couponData.discount_type || existing.discount_type) === 'percentage' 
-          ? (couponData.discount_value || existing.discount_value) 
+          ? Number(couponData.discount_value || existing.discount_value) 
           : 10,
-        active: (couponData.status || existing.status) === 'active',
+        active: (couponData.status || existing.status) === 'active' || couponData.active === true,
         expiresBy: couponData.valid_to || existing.valid_to || '2027-12-31'
       };
       db.coupons[idx] = updated;
