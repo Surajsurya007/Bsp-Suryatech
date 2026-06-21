@@ -442,7 +442,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🛍️',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0-Setup.zip'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-supermarket',
@@ -456,7 +456,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🏪',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-grocery',
@@ -470,7 +470,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🍎',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-medical',
@@ -484,7 +484,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '💊',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Medical-Store-ERP-v3.0.0.Setup.exe'
   },
   {
     id: 'sol-restaurant',
@@ -498,7 +498,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🍽️',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-POS-KOT-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-mobile',
@@ -512,7 +512,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '📱',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Mobile-Shop-Billing-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-electronics',
@@ -526,7 +526,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '📺',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Electronics-Shop-Billing-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-transport',
@@ -540,7 +540,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🚚',
     badge: 'Transport',
     badgeColor: 'blue',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/SafeWheels-ERP-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-hospital',
@@ -548,13 +548,13 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Hospital & Clinic Software',
     category: 'Hospital Software',
     subtitle: 'HEALTHCARE INTEGRATED',
+    description: 'In-patient/Out-patient registration, modular appointments, doctor scheduling, prescription prints, and laboratory logs.',
     price: '₹3,000',
+    features: ['OPD/IPD Patient Registry', 'Doctor Scheduler & Fees', 'EHR & Digital Prescriptions', 'Pharmacy & Lab Bilateral', 'Ward Bed Occupancy'],
     icon: '🏥',
     badge: 'Hospital',
     badgeColor: 'red',
-    description: 'In-patient/Out-patient registration, modular appointments, doctor scheduling, prescription prints, and laboratory logs.',
-    features: ['OPD/IPD Patient Registry', 'Doctor Scheduler & Fees', 'EHR & Digital Prescriptions', 'Pharmacy & Lab Bilateral', 'Ward Bed Occupancy'],
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Hospital-Management-ERP-v3.0.0.Setup.exe'
   },
   {
     id: 'sol-diagnostic',
@@ -562,13 +562,13 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Diagnostic Lab Manager',
     category: 'Hospital Software',
     subtitle: 'PATHOLOGY LABORATORY',
+    description: 'Streamlined report-making logs with custom layout sheets templates, sample collection workflows, and referral networks bookkeeping.',
     price: '₹3,000',
+    features: ['Test Report Template Maker', 'Barcode Sample Tracker', 'Patient Bill & Due Receipts', 'B2B Lab Referral Account', 'Automated Analyzer Sync'],
     icon: '🔬',
     badge: 'Hospital',
     badgeColor: 'red',
-    description: 'Streamlined report-making logs with custom layout sheets templates, sample collection workflows, and referral networks bookkeeping.',
-    features: ['Test Report Template Maker', 'Barcode Sample Tracker', 'Patient Bill & Due Receipts', 'B2B Lab Referral Account', 'Automated Analyzer Sync'],
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Laboratory-Management-ERP-v3.0.0.Setup.exe'
   },
   {
     id: 'sol-school',
@@ -576,13 +576,13 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'School ERP Management Suite',
     category: 'School Software',
     subtitle: 'ACADEMIC INSTITUTIONS',
+    description: 'Robust student lifecycle bookkeeping. Integrated fee customizer modules, grades charts, schedule grids and bus tracking.',
     price: '₹3,000',
+    features: ['Student Profile & Admissions', 'Dynamic Fee Structure Maker', 'Class Timetable Grid', 'Exam Marks & Report Cards', 'SMS & WhatsApp Notifications'],
     icon: '🏫',
     badge: 'School',
     badgeColor: 'indigo',
-    description: 'Robust student lifecycle bookkeeping. Integrated fee customizer modules, grades charts, schedule grids and bus tracking.',
-    features: ['Student Profile & Admissions', 'Dynamic Fee Structure Maker', 'Class Timetable Grid', 'Exam Marks & Report Cards', 'SMS & WhatsApp Notifications'],
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.Setup.exe'
   },
   {
     id: 'sol-erp-warehouse',
@@ -590,13 +590,41 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Enterprise ERP Suite',
     category: 'ERP Software',
     subtitle: 'SUPPLY CHAIN SUITE',
+    description: 'Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.',
     price: '₹3,000',
+    features: ['Multi-Warehouse Transfer Logs', 'Manufacturing Bill of Materials', 'Advanced Batch/Lot Control', 'PO & SO Purchase Orders', 'Reorder Stock Estimations'],
     icon: '🏭',
     badge: 'ERP',
     badgeColor: 'purple',
-    description: 'Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.',
-    features: ['Multi-Warehouse Transfer Logs', 'Manufacturing Bill of Materials', 'Advanced Batch/Lot Control', 'PO & SO Purchase Orders', 'Reorder Stock Estimations'],
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-hotel',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Hotel Management ERP',
+    category: 'ERP Software',
+    subtitle: 'HOTEL & HOSPITALITY SUITE',
+    description: 'Complete hotel checkout, room booking slots, check-in, housekeeping scheduler, guest ledgers, and seasonal tariff planners.',
+    price: '₹3,000',
+    features: ['Room Reservation Booking', 'Check-in & Check-out Folios', 'Housekeeping Scheduler', 'Laundry & Restaurant KOT Billing', 'Guest Ledger accounting'],
+    icon: '🏨',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-repairing',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Electrical & Repairing Shop',
+    category: 'Billing Software',
+    subtitle: 'SERVICE & WORKSHOP FLOW',
+    description: 'Specialized billing for electrical products, repairing job-cards logs, warranty claims, service reminders, and customer accounts ledger.',
+    price: '₹3,000',
+    features: ['Repairing Job-Cards Logs', 'Electrical Inventory Ledger', 'Serial / IMEI Warranty tracking', 'Technician Status Progress', 'Service SMS/WhatsApp alerts'],
+    icon: '🔌',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.Setup.exe'
   }
 ];
 
@@ -650,7 +678,23 @@ export function initDB() {
       if (!db.downloads || db.downloads.length === 0) db.downloads = defaultDownloads;
       if (!db.reviews || db.reviews.length === 0) db.reviews = defaultReviews;
       if (!db.videos || db.videos.length === 0) db.videos = [...defaultVideos];
-      if (!db.solutions || db.solutions.length === 0) db.solutions = [...defaultSolutions];
+      
+      if (!db.solutions || db.solutions.length === 0) {
+        db.solutions = [...defaultSolutions];
+      } else {
+        // Enforce all 14 standard solutions and keep them updated with latest data
+        defaultSolutions.forEach(defSol => {
+          const exIdx = db.solutions.findIndex(s => s.id === defSol.id);
+          if (exIdx === -1) {
+            db.solutions.push(defSol);
+          } else {
+            db.solutions[exIdx] = {
+              ...db.solutions[exIdx],
+              ...defSol
+            };
+          }
+        });
+      }
       if (!db.customerProfiles) db.customerProfiles = [];
       if (!db.payments) db.payments = [];
       if (!db.invoices) db.invoices = [];
