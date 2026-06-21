@@ -302,7 +302,7 @@ export const defaultSolutions = [
     category: 'ERP Software',
     subtitle: 'ENTERPRISE RESOURCE ERP',
     description: 'Unified system combining production, accounts, sales forces CRM, human resource profiles, and payroll audits.',
-    price: '₹1',
+    price: '₹3,000',
     features: [
       'Sales Management',
       'Purchase Management',

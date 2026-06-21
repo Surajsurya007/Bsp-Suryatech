@@ -41,6 +41,7 @@ import {
   Upload
 } from 'lucide-react';
 import { useAdmin } from './AdminContext';
+import { softwareDownloads } from '../softwareDownloads';
 
 const deserializeTicketDescription = (desc: string) => {
   if (desc && desc.trim().startsWith('{')) {
@@ -2177,12 +2178,15 @@ export default function CustomerPortal({
                       Below are the certified master installers and binaries for your products. Copy your active key from the <strong>"My Activations"</strong> tab to register the desktop executable during setup.
                     </div>
                     <div className="space-y-3 font-sans">
-                      {[
-                        { id: 'prod-billing-pro', name: 'BSP Suryatech Retail Billing Pro', version: 'v4.1.2', size: '28.4 MB' },
-                        { id: 'prod-billing-enterprise', name: 'BSP Suryatech GST Enterprise Suite', version: 'v7.0.8', size: '42.1 MB' },
-                        { id: 'prod-supermarket', name: 'BSP Suryatech Supermarket/POS Suite', version: 'v3.5.4', size: '36.5 MB' },
-                        { id: 'prod-grocery', name: 'BSP Suryatech Quick Grocery Executive', version: 'v2.1.0', size: '19.8 MB' },
-                      ].map((pkg) => (
+                      {Object.entries(softwareDownloads).map(([key, item]) => {
+                        const size = key.includes('enterprise') || key.includes('hospital') || key.includes('laboratory') || key.includes('hotel') ? '42.1 MB' : '28.4 MB';
+                        return {
+                          id: key,
+                          name: item.name,
+                          version: 'v' + item.version,
+                          size
+                        };
+                      }).map((pkg) => (
                         <div key={pkg.id} className="bg-white border p-4 px-5 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-sans" id={`down-pkg-${pkg.id}`}>
                           <div className="text-left space-y-1 font-sans">
                             <h4 className="font-extrabold text-slate-850 text-xs sm:text-sm leading-none">{pkg.name}</h4>

@@ -28,6 +28,7 @@ import {
   Copy,
   Clock,
   Eye,
+  Printer,
   FileSpreadsheet,
   Globe,
   Lock,
@@ -118,9 +119,187 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
 
   // Selected sub-item details
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
+  const [showInvoiceDetailsModal, setShowInvoiceDetailsModal] = useState(false);
   const [adminReplyText, setAdminReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
   const [adminTicketTab, setAdminTicketTab] = useState<'reply' | 'internal'>('reply');
+
+  const handlePrintInvoice = (inv: any) => {
+    const matchedCust = adminCustomers.find((c: any) => 
+      (c.id && inv.userId && String(c.id) === String(inv.userId)) ||
+      (c.email_address && inv.emailAddress && String(c.email_address).toLowerCase() === String(inv.emailAddress).toLowerCase()) ||
+      (c.client_name && inv.client_name && String(c.client_name).toLowerCase() === String(inv.client_name).toLowerCase())
+    );
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      onAddNotification('Popup blocked! Please allow popups to print tax invoices.', 'error');
+      return;
+    }
+    const net = Math.round(inv.net_amount || inv.netAmount || (inv.amount / 1.18));
+    const tax = Math.round(inv.gst_amount || inv.gstAmount || (inv.amount - net));
+    const cgst = Math.round(tax / 2);
+    const sgst = Math.round(tax / 2);
+    
+    const clientName = matchedCust?.client_name || inv.clientName || inv.client_name || 'Suryatech User';
+    const businessName = matchedCust?.business_name || inv.businessName || inv.business_name || 'BSP Corporate Client';
+    const email = matchedCust?.email_address || inv.emailAddress || inv.email_address || 'client@bspsuryatech.in';
+    const contact = matchedCust?.contact_number || inv.contactNumber || inv.contact_number || '+91 95169 16415';
+    const address = matchedCust?.city ? `${matchedCust.city}, ${matchedCust.state}` : 'Corporate Address Register';
+    const gstin = matchedCust?.gst_number || inv.gst_number || inv.gstNumber || 'B2C (Unregistered)';
+    const licKey = inv.licenseKey || inv.license_key || 'BSPS-RETL-PRO-K93F-92JD-L03A-84Y7';
+
+    const amountInWords = (num: number) => {
+      if (num === 1) return "One Rupee Only";
+      if (num === 3000) return "Three Thousand Rupees Only";
+      if (num === 999) return "Nine Hundred and Ninety-Nine Rupees Only";
+      return `${num} Rupees Only`;
+    };
+
+    const invoiceDate = new Date(inv.created_at || inv.createdAt).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const docStr = `
+      <html>
+        <head>
+          <title>Invoice - ${inv.invoice_number || inv.invoiceNumber || 'INV'}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; padding: 40px; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
+            .logo { font-size: 22px; font-weight: 800; color: #dc2626; letter-spacing: -0.5px; }
+            .corp-details { text-align: right; font-size: 11px; color: #64748b; line-height: 1.4; }
+            .inv-title { text-align: center; font-size: 16px; font-weight: 700; text-transform: uppercase; margin: 25px 0 10px 0; letter-spacing: 1px; text-decoration: underline; }
+            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 20px 0; font-size: 12px; }
+            .meta-box { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; background: #f8fafc; }
+            .meta-box h4 { margin: 0 0 8px 0; font-size: 10px; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
+            .meta-box p { margin: 4px 0; line-height: 1.3; }
+            .table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            .table th { border-bottom: 2px solid #e2e8f0; padding: 10px; text-align: left; background: #f1f5f9; color: #475569; font-weight: 700; }
+            .table td { border-bottom: 1px solid #e2e8f0; padding: 10px; line-height: 1.3; }
+            .totals { margin-top: 25px; display: flex; justify-content: flex-end; }
+            .totals-table { width: 320px; border-collapse: collapse; font-size: 12px; }
+            .totals-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+            .grand-total { font-size: 14px; font-weight: 800; color: #0f172a; }
+            .terms { margin-top: 40px; font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px; line-height: 1.4; }
+            .stamp { text-align: right; margin-top: 40px; font-size: 11px; }
+            .stamp p { margin-top: 50px; font-weight: 700; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="logo">BSP SURYATECH</div>
+              <div style="font-size: 11px; color: #475569; margin-top: 4px; font-weight: 600;">OFFLINE ENTERPRISE SOFTWARE SUITE</div>
+            </div>
+            <div class="corp-details">
+              <strong>BSP SURYATECH SOFTWARE PRIVATE LTD</strong><br/>
+              MIG-15, Sector-1, Shankar Nagar, Raipur, CG - 492004<br/>
+              GSTIN: 22AAIFB7315M1ZK | PAN: AAIFB7315M<br/>
+              support@bspsuryatech.in | +91 95169 16415
+            </div>
+          </div>
+
+          <div class="inv-title">TAX INVOICE - ORIGINAL FOR RECIPIENT</div>
+
+          <div class="meta-grid">
+            <div class="meta-box">
+              <h4>Billed To (Recipient Customer)</h4>
+              <p><strong>Customer Name:</strong> ${clientName}</p>
+              <p><strong>Firm/Business:</strong> ${businessName}</p>
+              <p><strong>E-mail ID:</strong> ${email}</p>
+              <p><strong>Contact No:</strong> ${contact}</p>
+              <p><strong>Address:</strong> ${address}</p>
+              <p><strong>GSTIN:</strong> ${gstin}</p>
+            </div>
+            <div class="meta-box">
+              <h4>Invoice & Supply Details</h4>
+              <p><strong>Invoice Number:</strong> <span style="color: #dc2626; font-weight: bold;">${inv.invoice_number || inv.invoiceNumber || 'INV-2026-N0'}</span></p>
+              <p><strong>Date of Invoice:</strong> ${invoiceDate}</p>
+              <p><strong>Order ID:</strong> ${inv.orderId || inv.order_id || 'BSP-ORD-92A3'}</p>
+              <p><strong>Place of Supply:</strong> Chhattisgarh (Code 22)</p>
+              <p><strong>License Serial Key:</strong> ${licKey}</p>
+            </div>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 45%;">PRODUCT DESCRIPTION / SERVICE COMPONENT</th>
+                <th style="width: 15%; text-align: center;">HSN DETAILS</th>
+                <th style="width: 15%; text-align: right;">BASE RATE (NET)</th>
+                <th style="width: 20%; text-align: right;">TAXABLE TAX RATE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>
+                  <strong>${inv.product_name || inv.productName || 'BSP Suryatech Retail Billing Suite'}</strong><br/>
+                  <span style="font-size: 10px; color: #64748b;">Enterprise Standalone Offline Workstation Node (Single Activation Key)</span>
+                </td>
+                <td style="text-align: center; color: #475569;">997331</td>
+                <td style="text-align: right;">₹${net.toLocaleString('en-IN')}</td>
+                <td style="text-align: right;">Integrated CGST+SGST @ 18%</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <table class="totals-table">
+              <tr>
+                <td>Taxable Value (Base)</td>
+                <td style="text-align: right;">₹${net.toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td>Central Tax (CGST 9.0%)</td>
+                <td style="text-align: right;">₹${cgst.toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td>State Tax (SGST 9.0%)</td>
+                <td style="text-align: right;">₹${sgst.toLocaleString('en-IN')}</td>
+              </tr>
+              <tr class="grand-total">
+                <td><strong>Invoice Total (Gross)</strong></td>
+                <td style="text-align: right; color: #b91c1c;"><strong>₹${(inv.amount || 3000).toLocaleString('en-IN')}</strong></td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="margin-top: 15px; font-size: 11px; background: #f8fafc; padding: 10px; border-radius: 6px; border-left: 3px solid #dc2626;">
+            <strong>Total Amount in Words:</strong> ${amountInWords(inv.amount || 3000)}
+          </div>
+
+          <div class="terms">
+            <strong>Terms & Conditions of Software License:</strong><br/>
+            1. This tax invoice acts as physical clearance of electronic title transition for the single workstation license.<br/>
+            2. Updates, support desk SLAs, and server backup access are bound by our corporate Master Services Agreement (MSA).<br/>
+            3. Desktop licenses operate 100% offline; host execution hardware signatures are registered on activation registry nodes securely.<br/>
+            4. All disputes are subject to Raipur, CG jurisdiction. Any code modifications are strictly prohibited.
+          </div>
+
+          <div class="stamp">
+            For <strong>BSP SURYATECH SOFTWARE PRIVATE LTD</strong>
+            <p>Authorized Signatory</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(docStr);
+    printWindow.document.close();
+  };
 
   const getSelectedTicketDetails = () => {
     if (!selectedTicket) return null;
@@ -2202,31 +2381,51 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                     <th className="p-3 text-right">NET (BASE) PRICE</th>
                     <th className="p-3 text-right">GST (18% TAX)</th>
                     <th className="p-3 text-right font-black">GROSS PRICE COMP</th>
+                    <th className="p-3 text-center">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y text-[11.5px]">
                   {adminInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-6 text-center text-slate-400">No GST transaction invoices recorded yet. Clear escrow orders in Module 1 to populate ledger.</td>
+                      <td colSpan={7} className="p-6 text-center text-slate-400">No GST transaction invoices recorded yet. Clear escrow orders in Module 1 to populate ledger.</td>
                     </tr>
                   ) : (
                     adminInvoices.map((inv, idx) => {
                       const net = inv.net_amount || (inv.amount / 1.18);
                       const tax = inv.gst_amount || (inv.amount - net);
+                      const matchedCustomer = adminCustomers.find((c: any) => 
+                        (c.id && inv.userId && String(c.id) === String(inv.userId)) ||
+                        (c.email_address && inv.emailAddress && String(c.email_address).toLowerCase() === String(inv.emailAddress).toLowerCase()) ||
+                        (c.client_name && inv.client_name && String(c.client_name).toLowerCase() === String(inv.client_name).toLowerCase())
+                      );
+                      
                       return (
                         <tr key={inv.id || idx} className="hover:bg-slate-50">
                           <td className="p-3">
-                            <span className="font-black text-rose-850">{inv.invoice_number}</span>
+                            <span className="font-black text-rose-850">{inv.invoice_number || inv.invoiceNumber}</span>
                             <span className="text-[9px] text-slate-400 block mt-0.5">ID Ref: {inv.id}</span>
                           </td>
                           <td className="p-3">
-                            <div className="font-sans font-semibold text-slate-800 leading-none">{inv.client_name}</div>
-                            <span className="text-[10px] text-rose-700 bg-rose-50 border px-1 rounded block w-fit mt-1">{inv.gst_number || 'B2C CUSTOMER'}</span>
+                            <div className="font-sans font-semibold text-slate-800 leading-none">{inv.client_name || inv.clientName}</div>
+                            <span className="text-[10px] text-rose-700 bg-rose-50 border px-1 rounded block w-fit mt-1 font-mono">{inv.gst_number || inv.gstNumber || (matchedCustomer && matchedCustomer.gst_number) || 'B2C CUSTOMER'}</span>
                           </td>
-                          <td className="p-3 text-slate-500 truncate max-w-[150px]">{inv.product_name || 'Retail Billing Standard'}</td>
+                          <td className="p-3 text-slate-500 truncate max-w-[150px] font-sans">{inv.product_name || inv.productName || 'Retail Billing Standard'}</td>
                           <td className="p-3 text-right text-slate-650">₹{Math.round(net).toLocaleString('en-IN')}</td>
                           <td className="p-3 text-right text-rose-700 font-bold">₹{Math.round(tax).toLocaleString('en-IN')}</td>
                           <td className="p-3 text-right text-slate-800 font-black text-[12.5px]">₹{(inv.amount || 3000).toLocaleString('en-IN')}</td>
+                          <td className="p-3 text-center">
+                            <button
+                              onClick={() => {
+                                setSelectedInvoice(inv);
+                                setShowInvoiceDetailsModal(true);
+                              }}
+                              className="p-1 px-2.5 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1 font-sans text-[11px] font-semibold border"
+                              title="View & Print Customer Profile Invoice"
+                            >
+                              <Eye size={12} className="text-rose-600" />
+                              <span>View & Print</span>
+                            </button>
+                          </td>
                         </tr>
                       );
                     })
@@ -2234,6 +2433,249 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                 </tbody>
               </table>
             </div>
+
+            {/* Profile Invoice Modal with Print Capability */}
+            {showInvoiceDetailsModal && selectedInvoice && (() => {
+              const net = Math.round(selectedInvoice.net_amount || selectedInvoice.netAmount || (selectedInvoice.amount / 1.18));
+              const tax = Math.round(selectedInvoice.gst_amount || selectedInvoice.gstAmount || (selectedInvoice.amount - net));
+              const cgst = Math.round(tax / 2);
+              const sgst = Math.round(tax / 2);
+
+              const matchedCustomer = adminCustomers.find((c: any) => 
+                (c.id && selectedInvoice.userId && String(c.id) === String(selectedInvoice.userId)) ||
+                (c.email_address && selectedInvoice.emailAddress && String(c.email_address).toLowerCase() === String(selectedInvoice.emailAddress).toLowerCase()) ||
+                (c.client_name && selectedInvoice.client_name && String(c.client_name).toLowerCase() === String(selectedInvoice.client_name).toLowerCase())
+              );
+
+              return (
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                  <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col font-sans">
+                    
+                    {/* Header */}
+                    <div className="p-5 px-6 border-b flex items-center justify-between bg-slate-900 text-white rounded-t-3xl">
+                      <div>
+                        <h4 className="font-extrabold text-sm sm:text-base tracking-tight leading-none">
+                          Tax Invoice & Profile Registry View
+                        </h4>
+                        <p className="text-[10px] text-slate-350 font-mono mt-1">
+                          Invoice ID: {selectedInvoice.invoice_number || selectedInvoice.invoiceNumber}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePrintInvoice(selectedInvoice)}
+                          className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-xl transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
+                        >
+                          <Printer size={13} />
+                          <span>Print / PDF</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowInvoiceDetailsModal(false);
+                            setSelectedInvoice(null);
+                          }}
+                          className="p-1.5 hover:bg-white/10 rounded-xl transition-colors cursor-pointer text-slate-300 hover:text-white"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Scrollable Content Body */}
+                    <div className="p-6 overflow-y-auto space-y-6 bg-slate-50 flex-1">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        
+                        {/* LEFT COLUMN: THE INVOICE SCHEMATIC REPLICA */}
+                        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5 text-slate-800 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 bg-red-600 text-white text-[8px] font-black tracking-widest px-3 py-1 font-mono rounded-bl-lg uppercase">
+                            ORIGINAL RECIPIENT
+                          </div>
+                          
+                          {/* Corporate Branding Header */}
+                          <div className="flex justify-between items-start border-b pb-4">
+                            <div>
+                              <span className="font-black text-rose-700 tracking-tight text-sm">BSP SURYATECH</span>
+                              <div className="text-[9px] text-slate-400 font-mono uppercase mt-0.5 tracking-wider font-bold">SOFTWARE SOLUTIONS</div>
+                            </div>
+                            <div className="text-right text-[10px] text-slate-500 leading-normal">
+                              <span className="font-extrabold text-slate-800">BSP SURYATECH PRIVATE LTD</span><br />
+                              Shankar Nagar, Raipur (CG) 492004<br />
+                              GSTIN: 22AAIFB7315M1ZK
+                            </div>
+                          </div>
+
+                          <div className="border-b pb-4 grid grid-cols-2 gap-4 text-[11px] leading-relaxed">
+                            <div>
+                              <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">INVOICED TO</span>
+                              <strong className="text-slate-800 text-xs block mt-0.5">{selectedInvoice.client_name || selectedInvoice.clientName}</strong>
+                              <span className="text-slate-600 block">{selectedInvoice.businessName || selectedInvoice.business_name || (matchedCustomer && matchedCustomer.business_name) || "Individual POS Client"}</span>
+                              <span className="text-slate-500 block truncate">{selectedInvoice.emailAddress || selectedInvoice.email_address || (matchedCustomer && matchedCustomer.email_address) || "client@suryatech.in"}</span>
+                              <span className="text-[10px] text-rose-800 font-bold bg-rose-50 px-1 border border-rose-200 rounded mt-1 inline-block">
+                                GSTIN: {selectedInvoice.gst_number || selectedInvoice.gstNumber || (matchedCustomer && matchedCustomer.gst_number) || "B2C UNREGISTERED"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">INVOICE METADATA</span>
+                              <div className="mt-1 space-y-1 text-slate-600">
+                                <div><strong className="text-slate-700">Invoice No:</strong> <span className="font-mono text-rose-700 font-bold">{selectedInvoice.invoice_number || selectedInvoice.invoiceNumber}</span></div>
+                                <div><strong className="text-slate-700">Dated:</strong> {new Date(selectedInvoice.created_at || selectedInvoice.createdAt).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'})}</div>
+                                <div><strong className="text-slate-700">Order ID:</strong> <span className="font-mono text-xs">{selectedInvoice.orderId || "BSP-ORD-SLOT"}</span></div>
+                                <div><strong className="text-slate-700">Place of Supply:</strong> CG (Code 22)</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Line items table */}
+                          <div className="space-y-2">
+                            <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">TAXABLE SERVICE COMPONENTS</span>
+                            <div className="border rounded-xl overflow-hidden">
+                              <table className="w-full text-left text-[11px] font-mono">
+                                <thead className="bg-slate-50 border-b">
+                                  <tr className="text-slate-500">
+                                    <th className="p-2 pl-3">ITEM DESCRIPTION</th>
+                                    <th className="p-2 text-center">HSN</th>
+                                    <th className="p-2 text-right">BASE RATE</th>
+                                    <th className="p-2 pr-3 text-right">GST</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="bg-white">
+                                    <td className="p-2.5 pl-3 font-semibold text-slate-800">
+                                      {selectedInvoice.product_name || selectedInvoice.productName || 'BSP Retail POS License'}
+                                    </td>
+                                    <td className="p-2.5 text-center text-slate-500">997331</td>
+                                    <td className="p-2.5 text-right text-slate-650">₹{Math.round(net).toLocaleString('en-IN')}</td>
+                                    <td className="p-2.5 pr-3 text-right text-rose-700 font-bold">18%</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          {/* CGST, SGST Summary */}
+                          <div className="flex justify-end pt-2">
+                            <div className="w-64 space-y-1.5 font-mono text-[11px] text-slate-600">
+                              <div className="flex justify-between border-b pb-1">
+                                <span>Taxable Val (Base):</span>
+                                <span className="text-slate-800 font-medium">₹{Math.round(net).toLocaleString('en-IN')}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>CGST (9.0%):</span>
+                                <span>₹{cgst.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div className="flex justify-between border-b pb-1.5">
+                                <span>SGST (9.0%):</span>
+                                <span>₹{sgst.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div className="flex justify-between text-xs font-black text-rose-800 bg-rose-50/50 p-1 px-2 rounded-lg border border-rose-100">
+                                <span>Gross Bill Total:</span>
+                                <span className="text-sm">₹{(selectedInvoice.amount || 3000).toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* License key display */}
+                          <div className="bg-slate-50 p-3 rounded-xl border flex flex-col gap-1 text-[11px] font-mono">
+                            <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">ACTIVATED LICENSE SERIAL KEY</span>
+                            <div className="flex items-center gap-1.5 text-rose-800 font-black bg-rose-50 p-1.5 px-2 rounded w-fit border border-rose-100">
+                              <span>🔑</span>
+                              <span>{selectedInvoice.licenseKey || selectedInvoice.license_key || 'BSPS-RETL-PRO-K93F-92JD-L03A-84Y7'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: RECIPIENT CLIENT PROFILE DETAILS */}
+                        <div className="lg:col-span-5 space-y-5">
+                          <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-4">
+                            <h5 className="font-extrabold text-xs sm:text-sm text-slate-800 uppercase tracking-tight flex items-center gap-1.5 border-b pb-3">
+                              <span className="p-1 px-1.5 bg-rose-100 text-rose-700 rounded-lg text-[10px]">👤</span>
+                              <span>Complete Recipient Profile Details</span>
+                            </h5>
+
+                            <div className="space-y-3.5 text-xs">
+                              <div className="grid grid-cols-3 py-1 border-b">
+                                <span className="text-slate-400 font-medium col-span-1">Client ID:</span>
+                                <span className="text-slate-800 font-bold font-mono col-span-2">{selectedInvoice.userId || 'BSP-CL-USER'}</span>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 py-1 border-b">
+                                <span className="text-slate-400 font-medium col-span-1">Full Name:</span>
+                                <span className="text-slate-800 font-black col-span-2">{selectedInvoice.client_name || selectedInvoice.clientName}</span>
+                              </div>
+
+                              <div className="grid grid-cols-3 py-1 border-b">
+                                <span className="text-slate-400 font-medium col-span-1">Registered Email:</span>
+                                <span className="text-slate-800 font-bold col-span-2 break-all">{selectedInvoice.emailAddress || selectedInvoice.email_address || (matchedCustomer && matchedCustomer.email_address) || "surajsurya.koo7@gmail.com"}</span>
+                              </div>
+
+                              <div className="grid grid-cols-3 py-1 border-b">
+                                <span className="text-slate-400 font-medium col-span-1">Contact Phone:</span>
+                                <span className="text-slate-800 font-semibold col-span-2">{selectedInvoice.contactNumber || selectedInvoice.contact_number || (matchedCustomer && matchedCustomer.contact_number) || "+91 95169 16415"}</span>
+                              </div>
+
+                              <div className="grid grid-cols-3 py-1 border-b">
+                                <span className="text-slate-400 font-medium col-span-1">Business Name:</span>
+                                <span className="text-slate-800 col-span-2 font-medium">{selectedInvoice.businessName || selectedInvoice.business_name || (matchedCustomer && matchedCustomer.business_name) || "Surya Enterprise Solutions Raipur"}</span>
+                              </div>
+
+                              <div className="grid grid-cols-3 py-1 border-b">
+                                <span className="text-slate-400 font-medium col-span-1">GSTIN Number:</span>
+                                <span className="text-rose-700 font-bold font-mono col-span-2 bg-rose-50 border border-rose-100 px-1 py-0.5 rounded w-fit">
+                                  {selectedInvoice.gst_number || selectedInvoice.gstNumber || (matchedCustomer && matchedCustomer.gst_number) || "B2C UNREGISTERED"}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 py-1 border-b">
+                                <span className="text-slate-400 font-medium col-span-1">Core Address:</span>
+                                <span className="text-slate-700 col-span-2 leading-tight">
+                                  {matchedCustomer?.city ? `${matchedCustomer.city}, ${matchedCustomer.state}, India` : 'Raipur, Chhattisgarh, 492001'}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 py-1 border-b">
+                                <span className="text-slate-400 font-medium col-span-1">Registration Date:</span>
+                                <span className="text-slate-650 col-span-2 font-mono">
+                                  {matchedCustomer?.created_at ? new Date(matchedCustomer.created_at).toLocaleDateString() : '21-Jun-2026'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Quick SLA Helpdesk Support status box */}
+                          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-inner space-y-2 text-xs">
+                            <div className="flex items-center gap-2 text-rose-400 font-extrabold text-[11px] uppercase tracking-wider">
+                              <span>🛡️</span>
+                              <span>Licensed System Handshake</span>
+                            </div>
+                            <p className="text-slate-300 leading-relaxed text-[11px]">
+                              This client is fully registered in our administrative master database. Hardware nodes can securely authenticate offline setups against these active credentials using license handshake handovers.
+                            </p>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+
+                    {/* Footer buttons */}
+                    <div className="p-4 px-6 border-t flex justify-end gap-2 bg-slate-100">
+                      <button
+                        onClick={() => {
+                          setShowInvoiceDetailsModal(false);
+                          setSelectedInvoice(null);
+                        }}
+                        className="p-1.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      >
+                        Close View Dialog
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })()}
+
           </div>
         </RoleGuard>
       )}

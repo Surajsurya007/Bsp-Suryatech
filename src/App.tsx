@@ -396,7 +396,7 @@ export default function App() {
       if (data && !error && data.length > 0) {
         const parsed = data.map((item: any) => ({
           ...item,
-          price: item.id === 'sol-erp-warehouse' ? '₹1' : (item.price || '₹3,000')
+          price: item.id === 'sol-erp-warehouse' ? '₹3,000' : (item.price || '₹3,000')
         }));
         setSolutions(parsed);
       } else {
@@ -406,7 +406,7 @@ export default function App() {
           const localData = await localRes.json();
           const parsed = localData.map((item: any) => ({
             ...item,
-            price: item.id === 'sol-erp-warehouse' ? '₹1' : (item.price || '₹3,000')
+            price: item.id === 'sol-erp-warehouse' ? '₹3,000' : (item.price || '₹3,000')
           }));
           setSolutions(parsed);
         } else {
@@ -421,7 +421,7 @@ export default function App() {
           const localData = await localRes.json();
           const parsed = localData.map((item: any) => ({
             ...item,
-            price: item.id === 'sol-erp-warehouse' ? '₹1' : (item.price || '₹3,000')
+            price: item.id === 'sol-erp-warehouse' ? '₹3,000' : (item.price || '₹3,000')
           }));
           setSolutions(parsed);
         } else {
@@ -589,10 +589,9 @@ export default function App() {
       console.log("App: Triggering binary download setup of:", prodId);
       const link = document.createElement('a');
       if (isFull) {
-        link.href = "https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe";
-        link.download = "BSP-Mart-POS-v1.0.0.Setup.exe";
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
+        const token = localStorage.getItem('bsp_token') || '';
+        link.href = `/api/downloads/secure/${encodeURIComponent(prodId)}?token=${encodeURIComponent(token)}`;
+        link.download = `${prodId}_Setup.exe`;
       } else {
         const exeName = prodId.endsWith('.exe') ? prodId : `BSPSuryatech_${prodId}_v${prodId.includes('enterprise')? '5.0.3':'4.2.1'}_Setup.exe`;
         const blob = new Blob(["BSP Suryatech Retail Billing installation setup executable file stream. Runs 100% offline."], { type: "application/octet-stream" });

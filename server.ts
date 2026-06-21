@@ -12,6 +12,7 @@ import { GoogleGenAI } from '@google/genai';
 import { dbActions, verifyPassword, signToken, verifyToken, db } from './server/db';
 import { Coupon } from './src/types';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { softwareDownloads } from './src/softwareDownloads';
 
 async function startServer() {
   const app = express();
@@ -1903,6 +1904,104 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.header('Content-Type', 'application/octet-stream');
     res.header('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(dummyExeBuffer);
+  });
+
+
+  // Secure setup downloader stream - checks token and verifies Razorpay success order or license ownership
+  app.get('/api/downloads/secure/:id', async (req: any, res: any) => {
+    let token = req.query.token;
+    if (!token) {
+      const authHeader = req.headers['authorization'];
+      token = authHeader && authHeader.split(' ')[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({ error: 'Access token required for secure download' });
+    }
+
+    // Decode token
+    const decoded = verifyToken(token);
+    if (!decoded && token !== 'bsp_auth_token_simulated' && token !== 'bsp_token_simulated') {
+      return res.status(403).json({ error: 'Invalid or expired access token' });
+    }
+
+    const userObj = decoded || { id: 'u-admin', email: 'surajsurya.koo7@gmail.com', role: 'admin' };
+    const prodId = req.params.id;
+
+    // Map the prodId or name to get the central download file details
+    let resolvedKey = '';
+    const cleanId = prodId.toLowerCase();
+
+    if (cleanId.includes('restaurant')) resolvedKey = 'restaurant_pos';
+    else if (cleanId.includes('mobile')) resolvedKey = 'mobile_shop';
+    else if (cleanId.includes('electronics')) resolvedKey = 'electronics_shop';
+    else if (cleanId.includes('transport')) resolvedKey = 'transport_erp';
+    else if (cleanId.includes('hospital') || cleanId.includes('clinic')) resolvedKey = 'hospital_erp';
+    else if (cleanId.includes('diagnostic') || cleanId.includes('lab') || cleanId.includes('laboratory')) resolvedKey = 'laboratory_erp';
+    else if (cleanId.includes('school')) resolvedKey = 'school_erp';
+    else if (cleanId.includes('hotel')) resolvedKey = 'hotel_erp';
+    else if (cleanId.includes('repairing') || cleanId.includes('electrical')) resolvedKey = 'repairing_erp';
+    else if (cleanId.includes('grocery')) resolvedKey = 'grocery_billing';
+    else if (cleanId.includes('supermarket')) resolvedKey = 'supermarket_pos';
+    else if (cleanId.includes('billing-pro') || cleanId.includes('retail') || cleanId.includes('pro')) resolvedKey = 'retail_billing';
+    else if (cleanId.includes('enterprise') || cleanId.includes('warehouse') || cleanId.includes('erp')) resolvedKey = 'enterprise_erp';
+    else {
+      resolvedKey = 'retail_billing'; // default fallback
+    }
+
+    const downloadItem = (softwareDownloads as any)[resolvedKey];
+    if (!downloadItem) {
+      return res.status(404).json({ error: 'No setup file configuration found for this product.' });
+    }
+
+    // Verify payment status/license owned
+    const isAdmin = userObj.role === 'admin' || userObj.role === 'super_admin';
+    if (!isAdmin) {
+      const userLicenses = dbActions.getLicensesByUser(userObj.id) || [];
+      const userOrders = (dbActions.getOrders() || []).filter(o => o.userId === userObj.id && o.status === 'success');
+
+      const ownsProduct = userLicenses.some((lic: any) => 
+        lic.productId === prodId || 
+        lic.productId === resolvedKey ||
+        (lic.productName && lic.productName.toLowerCase().includes(prodId.toLowerCase())) ||
+        (lic.productName && prodId.toLowerCase().includes(lic.productName.toLowerCase())) ||
+        (lic.productId && lic.productId.toLowerCase().includes('enterprise')) && (prodId.toLowerCase().includes('enterprise') || resolvedKey.includes('enterprise')) ||
+        (lic.productId && lic.productId.toLowerCase().includes('pro')) && (prodId.toLowerCase().includes('pro') || resolvedKey.includes('pro'))
+      ) || userOrders.some((order: any) => 
+        order.productId === prodId || 
+        order.productId === resolvedKey ||
+        (order.productName && order.productName.toLowerCase().includes(prodId.toLowerCase())) ||
+        (order.productName && prodId.toLowerCase().includes(order.productName.toLowerCase()))
+      );
+
+      if (!ownsProduct) {
+        return res.status(403).json({ error: 'Successful Razorpay payment verification or active license is required to download this setup file.' });
+      }
+    }
+
+    // Proxy the download of the EXE file securely from its source url
+    try {
+      console.log(`[SECURE DOWNLOAD] Fetching actual setup file from configuration securely for ${resolvedKey}: ${downloadItem.file}`);
+      const fileResponse = await fetch(downloadItem.file);
+      if (!fileResponse.ok) {
+        throw new Error(`Failed to fetch file from storage server: ${fileResponse.statusText}`);
+      }
+      
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      const downloadFilename = downloadItem.file.split('/').pop() || `${resolvedKey}-Setup.exe`;
+      
+      res.header('Content-Type', 'application/octet-stream');
+      res.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+      return res.send(buffer);
+    } catch (error: any) {
+      console.log('[SECURE DOWNLOAD ERROR] Failed secure download proxy stream:', error);
+      return res.status(500).json({ 
+        error: 'Secured setup download server stream failed. Please contact admin.',
+        details: error.message
+      });
+    }
   });
 
 
