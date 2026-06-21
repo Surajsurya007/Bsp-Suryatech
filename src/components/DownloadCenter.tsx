@@ -204,7 +204,7 @@ const solutions: SoftwareSolution[] = [
     category: 'ERP Software',
     subtitle: 'ENTERPRISE RESOURCE ERP',
     description: 'Unified system combining production, accounts, sales forces CRM, human resource profiles, and payroll audits.',
-    price: '₹3,000',
+    price: '₹1',
     features: [
       'Sales Management',
       'Purchase Management',

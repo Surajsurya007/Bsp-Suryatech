@@ -396,7 +396,7 @@ export default function App() {
       if (data && !error && data.length > 0) {
         const parsed = data.map((item: any) => ({
           ...item,
-          price: '₹3,000'
+          price: item.id === 'sol-erp-warehouse' ? '₹1' : (item.price || '₹3,000')
         }));
         setSolutions(parsed);
       } else {
@@ -406,7 +406,7 @@ export default function App() {
           const localData = await localRes.json();
           const parsed = localData.map((item: any) => ({
             ...item,
-            price: '₹3,000'
+            price: item.id === 'sol-erp-warehouse' ? '₹1' : (item.price || '₹3,000')
           }));
           setSolutions(parsed);
         } else {
@@ -421,7 +421,7 @@ export default function App() {
           const localData = await localRes.json();
           const parsed = localData.map((item: any) => ({
             ...item,
-            price: '₹3,000'
+            price: item.id === 'sol-erp-warehouse' ? '₹1' : (item.price || '₹3,000')
           }));
           setSolutions(parsed);
         } else {
@@ -584,19 +584,26 @@ export default function App() {
     // Start setup payload download
     addNotification(`Initiating ${isFull ? 'Full Version' : 'Free Trial'} Windows (.EXE) installation download...`, 'success');
     
-    // Simulate high-fidelity binary download client-side instantly via standard anchor Blob
+    // Serve the real POS executable setup if they complete payment (isFull version download is active)
     try {
-      console.log("App: Triggering direct binary Blob packaging for EXE download setup of:", prodId);
-      const exeName = prodId.endsWith('.exe') ? prodId : `BSPSuryatech_${prodId}_v${prodId.includes('enterprise')? '5.0.3':'4.2.1'}_Setup.exe`;
-      const blob = new Blob(["BSP Suryatech Retail Billing installation setup executable file stream. Runs 100% offline."], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
+      console.log("App: Triggering binary download setup of:", prodId);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = exeName;
+      if (isFull) {
+        link.href = "https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe";
+        link.download = "BSP-Mart-POS-v1.0.0.Setup.exe";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      } else {
+        const exeName = prodId.endsWith('.exe') ? prodId : `BSPSuryatech_${prodId}_v${prodId.includes('enterprise')? '5.0.3':'4.2.1'}_Setup.exe`;
+        const blob = new Blob(["BSP Suryatech Retail Billing installation setup executable file stream. Runs 100% offline."], { type: "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = exeName;
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
     } catch (e: any) {
       console.warn("Exception packaging installation blob client-side:", e);
     }

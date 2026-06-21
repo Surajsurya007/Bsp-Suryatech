@@ -590,7 +590,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     title: 'Enterprise ERP Suite',
     category: 'ERP Software',
     subtitle: 'SUPPLY CHAIN SUITE',
-    price: '₹3,000',
+    price: '₹1',
     icon: '🏭',
     badge: 'ERP',
     badgeColor: 'purple',

@@ -9,7 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
-import { dbActions, verifyPassword, signToken, verifyToken } from './server/db';
+import { dbActions, verifyPassword, signToken, verifyToken, db } from './server/db';
 import { Coupon } from './src/types';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
@@ -296,7 +296,7 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
 
   function requireAdmin(req: any, res: any, next: any) {
     authenticateToken(req, res, () => {
-      if (!req.user || req.user.role !== 'admin') {
+      if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         return res.status(403).json({ error: 'Admin access required' });
       }
@@ -1679,26 +1679,97 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   });
 
   // --- SUPER ADMIN COUPON MANAGEMENT API ---
-  app.get('/api/admin/coupons', authenticateToken, (req: any, res: any) => {
-    if (req.user.role !== 'admin') {
+  app.get('/api/admin/coupons', authenticateToken, async (req: any, res: any) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
       return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
     }
+    
+    // Attempt to pull from Supabase if enabled to keep local db in perfect sync
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('coupons').select('*');
+        if (!error && data) {
+          // Merge Supabase coupons into in-memory db
+          for (const sbCp of data) {
+            const codeVal = (sbCp.code || '').trim().toUpperCase();
+            if (!codeVal) continue;
+            const existingIdx = dbActions.getCoupons().findIndex(c => (c.coupon_code || '').toUpperCase() === codeVal || (c.code || '').toUpperCase() === codeVal);
+            if (existingIdx !== -1) {
+              const existing = dbActions.getCoupons()[existingIdx];
+              dbActions.getCoupons()[existingIdx] = {
+                ...existing,
+                coupon_code: codeVal,
+                code: codeVal,
+                discountPercent: sbCp.discount_percent,
+                discount_value: sbCp.discount_percent,
+                active: sbCp.active,
+                status: sbCp.active ? 'active' : 'disabled',
+                valid_to: sbCp.expires_by ? sbCp.expires_by.split('T')[0] : '2027-12-31',
+                expiresBy: sbCp.expires_by ? sbCp.expires_by.split('T')[0] : '2027-12-31'
+              };
+            } else {
+              dbActions.getCoupons().push({
+                id: 'cp-' + Math.random().toString(36).substr(2, 9),
+                coupon_code: codeVal,
+                coupon_name: `${codeVal} Promo`,
+                description: 'Synced from master Supabase database',
+                discount_type: 'percentage',
+                discount_value: sbCp.discount_percent,
+                discountPercent: sbCp.discount_percent,
+                active: sbCp.active,
+                status: sbCp.active ? 'active' : 'disabled',
+                valid_to: sbCp.expires_by ? sbCp.expires_by.split('T')[0] : '2027-12-31',
+                expiresBy: sbCp.expires_by ? sbCp.expires_by.split('T')[0] : '2027-12-31',
+                used_count: 0,
+                code: codeVal
+              });
+            }
+          }
+          // Request file persist
+          import('./server/db.js').then(({ saveDB }) => saveDB()).catch(() => {});
+        }
+      } catch (err) {
+        console.error("Failed to sync coupons from Supabase on GET:", err);
+      }
+    }
+    
     res.json(dbActions.getCoupons());
   });
 
-  app.post('/api/admin/coupons', authenticateToken, (req: any, res: any) => {
-    if (req.user.role !== 'admin') {
+  app.post('/api/admin/coupons', authenticateToken, async (req: any, res: any) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
       return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
     }
     const coupon = req.body;
-    coupon.created_by = req.user.email;
+    coupon.created_by = req.user?.email || req.user?.id || 'admin';
     const fresh = dbActions.createCoupon(coupon);
-    console.log(`[AUDIT LOG] Admin ${req.user.email} created new promotion coupon: ${fresh.coupon_code}`);
+    console.log(`[AUDIT LOG] Admin ${req.user?.email || 'system'} created new promotion coupon: ${fresh ? fresh.coupon_code : 'Unknown'}`);
+    
+    // Sync creation to Supabase if enabled
+    if (fresh) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          const discountVal = fresh.discount_type === 'percentage' ? Number(fresh.discount_value) : 10;
+          await supabase.from('coupons').upsert({
+            code: fresh.coupon_code || fresh.code,
+            discount_percent: discountVal,
+            active: fresh.status === 'active' || fresh.active === true,
+            expires_by: new Date(fresh.valid_to || fresh.expiresBy || '2027-12-31').toISOString()
+          });
+          console.log(`[SUPABASE SYNC] Coupon ${fresh.coupon_code} synchronized to public.coupons table.`);
+        } catch (sbErr) {
+          console.error("Supabase coupon synchronization insertion error:", sbErr);
+        }
+      }
+    }
+    
     res.status(201).json(fresh);
   });
 
-  app.put('/api/admin/coupons/:id', authenticateToken, (req: any, res: any) => {
-    if (req.user.role !== 'admin') {
+  app.put('/api/admin/coupons/:id', authenticateToken, async (req: any, res: any) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
       return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
     }
     const id = req.params.id;
@@ -1707,22 +1778,57 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     if (!updated) {
       return res.status(404).json({ error: 'Promotion coupon code not registered.' });
     }
-    console.log(`[AUDIT LOG] Admin ${req.user.email} updated promotion coupon: ${id}`);
+    console.log(`[AUDIT LOG] Admin ${req.user?.email || 'system'} updated promotion coupon: ${id}`);
+    
+    // Sync update/toggle to Supabase if enabled
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const discountVal = updated.discount_type === 'percentage' ? Number(updated.discount_value) : 10;
+        await supabase.from('coupons').upsert({
+          code: updated.coupon_code || updated.code,
+          discount_percent: discountVal,
+          active: updated.status === 'active' || updated.active === true,
+          expires_by: new Date(updated.valid_to || updated.expiresBy || '2027-12-31').toISOString()
+        });
+        console.log(`[SUPABASE SYNC] Coupon ${updated.coupon_code} update synchronized to public.coupons table.`);
+      } catch (sbErr) {
+        console.error("Supabase coupon synchronization update error:", sbErr);
+      }
+    }
+    
     res.json(updated);
   });
 
-  app.delete('/api/admin/coupons/:id', authenticateToken, (req: any, res: any) => {
-    if (req.user.role !== 'admin') {
+  app.delete('/api/admin/coupons/:id', authenticateToken, async (req: any, res: any) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
       return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
     }
     const id = req.params.id;
+    
+    // Identify code before delete
+    const cpToDelete = dbActions.getCoupons().find(c => c.id === id || c.coupon_code === id || c.code === id);
+    const codeVal = cpToDelete ? (cpToDelete.coupon_code || cpToDelete.code) : id;
+    
     dbActions.deleteCoupon(id);
-    console.log(`[AUDIT LOG] Admin ${req.user.email} terminated coupon from master database: ${id}`);
+    console.log(`[AUDIT LOG] Admin ${req.user?.email || 'system'} terminated coupon from master database: ${id}`);
+    
+    // Sync deletion to Supabase if enabled
+    const supabase = getSupabaseClient();
+    if (supabase && codeVal) {
+      try {
+        await supabase.from('coupons').delete().eq('code', codeVal);
+        console.log(`[SUPABASE SYNC] Coupon ${codeVal} deleted from public.coupons table.`);
+      } catch (sbErr) {
+        console.error("Supabase coupon synchronization deletion error:", sbErr);
+      }
+    }
+    
     res.json({ success: true });
   });
 
   app.get('/api/admin/coupon-redemptions', authenticateToken, (req: any, res: any) => {
-    if (req.user.role !== 'admin') {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
       return res.status(403).json({ error: 'Permission denied. Super Admin required.' });
     }
     res.json(dbActions.getCouponRedemptions());
