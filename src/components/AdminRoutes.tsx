@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   XCircle,
   Copy,
+  Save,
   Clock,
   Eye,
   Printer,
@@ -34,7 +35,10 @@ import {
   Lock,
   MessageSquare,
   Disc,
-  Bell
+  Bell,
+  Layers,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 interface AdminRoutesProps {
@@ -89,6 +93,7 @@ const safeFormatTime = (dateStr: any) => {
 
 export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) => {
   const { 
+    adminRole,
     activeModule, 
     setActiveModule,
     searchQuery,
@@ -375,11 +380,266 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
     { id: '2', name: 'BSP Suryatech GST Enterprise Suite', version: 'v2.1.0', size: '108.5 MB', changelog: 'Multi-device GST ledger compilation', status: 'Stable', downloadUrl: 'https://bspsuryatech.in/downloads/gst-setup.exe' }
   ]);
 
+  // --- DOWNLOAD CENTER DYNAMIC SOLUTIONS MANAGEMENT STATE ---
+  const [adminSolutions, setAdminSolutions] = useState<any[]>([]);
+  const [solutionsLoading, setSolutionsLoading] = useState(false);
+  const [editingSolution, setEditingSolution] = useState<any | null>(null);
+  const [isAddingSolution, setIsAddingSolution] = useState(false);
+  const [solutionSearch, setSolutionSearch] = useState('');
+  const [solutionSortField, setSolutionSortField] = useState<'title' | 'category' | 'displayOrder'>('displayOrder');
+  const [solutionSortOrder, setSolutionSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [solutionSelectedIds, setSolutionSelectedIds] = useState<string[]>([]);
+  const [solutionForm, setSolutionForm] = useState({
+    id: '',
+    title: '',
+    subtitle: '',
+    category: 'Billing Software',
+    description: '',
+    price: '₹3,000',
+    features: '',
+    icon: '🛍️',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: '',
+    mappedPlanId: 'prod-billing-pro',
+    status: 'active' as 'active' | 'inactive',
+    displayOrder: 10
+  });
+
+  const resetSolutionForm = () => {
+    setSolutionForm({
+      id: '',
+      title: '',
+      subtitle: '',
+      category: 'Billing Software',
+      description: '',
+      price: '₹3,000',
+      features: '',
+      icon: '🛍️',
+      badge: 'Billing',
+      badgeColor: 'emerald',
+      exeUrl: '',
+      mappedPlanId: 'prod-billing-pro',
+      status: 'active',
+      displayOrder: 10
+    });
+  };
+
+  const fetchAdminSolutions = async () => {
+    setSolutionsLoading(true);
+    try {
+      const { data, error } = await supabase.from('solutions').select('*');
+      if (data && !error && data.length > 0) {
+        setAdminSolutions(data);
+      } else {
+        const res = await fetch('/api/solutions');
+        if (res.ok) {
+          const localData = await res.json();
+          setAdminSolutions(localData);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching solutions:", err);
+      try {
+        const res = await fetch('/api/solutions');
+        if (res.ok) {
+          const localData = await res.json();
+          setAdminSolutions(localData);
+        }
+      } catch (innerErr) {
+        console.error("Express API fallback error:", innerErr);
+      }
+    } finally {
+      setSolutionsLoading(false);
+    }
+  };
+
+  const handleSaveSolution = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!solutionForm.title || !solutionForm.category) {
+      onAddNotification("Software Title and Category are mandatory!", "error");
+      return;
+    }
+
+    try {
+      const payload = {
+        title: solutionForm.title.trim(),
+        subtitle: solutionForm.subtitle.trim(),
+        category: solutionForm.category.trim(),
+        description: solutionForm.description.trim(),
+        price: solutionForm.price.trim() || '₹3,000',
+        features: solutionForm.features.split('\n').map(f => f.trim()).filter(Boolean),
+        icon: solutionForm.icon.trim() || '🛍️',
+        badge: solutionForm.badge.trim() || 'Billing',
+        badgeColor: solutionForm.badgeColor.trim() || 'emerald',
+        exeUrl: solutionForm.exeUrl.trim(),
+        mappedPlanId: solutionForm.mappedPlanId.trim() || 'prod-billing-pro',
+        status: solutionForm.status,
+        displayOrder: Number(solutionForm.displayOrder) || 10
+      };
+
+      if (editingSolution) {
+        const localRes = await fetch(`/api/solutions/${editingSolution.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        try {
+          await supabase.from('solutions').update(payload).eq('id', editingSolution.id);
+        } catch (sErr) {
+          console.warn("Supabase solutions write deferred:", sErr);
+        }
+
+        if (localRes.ok) {
+          onAddNotification(`Software "${payload.title}" updated successfully!`, "success");
+          addTelemetryLog(`Edited software details: ${editingSolution.id}`, 'success');
+        } else {
+          throw new Error("Local API update failed");
+        }
+      } else {
+        const customId = solutionForm.id.trim() ? { id: solutionForm.id.trim() } : {};
+        const payloadWithId = { ...payload, ...customId };
+
+        const localRes = await fetch('/api/solutions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payloadWithId)
+        });
+
+        const createdLocal = localRes.ok ? await localRes.json() : null;
+
+        try {
+          const finalPayload = createdLocal ? createdLocal : payloadWithId;
+          await supabase.from('solutions').insert([finalPayload]);
+        } catch (sErr) {
+          console.warn("Supabase solutions insert deferred:", sErr);
+        }
+
+        if (localRes.ok) {
+          onAddNotification(`New software "${payload.title}" registered successfully!`, "success");
+          addTelemetryLog(`Registered new software solution: ${createdLocal?.id || 'new'}`, 'success');
+        } else {
+          throw new Error("Local API insert failed");
+        }
+      }
+
+      setEditingSolution(null);
+      setIsAddingSolution(false);
+      resetSolutionForm();
+      fetchAdminSolutions();
+      window.dispatchEvent(new CustomEvent('reload_customer_datastore'));
+    } catch (err: any) {
+      console.error(err);
+      onAddNotification(`Error saving software: ${err.message || err}`, "error");
+    }
+  };
+
+  const handleDeleteSolution = async (id: string, name: string) => {
+    if (!window.confirm(`Are you absolutely sure you want to delete "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const localRes = await fetch(`/api/solutions/${id}`, {
+        method: 'DELETE'
+      });
+
+      try {
+        await supabase.from('solutions').delete().eq('id', id);
+      } catch (sErr) {
+        console.warn("Supabase solutions delete deferred:", sErr);
+      }
+
+      if (localRes.ok) {
+        onAddNotification(`Software "${name}" deleted successfully!`, "success");
+        addTelemetryLog(`Deleted software solution: ${id}`, 'success');
+        setSolutionSelectedIds(prev => prev.filter(selId => selId !== id));
+        fetchAdminSolutions();
+        window.dispatchEvent(new CustomEvent('reload_customer_datastore'));
+      } else {
+        throw new Error("Express delete failed");
+      }
+    } catch (err: any) {
+      console.error(err);
+      onAddNotification(`Error deleting software: ${err.message || err}`, "error");
+    }
+  };
+
+  const handleBulkDeleteSolutions = async () => {
+    if (solutionSelectedIds.length === 0) {
+      onAddNotification("No software selected for bulk deletion!", "error");
+      return;
+    }
+
+    if (!window.confirm(`Are you absolutely sure you want to bulk-delete ${solutionSelectedIds.length} software(s)? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const localRes = await fetch('/api/solutions/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: solutionSelectedIds })
+      });
+
+      try {
+        await supabase.from('solutions').delete().in('id', solutionSelectedIds);
+      } catch (sErr) {
+        console.warn("Supabase solutions bulk delete deferred:", sErr);
+      }
+
+      if (localRes.ok) {
+        onAddNotification(`Successfully bulk-deleted ${solutionSelectedIds.length} software(s)!`, "success");
+        addTelemetryLog(`Bulk-deleted ${solutionSelectedIds.length} software solutions`, 'success');
+        setSolutionSelectedIds([]);
+        fetchAdminSolutions();
+        window.dispatchEvent(new CustomEvent('reload_customer_datastore'));
+      } else {
+        throw new Error("Express bulk delete failed");
+      }
+    } catch (err: any) {
+      console.error(err);
+      onAddNotification(`Bulk delete failed: ${err.message || err}`, "error");
+    }
+  };
+
+  const toggleSolutionVisibility = async (id: string, currentStatus: string, title: string) => {
+    const newStatus = currentStatus === 'inactive' ? 'active' : 'inactive';
+    try {
+      const localRes = await fetch(`/api/solutions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      try {
+        await supabase.from('solutions').update({ status: newStatus }).eq('id', id);
+      } catch (sErr) {
+        console.warn("Supabase visibility sync deferred:", sErr);
+      }
+
+      if (localRes.ok) {
+        onAddNotification(`Software "${title}" is now ${newStatus === 'active' ? 'Visible' : 'Hidden'} in frontend Download Center!`, "success");
+        addTelemetryLog(`Toggled visibility of solution ${id} to ${newStatus}`, 'success');
+        fetchAdminSolutions();
+        window.dispatchEvent(new CustomEvent('reload_customer_datastore'));
+      } else {
+        throw new Error("Visibility toggle failed");
+      }
+    } catch (err: any) {
+      console.error(err);
+      onAddNotification(`Error toggling visibility: ${err.message || err}`, 'error');
+    }
+  };
+
   // --- MODULE 5-B: MASTER SOFTWARE CATALOG STATE ---
   const [adminProducts, setAdminProducts] = useState<any[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [productForm, setProductForm] = useState({
     id: '',
     name: '',
@@ -391,23 +651,40 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
     description: '',
     download_url: '',
     connected_plan: '',
-    category: 'Retail & POS Billing',
+    category: 'Billing Software',
     full_description: '',
     system_requirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
     license_info: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
     demo_video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     gallery: '',
     manual_url: '',
-    status: 'active'
+    status: 'active',
+    
+    // Download Center Extras
+    logo_url: '',
+    thumbnail_url: '',
+    banner_url: '',
+    buy_now_link: '',
+    learn_more_link: '',
+    trial_download_url: '',
+    setup_exe_url: '',
+    
+    // Visibility/Ordering Controls
+    show_in_download_center: true,
+    is_featured: false,
+    is_new_arrival: false,
+    is_bestseller: false,
+    is_hidden: false,
+    display_order: 10,
+    is_pinned: false
   });
 
   const fetchAdminProducts = async () => {
     setProductsLoading(true);
+    let success = false;
     try {
       const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-      if (error) {
-        console.error("Error fetching products:", error);
-      } else if (data) {
+      if (data && !error && data.length > 0) {
         const parsed = data.map(item => ({
           ...item,
           price: item.price ? Number(item.price) : 0,
@@ -416,11 +693,133 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
           gallery: typeof item.gallery === 'string' ? JSON.parse(item.gallery) : (Array.isArray(item.gallery) ? item.gallery : []),
         }));
         setAdminProducts(parsed);
+        success = true;
+      } else {
+        if (error) console.error("Error fetching products from Supabase:", error);
       }
     } catch (e) {
-      console.error(e);
-    } finally {
-      setProductsLoading(false);
+      console.error("Supabase products fetch exception:", e);
+    }
+
+    if (!success) {
+      try {
+        const res = await fetch('/api/products');
+        if (res.ok) {
+          const localData = await res.json();
+          const parsed = localData.map((item: any) => ({
+            ...item,
+            price: item.price ? Number(item.price) : 0,
+            original_price: item.original_price || item.originalPrice ? Number(item.original_price || item.originalPrice) : 0,
+            features: typeof item.features === 'string' ? JSON.parse(item.features) : (Array.isArray(item.features) ? item.features : []),
+            gallery: typeof item.gallery === 'string' ? JSON.parse(item.gallery) : (Array.isArray(item.gallery) ? item.gallery : []),
+            status: item.status || 'active'
+          }));
+          setAdminProducts(parsed);
+        }
+      } catch (localErr) {
+        console.error("Local products fetch exception:", localErr);
+      }
+    }
+    setProductsLoading(false);
+  };
+
+  const [adminCategories, setAdminCategories] = useState<any[]>([]);
+  const fetchAdminCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      if (res.ok) {
+        const data = await res.json();
+        const sorted = data.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        setAdminCategories(sorted);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  };
+
+  const handleCreateCategory = async (catName: string) => {
+    if (!catName.trim()) return;
+    try {
+      const id = 'cat-' + Math.random().toString(36).substr(2, 9);
+      const newOrder = adminCategories.length > 0 ? Math.max(...adminCategories.map(c => c.displayOrder || 0)) + 1 : 1;
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name: catName.trim(), displayOrder: newOrder })
+      });
+      if (res.ok) {
+        onAddNotification(`Category "${catName}" added!`, "success");
+        fetchAdminCategories();
+        window.dispatchEvent(new Event('categories_updated'));
+      }
+    } catch (err) {
+      console.error("Error creating category:", err);
+    }
+  };
+
+  const handleUpdateCategory = async (id: string, newName: string) => {
+    if (!newName.trim()) return;
+    try {
+      const res = await fetch(`/api/categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() })
+      });
+      if (res.ok) {
+        onAddNotification(`Category updated!`, "success");
+        fetchAdminCategories();
+        window.dispatchEvent(new Event('categories_updated'));
+      }
+    } catch (err) {
+      console.error("Error updating category:", err);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this category? Softwares belonging to this category will not have their categories deleted, but they won't automatically map to a dynamic header filter.")) return;
+    try {
+      const res = await fetch(`/api/categories/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        onAddNotification("Category deleted successfully!", "success");
+        fetchAdminCategories();
+        window.dispatchEvent(new Event('categories_updated'));
+      }
+    } catch (err) {
+      console.error("Error deleting category:", err);
+    }
+  };
+
+  const handleReorderCategory = async (index: number, direction: 'up' | 'down') => {
+    const nextIndex = direction === 'up' ? index - 1 : index + 1;
+    if (nextIndex < 0 || nextIndex >= adminCategories.length) return;
+    
+    const reordered = [...adminCategories];
+    const temp = reordered[index];
+    reordered[index] = reordered[nextIndex];
+    reordered[nextIndex] = temp;
+    
+    // Reset order index
+    const updated = reordered.map((c, idx) => ({
+      ...c,
+      displayOrder: idx + 1
+    }));
+    
+    setAdminCategories(updated);
+    
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        fetchAdminCategories();
+        window.dispatchEvent(new Event('categories_updated'));
+      }
+    } catch (err) {
+      console.error("Error saving categories order:", err);
     }
   };
 
@@ -451,26 +850,71 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
         manual_url: productForm.manual_url.trim() || null,
         status: productForm.status,
         features: productForm.features.split('\n').map(f => f.trim()).filter(Boolean),
-        gallery: productForm.gallery.split('\n').map(u => u.trim()).filter(Boolean)
+        gallery: productForm.gallery.split('\n').map(u => u.trim()).filter(Boolean),
+        
+        logoUrl: productForm.logo_url.trim() || null,
+        thumbnailUrl: productForm.thumbnail_url.trim() || null,
+        bannerUrl: productForm.banner_url.trim() || null,
+        buyNowLink: productForm.buy_now_link.trim() || null,
+        learnMoreLink: productForm.learn_more_link.trim() || null,
+        trialDownloadUrl: productForm.trial_download_url.trim() || productForm.download_url.trim() || null,
+        setupExeUrl: productForm.setup_exe_url.trim() || productForm.download_url.trim() || null,
+        showInDownloadCenter: !!productForm.show_in_download_center,
+        isFeatured: !!productForm.is_featured,
+        isNewArrival: !!productForm.is_new_arrival,
+        isBestseller: !!productForm.is_bestseller,
+        isHidden: !!productForm.is_hidden,
+        displayOrder: Number(productForm.display_order),
+        isPinned: !!productForm.is_pinned
       };
 
       if (editingProduct) {
-        const { error } = await supabase
-          .from('products')
-          .update(payload)
-          .eq('id', editingProduct.id);
+        // Save to local Express DB first
+        const localRes = await fetch(`/api/products/${editingProduct.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-        if (error) throw error;
-        onAddNotification(`Software product "${payload.name}" updated successfully!`, "success");
-        addTelemetryLog(`Edited software product: ${payload.id}`, 'success');
+        // Try Supabase too
+        try {
+          await supabase
+            .from('products')
+            .update(payload)
+            .eq('id', editingProduct.id);
+        } catch (sbError) {
+          console.warn("Supabase product update sync deferred:", sbError);
+        }
+
+        if (localRes.ok) {
+          onAddNotification(`Software product "${payload.name}" updated successfully in database!`, "success");
+          addTelemetryLog(`Edited software product: ${payload.id}`, 'success');
+        } else {
+          throw new Error("Express product update API failed");
+        }
       } else {
-        const { error } = await supabase
-          .from('products')
-          .insert([payload]);
+        // Create in local Express DB first
+        const localRes = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-        if (error) throw error;
-        onAddNotification(`New software "${payload.name}" created successfully!`, "success");
-        addTelemetryLog(`Created software product: ${payload.id}`, 'success');
+        // Try Supabase too
+        try {
+          await supabase
+            .from('products')
+            .insert([payload]);
+        } catch (sbError) {
+          console.warn("Supabase product creation sync deferred:", sbError);
+        }
+
+        if (localRes.ok) {
+          onAddNotification(`New software "${payload.name}" created successfully in database!`, "success");
+          addTelemetryLog(`Created software product: ${payload.id}`, 'success');
+        } else {
+          throw new Error("Express product creation API failed");
+        }
       }
 
       setEditingProduct(null);
@@ -500,14 +944,28 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
       description: prod.description || '',
       download_url: prod.download_url || '',
       connected_plan: prod.connected_plan || '',
-      category: prod.category || 'Retail & POS Billing',
+      category: prod.category || 'Billing Software',
       full_description: prod.full_description || '',
       system_requirements: prod.system_requirements || '',
       license_info: prod.license_info || '',
       demo_video_url: prod.demo_video_url || '',
       gallery: Array.isArray(prod.gallery) ? prod.gallery.join('\n') : '',
       manual_url: prod.manual_url || '',
-      status: prod.status || 'active'
+      status: prod.status || 'active',
+      logo_url: prod.logoUrl || '',
+      thumbnail_url: prod.thumbnailUrl || '',
+      banner_url: prod.bannerUrl || '',
+      buy_now_link: prod.buyNowLink || '',
+      learn_more_link: prod.learnMoreLink || '',
+      trial_download_url: prod.trialDownloadUrl || prod.downloadUrl || '',
+      setup_exe_url: prod.setupExeUrl || prod.downloadUrl || '',
+      show_in_download_center: prod.showInDownloadCenter !== false,
+      is_featured: !!prod.isFeatured,
+      is_new_arrival: !!prod.isNewArrival,
+      is_bestseller: !!prod.isBestseller,
+      is_hidden: !!prod.isHidden,
+      display_order: prod.displayOrder !== undefined ? prod.displayOrder : 10,
+      is_pinned: !!prod.isPinned
     });
   };
 
@@ -517,17 +975,27 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
     }
 
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', prodId);
+      const localRes = await fetch(`/api/products/${prodId}`, {
+        method: 'DELETE'
+      });
 
-      if (error) throw error;
+      try {
+        await supabase
+          .from('products')
+          .delete()
+          .eq('id', prodId);
+      } catch (sbError) {
+        console.warn("Supabase product deletion sync deferred:", sbError);
+      }
 
-      onAddNotification(`Deleted software product ID: ${prodId}`, "success");
-      addTelemetryLog(`Deleted product from active catalog: ${prodId}`, 'warning');
-      fetchAdminProducts();
-      window.dispatchEvent(new Event('products_updated'));
+      if (localRes.ok) {
+        onAddNotification(`Deleted software product ID: ${prodId}`, "success");
+        addTelemetryLog(`Deleted product from active catalog: ${prodId}`, 'warning');
+        fetchAdminProducts();
+        window.dispatchEvent(new Event('products_updated'));
+      } else {
+        throw new Error("Express delete products API failed");
+      }
     } catch (err: any) {
       console.error(err);
       onAddNotification(`Failed to delete software: ${err.message || err}`, "error");
@@ -546,20 +1014,38 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
       description: '',
       download_url: '',
       connected_plan: '',
-      category: 'Retail & POS Billing',
+      category: 'Billing Software',
       full_description: '',
       system_requirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
       license_info: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
       demo_video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       gallery: '',
       manual_url: '',
-      status: 'active'
+      status: 'active',
+      logo_url: '',
+      thumbnail_url: '',
+      banner_url: '',
+      buy_now_link: '',
+      learn_more_link: '',
+      trial_download_url: '',
+      setup_exe_url: '',
+      show_in_download_center: true,
+      is_featured: false,
+      is_new_arrival: false,
+      is_bestseller: false,
+      is_hidden: false,
+      display_order: 10,
+      is_pinned: false
     });
   };
 
   useEffect(() => {
     if (activeModule === 'software') {
       fetchAdminProducts();
+      fetchAdminCategories();
+    }
+    if (activeModule === 'downloads') {
+      fetchAdminSolutions();
     }
   }, [activeModule]);
 
@@ -1780,17 +2266,26 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                   <p className="text-xs text-slate-500">Add, edit, or configure separate softwares, pricing policies, executable download links, video demos, and screenshot galleries.</p>
                 </div>
                 {!isAddingProduct && !editingProduct ? (
-                  <button
-                    onClick={() => {
-                      resetProductForm();
-                      setIsAddingProduct(true);
-                      setEditingProduct(null);
-                    }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-lg tracking-wider flex items-center gap-1.5 shadow-sm transition cursor-pointer self-start"
-                  >
-                    <Plus size={14} />
-                    <span>CREATE NEW SOFTWARE</span>
-                  </button>
+                  <div className="flex items-center gap-2 self-start flex-wrap">
+                    <button
+                      onClick={() => setShowCategoryManager(prev => !prev)}
+                      className={`px-4 py-2 text-xs font-extrabold rounded-lg tracking-wider flex items-center gap-1.5 shadow-sm transition cursor-pointer ${showCategoryManager ? 'bg-slate-800 text-white border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-350'}`}
+                    >
+                      <Layers size={14} />
+                      <span>{showCategoryManager ? "HIDE CATEGORIES" : "MANAGE CATEGORIES"}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        resetProductForm();
+                        setIsAddingProduct(true);
+                        setEditingProduct(null);
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-lg tracking-wider flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                    >
+                      <Plus size={14} />
+                      <span>CREATE NEW SOFTWARE</span>
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => {
@@ -1805,6 +2300,112 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                 )}
               </div>
 
+              {/* Category Manager Collapsible Section */}
+              {showCategoryManager && !isAddingProduct && !editingProduct && (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 text-xs animate-fade-in text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 gap-2">
+                    <div>
+                      <h5 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 font-mono uppercase">
+                        <Layers size={14} className="text-blue-605" />
+                        <span>Dynamic Software Category Registry ({adminCategories.length})</span>
+                      </h5>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Define custom software solutions categories. Order determines the filter layout of the Download Center tab bar.</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="New category name..." 
+                        value={newCategoryName} 
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        className="p-2 border bg-white rounded-lg text-xs font-bold focus:outline-none focus:border-blue-605 w-44"
+                      />
+                      <button
+                        onClick={() => {
+                          if (newCategoryName.trim()) {
+                            handleCreateCategory(newCategoryName);
+                            setNewCategoryName('');
+                          }
+                        }}
+                        className="px-3 h-8 bg-blue-605 hover:bg-blue-700 text-white text-xs font-extrabold rounded-lg tracking-wider"
+                      >
+                        ADD
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs bg-white rounded-xl border border-collapse overflow-hidden shadow-sm">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-600 font-bold border-b">
+                          <th className="p-2.5 font-mono text-[10px] uppercase">ID Key Slug</th>
+                          <th className="p-2.5 font-mono text-[10px] uppercase">Category Name</th>
+                          <th className="p-2.5 font-mono text-[10px] uppercase text-center w-24">Display Order</th>
+                          <th className="p-2.5 font-mono text-[10px] uppercase text-center w-28">Priority Sorting</th>
+                          <th className="p-2.5 font-mono text-[10px] uppercase text-center w-20">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminCategories.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="p-6 text-center text-slate-400">No custom categories found. Add some above to manage them!</td>
+                          </tr>
+                        ) : (
+                          adminCategories.map((cat, idx) => (
+                            <tr key={cat.id} className="border-b last:border-0 hover:bg-slate-50">
+                              <td className="p-2.5 font-mono text-slate-500 text-[11px] font-bold">#{cat.id}</td>
+                              <td className="p-2.5">
+                                <input
+                                  type="text"
+                                  value={cat.name}
+                                  onChange={(e) => {
+                                    const updated = [...adminCategories];
+                                    updated[idx].name = e.target.value;
+                                    setAdminCategories(updated);
+                                  }}
+                                  onBlur={(e) => handleUpdateCategory(cat.id, e.target.value)}
+                                  className="w-full bg-transparent font-extrabold text-slate-800 focus:bg-white focus:p-1 focus:border focus:rounded focus:outline-none"
+                                />
+                              </td>
+                              <td className="p-2.5 text-center font-bold text-slate-600">{cat.displayOrder || idx + 1}</td>
+                              <td className="p-2.5 text-center">
+                                <div className="inline-flex gap-1">
+                                  <button
+                                    onClick={() => handleReorderCategory(idx, 'up')}
+                                    disabled={idx === 0}
+                                    className="p-1 border rounded hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={11} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleReorderCategory(idx, 'down')}
+                                    disabled={idx === adminCategories.length - 1}
+                                    className="p-1 border rounded hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={11} />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="p-2.5 text-center">
+                                <button
+                                  onClick={() => handleDeleteCategory(cat.id)}
+                                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition cursor-pointer"
+                                  title="Delete Category"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Product Add/Edit Form section */}
               {(isAddingProduct || editingProduct) && (
                 <form onSubmit={handleSaveProduct} className="bg-blue-50/50 border border-blue-200 rounded-2xl p-5 space-y-4 text-xs text-slate-800 animate-fade-in text-left">
@@ -1812,233 +2413,385 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                     <span className="font-extrabold text-blue-900 uppercase tracking-wider font-mono">
                       {editingProduct ? '✏️ EDIT SOFTWARE CATALOG DETAILS' : '🚀 REGISTER NEW SOFTWARE PRODUCT'}
                     </span>
-                    <span className="text-[10px] text-blue-600 font-medium">Real-time synchronization with Supabase datastore</span>
+                    <span className="text-[10px] text-blue-600 font-medium font-mono">Real-time synchronization with database</span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Column 1: Core Identifiers */}
-                    <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {/* Column 1: Core Identifiers & Financials */}
+                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm">
+                      <h5 className="font-extrabold text-[11px] text-blue-900 border-b pb-1.5 uppercase font-mono">1. Basic Identifiers</h5>
+                      
                       <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Product Slug ID (Mandatory, No spacing)</label>
+                        <label className="font-bold text-slate-705 block">Product Slug ID (No spacing)</label>
                         <input
                           type="text"
-                          placeholder="E.g., prod-billing-pro"
+                          placeholder="prod-billing-pro"
                           value={productForm.id}
-                          onChange={(e) => setNewVersion(prev => {
-                            // Update slug
-                            return prev;
-                          })}
                           onInput={(e: any) => {
                             const val = e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '');
                             setProductForm(p => ({ ...p, id: val }));
                           }}
                           disabled={!!editingProduct}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-mono font-bold disabled:bg-slate-100 disabled:text-slate-500"
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-mono font-bold disabled:bg-slate-100 disabled:text-slate-500"
                           required
                         />
-                        {!editingProduct && <p className="text-[10px] text-slate-400">Must be unique and match standard billing plans. Lowercase alphanumeric and hyphens only.</p>}
                       </div>
 
                       <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Software / Product Name</label>
+                        <label className="font-bold text-slate-705 block">Software Name</label>
                         <input
                           type="text"
-                          placeholder="E.g., BSP Suryatech Pharma Billing Suite"
+                          placeholder="BSP Suryatech Retail Pro"
                           value={productForm.name}
                           onChange={(e) => setProductForm(p => ({ ...p, name: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-sans font-bold"
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-sans font-bold"
                           required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">Product Category</label>
+                        <select
+                          value={productForm.category}
+                          onChange={(e) => setProductForm(p => ({ ...p, category: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-bold"
+                        >
+                          <option value="Billing Software">Billing Software</option>
+                          {adminCategories.map(c => (
+                            <option key={c.id} value={c.name}>{c.name}</option>
+                          ))}
+                          <option value="Custom Group">-- CUSTOM ENTY --</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Or type custom category..."
+                          value={productForm.category}
+                          onChange={(e) => setProductForm(p => ({ ...p, category: e.target.value }))}
+                          className="w-full p-2 mt-1 border bg-white rounded-lg text-[11px]"
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="font-bold text-slate-700 block">Offer Price (INR ₹)</label>
+                          <label className="font-bold text-slate-750 block">Offer Price (₹)</label>
                           <input
                             type="number"
                             min="0"
                             placeholder="999"
                             value={productForm.price}
                             onChange={(e) => setProductForm(p => ({ ...p, price: Number(e.target.value) }))}
-                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-sans font-extrabold text-blue-700"
+                            className="w-full p-2 border bg-white rounded-lg focus:outline-none font-bold text-blue-700"
                             required
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="font-bold text-slate-700 block">Original Price (INR ₹)</label>
+                          <label className="font-bold text-slate-750 block">Original Price (₹)</label>
                           <input
                             type="number"
                             min="0"
                             placeholder="2499"
                             value={productForm.original_price}
                             onChange={(e) => setProductForm(p => ({ ...p, original_price: Number(e.target.value) }))}
-                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 text-slate-500 line-through"
+                            className="w-full p-2 border bg-white rounded-lg focus:outline-none text-slate-500 line-through"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Direct Download URL (Setup.exe payload)</label>
-                        <input
-                          type="text"
-                          placeholder="E.g., /api/downloads/setup/prod-billing-pro or direct https link"
-                          value={productForm.download_url}
-                          onChange={(e) => setProductForm(p => ({ ...p, download_url: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-mono text-[11px]"
-                          required
-                        />
-                        <p className="text-[10px] text-slate-400">Path or direct binary link to downlading setup wizard executable.</p>
-                      </div>
-                    </div>
-
-                    {/* Column 2: Specs & Metadata */}
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="font-bold text-slate-700 block">Version Code</label>
-                          <input
-                            type="text"
-                            placeholder="E.g., v4.2.1"
-                            value={productForm.version}
-                            onChange={(e) => setProductForm(p => ({ ...p, version: e.target.value }))}
-                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="font-bold text-slate-700 block">Binary Size tag</label>
-                          <input
-                            type="text"
-                            placeholder="E.g., 14.8 MB"
-                            value={productForm.size}
-                            onChange={(e) => setProductForm(p => ({ ...p, size: e.target.value }))}
-                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Product Category</label>
-                        <input
-                          type="text"
-                          placeholder="E.g., Retail & POS Billing"
-                          value={productForm.category}
-                          onChange={(e) => setProductForm(p => ({ ...p, category: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Demo Video URL (YouTube Embed Link)</label>
-                        <input
-                          type="text"
-                          placeholder="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                          value={productForm.demo_video_url}
-                          onChange={(e) => setProductForm(p => ({ ...p, demo_video_url: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-mono text-[11px]"
-                        />
-                        <p className="text-[10px] text-slate-400">Needs to be embed format: /embed/ID</p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Status</label>
+                        <label className="font-bold text-slate-705 block">Deployment Status</label>
                         <select
                           value={productForm.status}
                           onChange={(e) => setProductForm(p => ({ ...p, status: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none focus:border-blue-600 font-bold"
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-bold"
                         >
-                          <option value="active">Active (Visible in Catalog)</option>
-                          <option value="inactive">Archived / Hidden</option>
+                          <option value="active">Active (Visible)</option>
+                          <option value="inactive">Archived (Hidden)</option>
                         </select>
                       </div>
                     </div>
 
-                    {/* Column 3: Large Texts (Description & Specs) */}
-                    <div className="space-y-3">
+                    {/* Column 2: Direct CTA Links */}
+                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm">
+                      <h5 className="font-extrabold text-[11px] text-blue-900 border-b pb-1.5 uppercase font-mono">2. Redirect & Download Links</h5>
+                      
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">Buy Now Checkout Link</label>
+                        <input
+                          type="text"
+                          placeholder="/checkout?plan=prod-billing-pro"
+                          value={productForm.buy_now_link}
+                          onChange={(e) => setProductForm(p => ({ ...p, buy_now_link: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">Learn More Page Link</label>
+                        <input
+                          type="text"
+                          placeholder="/software/prod-billing-pro"
+                          value={productForm.learn_more_link}
+                          onChange={(e) => setProductForm(p => ({ ...p, learn_more_link: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">Trial Download Link</label>
+                        <input
+                          type="text"
+                          placeholder="/api/downloads/setup/prod-billing-pro?version=trial"
+                          value={productForm.trial_download_url}
+                          onChange={(e) => setProductForm(p => ({ ...p, trial_download_url: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-755 block">Full Setup.exe Purchase Download Link</label>
+                        <input
+                          type="text"
+                          placeholder="/api/downloads/setup/prod-billing-pro?key=full"
+                          value={productForm.setup_exe_url}
+                          onChange={(e) => setProductForm(p => ({ ...p, setup_exe_url: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono text-[11px]"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-705 block">Version Tag</label>
+                          <input
+                            type="text"
+                            placeholder="v4.2.1"
+                            value={productForm.version}
+                            onChange={(e) => setProductForm(p => ({ ...p, version: e.target.value }))}
+                            className="w-full p-2 border bg-white rounded-lg focus:outline-none"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-bold text-slate-705 block">Binary Size tag</label>
+                          <input
+                            type="text"
+                            placeholder="14.8 MB"
+                            value={productForm.size}
+                            onChange={(e) => setProductForm(p => ({ ...p, size: e.target.value }))}
+                            className="w-full p-2 border bg-white rounded-lg focus:outline-none"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Column 3: Visual Branding Assets */}
+                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm">
+                      <h5 className="font-extrabold text-[11px] text-blue-900 border-b pb-1.5 uppercase font-mono">3. Creative Branding Assets</h5>
+                      
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">Product Logo (Emoji or hosted PNG/SVG)</label>
+                        <input
+                          type="text"
+                          placeholder="🛍️ or https://some-cdn.com/logo.png"
+                          value={productForm.logo_url}
+                          onChange={(e) => setProductForm(p => ({ ...p, logo_url: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">Thumbnail Image URL</label>
+                        <input
+                          type="text"
+                          placeholder="https://images.unsplash.com/photo-..."
+                          value={productForm.thumbnail_url}
+                          onChange={(e) => setProductForm(p => ({ ...p, thumbnailUrl: e.target.value, thumbnail_url: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">Card Banner Image URL</label>
+                        <input
+                          type="text"
+                          placeholder="https://images.unsplash.com/photo-..."
+                          value={productForm.banner_url}
+                          onChange={(e) => setProductForm(p => ({ ...p, bannerUrl: e.target.value, banner_url: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">YouTube Demo Embed URL</label>
+                        <input
+                          type="text"
+                          placeholder="https://www.youtube.com/embed/..."
+                          value={productForm.demo_video_url}
+                          onChange={(e) => setProductForm(p => ({ ...p, demo_video_url: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Column 4: Controls & Priority Orders */}
+                    <div className="space-y-3 bg-white p-4 border rounded-xl shadow-sm text-[11px]">
+                      <h5 className="font-extrabold text-[11px] text-blue-900 border-b pb-1.5 uppercase font-mono">4. Display Controls</h5>
+                      
+                      <div className="space-y-2 border-b pb-2">
+                        <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={productForm.show_in_download_center}
+                            onChange={(e) => setProductForm(p => ({ ...p, show_in_download_center: e.target.checked }))}
+                            className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                          />
+                          <span>Show in Download Center</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={productForm.is_featured}
+                            onChange={(e) => setProductForm(p => ({ ...p, is_featured: e.target.checked }))}
+                            className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                          />
+                          <span>Featured Product</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={productForm.is_new_arrival}
+                            onChange={(e) => setProductForm(p => ({ ...p, is_new_arrival: e.target.checked }))}
+                            className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                          />
+                          <span>New Arrival Badge</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={productForm.is_bestseller}
+                            onChange={(e) => setProductForm(p => ({ ...p, is_bestseller: e.target.checked }))}
+                            className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                          />
+                          <span>Bestseller Badge</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={productForm.is_pinned}
+                            onChange={(e) => setProductForm(p => ({ ...p, is_pinned: e.target.checked }))}
+                            className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                          />
+                          <span>Pin Content At Top</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 font-bold text-red-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={productForm.is_hidden}
+                            onChange={(e) => setProductForm(p => ({ ...p, is_hidden: e.target.checked }))}
+                            className="rounded text-red-650 focus:ring-red-500 h-4 w-4"
+                          />
+                          <span>Hide from Frontend List</span>
+                        </label>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-705 block">Display Order Priority (Low is high priority)</label>
+                        <input
+                          type="number"
+                          value={productForm.display_order}
+                          onChange={(e) => setProductForm(p => ({ ...p, display_order: Number(e.target.value) }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none"
+                        />
+                        <p className="text-[10px] text-slate-400">Default: 10. E.g., 1 appears first, 100 appears last.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Descriptions and Features */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-blue-200/50 pt-3 text-xs">
+                    <div className="space-y-4">
                       <div className="space-y-1">
                         <label className="font-bold text-slate-700 block">Short Description</label>
                         <textarea
                           rows={2}
-                          placeholder="Lightweight, ultra-fast, and runs 100% offline desktop billing ERP..."
+                          placeholder="Lightweight, ultra-fast, offline retail billing desk app with multi-terminal..."
                           value={productForm.description}
                           onChange={(e) => setProductForm(p => ({ ...p, description: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none text-[11px] leading-relaxed"
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none text-[11px]"
                           required
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Screenshot/Sample Image Links (One URL per line)</label>
+                        <label className="font-bold text-slate-700 block">Screenshot Links (one URL per line)</label>
                         <textarea
-                          rows={3}
-                          placeholder="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format..."
+                          rows={2}
+                          placeholder="https://images.unsplash.com/photo-..."
                           value={productForm.gallery}
                           onChange={(e) => setProductForm(p => ({ ...p, gallery: e.target.value }))}
                           className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono text-[10px]"
                         />
-                        <p className="text-[10px] text-slate-400">URLs representing screenshot images of software UI.</p>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Deep Configuration collapse sections */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-blue-200/50 pt-3">
-                    <div className="space-y-11">
                       <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Bullet Features list (One feature per line)</label>
+                        <label className="font-bold text-slate-700 block">Bullet Features Checklist (One feature per line - MAX 5 recommended)</label>
                         <textarea
-                          rows={4}
-                          placeholder="Retail & Wholesale Billing&#10;GST Invoice Generation&#10;Barcode Creation & Printing&#10;Lightweight offline-first SQLite files..."
+                          rows={3}
+                          placeholder="GST Invoicing & Taxation&#10;Offline first DB sync&#10;Thermal receipt customization"
                           value={productForm.features}
                           onChange={(e) => setProductForm(p => ({ ...p, features: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none font-sans text-[11px] leading-relaxed"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">Full Detailed Description (HTML/Rich-text support)</label>
-                        <textarea
-                          rows={4}
-                          placeholder="Provide a long narrative detailing module properties, tax structures, and business utilities..."
-                          value={productForm.full_description}
-                          onChange={(e) => setProductForm(p => ({ ...p, full_description: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none text-[11px] leading-relaxed"
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none text-[11px]"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-11">
+                    <div className="space-y-4">
                       <div className="space-y-1">
-                        <label className="font-bold text-slate-700 block">System Operational Requirements</label>
+                        <label className="font-bold text-slate-700 block">Full Markdown Description / HTML Overview</label>
                         <textarea
-                          rows={4}
-                          placeholder="E.g., OS: Windows 7, 8, 10 or 11&#10;Memory: 2 GB RAM minimum&#10;Storage: 100 MB free space..."
-                          value={productForm.system_requirements}
-                          onChange={(e) => setProductForm(p => ({ ...p, system_requirements: e.target.value }))}
-                          className="w-full p-2.5 border bg-white rounded-lg focus:outline-none font-sans text-[11px] leading-relaxed"
+                          rows={2}
+                          placeholder="Detailed overview shown on product click..."
+                          value={productForm.full_description}
+                          onChange={(e) => setProductForm(p => ({ ...p, full_description: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none text-[11px]"
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 block">System Requirements spec</label>
+                        <textarea
+                          rows={2}
+                          placeholder="OS: Windows 7, 8, 10, 11 (32-bit & 64-bit)&#10;Memory: 2 GB RAM minimum"
+                          value={productForm.system_requirements}
+                          onChange={(e) => setProductForm(p => ({ ...p, system_requirements: e.target.value }))}
+                          className="w-full p-2 border bg-white rounded-lg focus:outline-none text-[11px]"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="font-bold text-slate-700 block">License Policy Details</label>
+                          <label className="font-bold text-slate-700 block">License Policy Info</label>
                           <input
                             type="text"
-                            placeholder="Single-Terminal Lifetime License Key with 1 Year free security support"
+                            placeholder="Single-Terminal Lifetime Key"
                             value={productForm.license_info}
                             onChange={(e) => setProductForm(p => ({ ...p, license_info: e.target.value }))}
-                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none"
+                            className="w-full p-2 border bg-white rounded-lg focus:outline-none"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="font-bold text-slate-700 block">Manual Setup Guide / Documentation Link (Optional PDF)</label>
+                          <label className="font-bold text-slate-700 block">Documentation PDF Guide URL</label>
                           <input
                             type="text"
-                            placeholder="E.g., /manuals/retail-billing-manual.pdf"
+                            placeholder="/manuals/user-guide.pdf"
                             value={productForm.manual_url}
                             onChange={(e) => setProductForm(p => ({ ...p, manual_url: e.target.value }))}
-                            className="w-full p-2.5 border bg-white rounded-lg focus:outline-none font-mono text-[11px]"
+                            className="w-full p-2 border bg-white rounded-lg focus:outline-none font-mono"
                           />
                         </div>
                       </div>
@@ -2159,48 +2912,560 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
         </RoleGuard>
       )}
 
-      {/* -------------------- MODULE 6: DOWNLOAD CENTER MONITOR -------------------- */}
+      {/* -------------------- MODULE 6: DOWNLOAD CENTER MONITOR & CMS -------------------- */}
       {activeModule === 'downloads' && (
         <RoleGuard moduleId="downloads">
           <div className="space-y-6 animate-fade-in text-left bg-white p-6 border rounded-2xl shadow-sm" id="admin-module-6">
-            <h3 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2 border-b pb-4">
-              <Download size={17} className="text-red-650" />
-              <span>Module 6: Offline Binary Download Analytics Center</span>
-            </h3>
+            
+            {/* Header section with status metadata */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shadow-sm">
+                  <Download size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight leading-none">
+                    Module 6: Download Center CMS Manager
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">Manage downloadable software listings on the website frontpage and review telemetry insights.</p>
+                </div>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
-              <div className="bg-slate-50 border p-4 rounded-xl">
-                <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">GLOBAL DOWNLOAD COUNTS</span>
-                <span className="text-2xl font-black text-slate-800 mt-2 block leading-none">1,420 pulls</span>
-                <p className="text-[9.5px] text-slate-500 mt-2 font-light">Includes Retail Pro as dominant component (82%).</p>
-              </div>
-              <div className="bg-slate-50 border p-4 rounded-xl">
-                <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">CDN CACHE EFFICIENCY</span>
-                <span className="text-2xl font-black text-emerald-605 mt-2 block leading-none">99.82% HIT</span>
-                <p className="text-[9.5px] text-slate-500 mt-2 font-light">Cloudflare backup nodes Raipur sync operational.</p>
-              </div>
-              <div className="bg-slate-50 border p-4 rounded-xl">
-                <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">CLIENT DESKTOP CRASHES</span>
-                <span className="text-2xl font-black text-slate-850 mt-2 block leading-none">0.00% Zero</span>
-                <p className="text-[9.5px] text-slate-500 mt-2 font-light">Handshake crash telemetry matches active licenses.</p>
+              {/* simulated role status indicator */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400">Privilege:</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                  adminRole === 'super_admin' ? 'bg-purple-50 text-purple-750 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200'
+                }`}>
+                  {adminRole === 'super_admin' ? '🛡️ Super Admin' : `${adminRole?.toUpperCase() || 'Customer'}`}
+                </span>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-950 text-white rounded-xl font-mono text-xs space-y-2">
-              <h4 className="text-[10px] text-slate-455 font-black uppercase tracking-wider">Client pull activity telemetry stream:</h4>
-              <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
-                <div className="text-slate-355 text-[10.5px] flex items-center justify-between border-b border-slate-900 pb-1">
-                  <span>📥 IP 223.185.94.102 • Downloaded 'Suryatech_Billing_v4.2.2.exe'</span>
-                  <span className="text-slate-500 font-light text-[9px]">Raipur • 2 min ago</span>
+            {/* Privilege Warning Banner - if not Super Admin */}
+            {adminRole !== 'super_admin' && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl text-xs flex items-start gap-2.5">
+                <span className="text-base select-none">⚠️</span>
+                <div>
+                  <span className="font-bold">Restricted View Access:</span> You are currently viewing in Read-Only Mode. 
+                  <p className="mt-1 font-mono text-[11.5px] text-slate-600">
+                    Only <span className="font-bold text-slate-800">Super Admin</span> can Add, Edit, Delete software listings, manage downloads, or inspect analytics. 
+                    Please use the simulated Role Controller in the navigation header to switch to Super Admin mode!
+                  </p>
                 </div>
-                <div className="text-slate-355 text-[10.5px] flex items-center justify-between border-b border-slate-900 pb-1">
-                  <span>📥 IP 103.88.243.15 • Downloaded 'Restaurant_POS_v1.0.5.exe'</span>
-                  <span className="text-slate-500 font-light text-[9px]">Bilaspur • 15 min ago</span>
+              </div>
+            )}
+
+            {/* CMS Form for adding/editing solutions */}
+            { (isAddingSolution || editingSolution) && adminRole === 'super_admin' ? (
+              <form onSubmit={handleSaveSolution} className="bg-slate-50 border rounded-2xl p-6 space-y-4 text-xs text-slate-800 animate-fade-in text-left">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center justify-between">
+                  <span>{editingSolution ? `✏️ Edit Product Details: ${editingSolution.title}` : '➕ Register New Downloadable Software'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSolution(null);
+                      setIsAddingSolution(false);
+                      resetSolutionForm();
+                    }}
+                    className="text-slate-400 hover:text-slate-600 font-normal px-2 py-1 text-xs"
+                  >
+                    Cancel
+                  </button>
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Unique Software ID (Slug) *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. sol-repairing"
+                      disabled={!!editingSolution}
+                      value={solutionForm.id}
+                      onChange={e => setSolutionForm({ ...solutionForm, id: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white font-mono"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Direct reference in code or database.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Software Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mobile Repair Professional"
+                      value={solutionForm.title}
+                      onChange={e => setSolutionForm({ ...solutionForm, title: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Subtitle / Tagline *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Professional repair shops accounts management"
+                      value={solutionForm.subtitle}
+                      onChange={e => setSolutionForm({ ...solutionForm, subtitle: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white focus:outline-none"
+                    />
+                  </div>
                 </div>
-                <div className="text-slate-355 text-[10.5px] flex items-center justify-between pb-1">
-                  <span>📥 IP 223.189.2.44 • Downloaded 'GST_Enterprise_v2.1.0.exe'</span>
-                  <span className="text-slate-500 font-light text-[9px]">Durg • 42 min ago</span>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Category *</label>
+                    <select
+                      value={solutionForm.category}
+                      onChange={e => setSolutionForm({ ...solutionForm, category: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white"
+                    >
+                      <option value="Billing Software">Billing Software</option>
+                      <option value="Enterprise ERP">Enterprise ERP</option>
+                      <option value="Education ERP">Education ERP</option>
+                      <option value="POS & Retail">POS & Retail</option>
+                      <option value="Hospitality ERP">Hospitality ERP</option>
+                      <option value="Specialized ERP">Specialized ERP</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Display Price *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. ₹3,000"
+                      value={solutionForm.price}
+                      onChange={e => setSolutionForm({ ...solutionForm, price: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Mapped Plan ID *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. prod-billing-pro"
+                      value={solutionForm.mappedPlanId}
+                      onChange={e => setSolutionForm({ ...solutionForm, mappedPlanId: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white font-mono focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Display Sort Order *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="e.g. 10"
+                      value={solutionForm.displayOrder}
+                      onChange={e => setSolutionForm({ ...solutionForm, displayOrder: parseInt(e.target.value) || 10 })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white font-mono focus:outline-none"
+                    />
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Card Badge</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. New Release"
+                      value={solutionForm.badge}
+                      onChange={e => setSolutionForm({ ...solutionForm, badge: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Badge Color</label>
+                    <select
+                      value={solutionForm.badgeColor}
+                      onChange={e => setSolutionForm({ ...solutionForm, badgeColor: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white"
+                    >
+                      <option value="emerald">emerald (Green)</option>
+                      <option value="blue">blue (Blue)</option>
+                      <option value="rose">rose (Red)</option>
+                      <option value="amber">amber (Yellow)</option>
+                      <option value="indigo">indigo (Purple)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Emoji Icon</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 🛠️"
+                      value={solutionForm.icon}
+                      onChange={e => setSolutionForm({ ...solutionForm, icon: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white text-center font-mono focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">App Visibility *</label>
+                    <select
+                      value={solutionForm.status}
+                      onChange={e => setSolutionForm({ ...solutionForm, status: e.target.value as 'active' | 'inactive' })}
+                      className="w-full px-3 py-2 border rounded-xl bg-white"
+                    >
+                      <option value="active">Active (Visible in Download Center)</option>
+                      <option value="inactive">Inactive (Hidden from Download Center)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Download Executable URL (.EXE Setup File) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. https://bspsuryatech.in/downloads/repairing-setup.exe"
+                    value={solutionForm.exeUrl}
+                    onChange={e => setSolutionForm({ ...solutionForm, exeUrl: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl bg-white font-mono text-[11px] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Overview Description *</label>
+                  <textarea
+                    rows={2}
+                    required
+                    placeholder="Describe what client-facing operations this software helps solve..."
+                    value={solutionForm.description}
+                    onChange={e => setSolutionForm({ ...solutionForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl bg-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Feature Bullet points (One per Line) *</label>
+                  <textarea
+                    rows={4}
+                    required
+                    placeholder="e.g.&#10;Job Card & Repair workflow&#10;Spare part inventory stock depletion tracking&#10;Customer WhatsApp invoice notifications&#10;Due accounts ledger reports"
+                    value={solutionForm.features}
+                    onChange={e => setSolutionForm({ ...solutionForm, features: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl bg-white font-mono focus:outline-none"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Provide up to 8 core features, each on its own line.</p>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 border-t pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSolution(null);
+                      setIsAddingSolution(false);
+                      resetSolutionForm();
+                    }}
+                    className="px-4 py-2 border rounded-xl bg-white hover:bg-slate-50 font-semibold text-slate-700 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-red-650 hover:bg-red-700 font-bold text-white transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Save size={14} />
+                    <span>Save Listing</span>
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
+            {/* Main CMS Listings Split-Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              
+              {/* LEFT SIDE: LISTING TABLE */}
+              <div className="lg:col-span-8 space-y-4">
+                
+                {/* Search & Actions Bar */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border">
+                  
+                  {/* Search box */}
+                  <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Search software by Title, Category..."
+                      value={solutionSearch}
+                      onChange={(e) => setSolutionSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 border rounded-xl text-xs bg-white focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Right hand CMS listings control */}
+                  <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+                    {adminRole === 'super_admin' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetSolutionForm();
+                            setEditingSolution(null);
+                            setIsAddingSolution(true);
+                          }}
+                          className="px-3 py-1.5 bg-red-650 hover:bg-red-700 text-white font-bold rounded-xl flex items-center gap-1 text-[11px] border border-red-700 transition cursor-pointer"
+                        >
+                          <Plus size={12} />
+                          <span>Add Software</span>
+                        </button>
+
+                        {solutionSelectedIds.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleBulkDeleteSolutions}
+                            className="px-3 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold rounded-xl flex items-center gap-1 text-[11px] transition cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                            <span>Bulk Delete ({solutionSelectedIds.length})</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Software listings database inventory */}
+                <div className="overflow-x-auto border rounded-2xl bg-white shadow-sm">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b text-slate-500 font-mono text-[9.5px] uppercase tracking-wider">
+                        <th className="p-3 w-8">
+                          {adminRole === 'super_admin' && (
+                            <input
+                              type="checkbox"
+                              checked={adminSolutions.length > 0 && solutionSelectedIds.length === adminSolutions.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSolutionSelectedIds(adminSolutions.map(s => s.id));
+                                } else {
+                                  setSolutionSelectedIds([]);
+                                }
+                              }}
+                              className="rounded border-slate-300 text-primary focus:ring-1 focus:ring-slate-350 cursor-pointer"
+                            />
+                          )}
+                        </th>
+                        <th className="p-3">Software listing details</th>
+                        <th className="p-3">Category</th>
+                        <th className="p-3">Map Plan / Order</th>
+                        <th className="p-3">Price</th>
+                        <th className="p-3 w-20 text-center">Visibility</th>
+                        <th className="p-3 w-16 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {solutionsLoading ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-550 font-mono">
+                            🔄 Loading software listings...
+                          </td>
+                        </tr>
+                      ) : adminSolutions.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-400">
+                            No downloadable software defined yet. Click "Add Software" to load.
+                          </td>
+                        </tr>
+                      ) : (
+                        adminSolutions
+                          .filter(s => {
+                            const q = solutionSearch.toLowerCase();
+                            return !q || 
+                                   (s.title || '').toLowerCase().includes(q) || 
+                                   (s.category || '').toLowerCase().includes(q) ||
+                                   (s.subtitle || '').toLowerCase().includes(q);
+                          })
+                          .sort((a, b) => (a.displayOrder ?? 10) - (b.displayOrder ?? 10))
+                          .map((sol) => {
+                            const isChecked = solutionSelectedIds.includes(sol.id);
+                            return (
+                              <tr key={sol.id} className="hover:bg-slate-50/70 transition">
+                                <td className="p-3">
+                                  {adminRole === 'super_admin' && (
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        if (isChecked) {
+                                          setSolutionSelectedIds(prev => prev.filter(x => x !== sol.id));
+                                        } else {
+                                          setSolutionSelectedIds(prev => [...prev, sol.id]);
+                                        }
+                                      }}
+                                      className="rounded border-slate-300 cursor-pointer"
+                                    />
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="text-xl select-none">{sol.icon || '📦'}</span>
+                                    <div>
+                                      <div className="font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                                        <span>{sol.title}</span>
+                                        {sol.badge && (
+                                          <span className={`px-1.5 py-0.2 text-[8px] font-bold rounded uppercase border shrink-0 ${
+                                            sol.badgeColor === 'rose' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                            sol.badgeColor === 'blue' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                            sol.badgeColor === 'amber' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                            sol.badgeColor === 'indigo' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                                            'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                          }`}>
+                                            {sol.badge}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-[10px] text-slate-500 line-clamp-1">{sol.subtitle}</div>
+                                      <div className="text-[9px] text-slate-400 font-mono mt-0.5">{sol.id}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-3 text-slate-600 text-[10.5px]">
+                                  {sol.category}
+                                </td>
+                                <td className="p-3">
+                                  <div className="font-mono text-[9.5px] text-slate-700 font-semibold">{sol.mappedPlanId || '-'}</div>
+                                  <div className="text-[9.5px] text-slate-400">Order: {sol.displayOrder ?? 10}</div>
+                                </td>
+                                <td className="p-3 font-semibold text-slate-800">
+                                  {sol.price}
+                                </td>
+                                <td className="p-3 text-center">
+                                  {adminRole === 'super_admin' ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSolutionVisibility(sol.id, sol.status || 'active', sol.title)}
+                                      className={`px-2 py-0.5 text-[9.5px] font-bold rounded-full border transition cursor-pointer ${
+                                        sol.status === 'inactive'
+                                          ? 'bg-slate-100 text-slate-500 border-slate-200'
+                                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+                                      }`}
+                                    >
+                                      {sol.status === 'inactive' ? 'Hidden' : 'Visible'}
+                                    </button>
+                                  ) : (
+                                    <span className={`px-2 py-0.5 text-[9.5px] font-bold rounded-full border ${
+                                      sol.status === 'inactive'
+                                        ? 'bg-slate-100 text-slate-405 border-slate-150'
+                                        : 'bg-emerald-50/50 text-emerald-650 border-emerald-100'
+                                    }`}>
+                                      {sol.status === 'inactive' ? 'Hidden' : 'Visible'}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    {adminRole === 'super_admin' ? (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setEditingSolution(sol);
+                                            setSolutionForm({
+                                              id: sol.id,
+                                              title: sol.title || '',
+                                              subtitle: sol.subtitle || '',
+                                              category: sol.category || 'Billing Software',
+                                              description: sol.description || '',
+                                              price: sol.price || '₹3,000',
+                                              features: (sol.features || []).join('\n'),
+                                              icon: sol.icon || '🛍️',
+                                              badge: sol.badge || '',
+                                              badgeColor: sol.badgeColor || 'emerald',
+                                              exeUrl: sol.exeUrl || '',
+                                              mappedPlanId: sol.mappedPlanId || 'prod-billing-pro',
+                                              status: (sol.status || 'active') as 'active' | 'inactive',
+                                              displayOrder: sol.displayOrder ?? 10
+                                            });
+                                            setIsAddingSolution(false);
+                                          }}
+                                          className="p-1 hover:bg-slate-100 rounded text-blue-650 transition cursor-pointer"
+                                          title="Edit listings parameters"
+                                        >
+                                          <Edit size={13} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteSolution(sol.id, sol.title)}
+                                          className="p-1 hover:bg-slate-100 rounded text-red-650 transition cursor-pointer"
+                                          title="Delete listings"
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span className="text-[9.5px] text-slate-400 font-mono italic">Locked</span>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* RIGHT SIDE: TELEMETRY & ANALYTICS MONITOR */}
+              <div className="lg:col-span-4 space-y-4">
+                {adminRole === 'super_admin' ? (
+                  <div className="space-y-4 animate-fade-in text-left">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block font-mono">
+                      📊 Telemetry Insights
+                    </h4>
+                    
+                    <div className="bg-slate-50 border p-4 rounded-xl">
+                      <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">GLOBAL DOWNLOAD COUNTS</span>
+                      <span className="text-2xl font-black text-slate-800 mt-1 block leading-none">1,420 pulls</span>
+                      <p className="text-[9.5px] text-slate-500 mt-2 font-light">Includes Retail Pro as dominant component (82%).</p>
+                    </div>
+
+                    <div className="bg-slate-50 border p-4 rounded-xl">
+                      <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">CDN CACHE EFFICIENCY</span>
+                      <span className="text-2xl font-black text-emerald-655 mt-1 block leading-none">99.82% HIT</span>
+                      <p className="text-[9.5px] text-slate-500 mt-2 font-light">Cloudflare backup nodes Raipur sync operational.</p>
+                    </div>
+
+                    <div className="bg-slate-50 border p-4 rounded-xl">
+                      <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">CLIENT DESKTOP CRASHES</span>
+                      <span className="text-2xl font-black text-slate-850 mt-1 block leading-none">0.00% Zero</span>
+                      <p className="text-[9.5px] text-slate-500 mt-2 font-light">Handshake crash telemetry matches active licenses.</p>
+                    </div>
+
+                    <div className="p-4 bg-slate-950 text-white rounded-xl font-mono text-xs space-y-2">
+                       <h4 className="text-[10px] text-slate-455 font-black uppercase tracking-wider">Client pull activity telemetry stream:</h4>
+                       <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
+                         <div className="text-slate-355 text-[10.5px] flex items-center justify-between border-b border-rose-950 pb-1">
+                           <span>📥 IP 223.185.94.102 • Downloaded 'Suryatech_Billing_v4.2.2.exe'</span>
+                           <span className="text-slate-500 font-light text-[9px]">Raipur • 2 min ago</span>
+                         </div>
+                         <div className="text-slate-355 text-[10.5px] flex items-center justify-between border-b border-rose-950 pb-1">
+                           <span>📥 IP 103.88.243.15 • Downloaded 'Restaurant_POS_v1.0.5.exe'</span>
+                           <span className="text-slate-500 font-light text-[9px]">Bilaspur • 15 min ago</span>
+                         </div>
+                         <div className="text-slate-355 text-[10.5px] flex items-center justify-between pb-1">
+                           <span>📥 IP 223.189.2.44 • Downloaded 'GST_Enterprise_v2.1.0.exe'</span>
+                           <span className="text-slate-500 font-light text-[9px]">Durg • 42 min ago</span>
+                         </div>
+                       </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 border border-dashed rounded-2xl p-6 text-center select-none flex flex-col items-center justify-center min-h-[300px]">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 mb-3 shadow-inner text-xs">
+                      🔒
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-700">Analytics Panel Locked</h4>
+                    <p className="text-[10px] text-slate-405 max-w-[200px] mt-1.5 leading-relaxed">
+                      CDN cache ratios, telemetry pulls streams, and client crashes metrics are guarded. Elevate to <span className="font-semibold text-slate-650">Super Admin</span> in the header role controller to unlock.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -3696,7 +4961,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                 <label className="font-extrabold text-slate-700 block uppercase tracking-wide text-[10px]">Campaign Description</label>
                 <textarea
                   rows={2}
-                  className="w-full bg-slate-50 border p-2.5 rounded-xl font-medium text-slate-805 outline-none focus:border-blue-500 text-xs text-left"
+                  className="w-full bg-slate-50 border p-2.5 rounded-xl font-medium text-slate-800 outline-none focus:border-blue-500 text-xs text-left"
                   placeholder="Provide parameters context for customers support reference..."
                   value={formDescription}
                   onChange={e => setFormDescription(e.target.value)}

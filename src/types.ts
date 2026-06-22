@@ -92,6 +92,31 @@ export interface Product {
   gallery?: string[];
   manualUrl?: string;
   status?: 'active' | 'inactive';
+  
+  // Dynamic Download Center Fields
+  discountPrice?: number;
+  logoUrl?: string;
+  thumbnailUrl?: string;
+  bannerUrl?: string;
+  buyNowLink?: string;
+  learnMoreLink?: string;
+  trialDownloadUrl?: string;
+  setupExeUrl?: string;
+  
+  // Visibility Controls
+  showInDownloadCenter?: boolean;
+  isFeatured?: boolean;
+  isNewArrival?: boolean;
+  isBestseller?: boolean;
+  isHidden?: boolean;
+  displayOrder?: number;
+  isPinned?: boolean;
+}
+
+export interface SoftwareCategory {
+  id: string;
+  name: string;
+  displayOrder: number;
 }
 
 export interface Order {
@@ -263,5 +288,7 @@ export interface SoftwareSolution {
   exeUrl?: string;
   demoVideoUrl?: string;
   gallery?: string[];
+  status?: 'active' | 'inactive';
+  displayOrder?: number;
 }
 

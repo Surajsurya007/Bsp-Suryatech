@@ -1460,9 +1460,81 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json(dbActions.getProducts());
   });
 
+  app.post('/api/products', (req, res) => {
+    const prod = dbActions.createProduct(req.body);
+    res.status(201).json(prod);
+  });
+
+  app.put('/api/products/:id', (req, res) => {
+    const updated = dbActions.updateProduct(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ error: 'Software Product not found' });
+    }
+    res.json(updated);
+  });
+
+  app.delete('/api/products/:id', (req, res) => {
+    dbActions.deleteProduct(req.params.id);
+    res.json({ success: true });
+  });
+
+  // Dynamic Software Categories
+  app.get('/api/categories', (req, res) => {
+    res.json(dbActions.getCategories());
+  });
+
+  app.post('/api/categories', (req, res) => {
+    if (Array.isArray(req.body)) {
+      res.json(dbActions.saveCategoriesOrder(req.body));
+    } else {
+      const cat = dbActions.createCategory(req.body);
+      res.status(201).json(cat);
+    }
+  });
+
+  app.put('/api/categories/:id', (req, res) => {
+    const updated = dbActions.updateCategory(req.params.id, req.body.name);
+    if (!updated) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    res.json(updated);
+  });
+
+  app.delete('/api/categories/:id', (req, res) => {
+    dbActions.deleteCategory(req.params.id);
+    res.json({ success: true });
+  });
+
   // Solutions dynamic list
   app.get('/api/solutions', (req, res) => {
     res.json(dbActions.getSolutions());
+  });
+
+  app.post('/api/solutions', (req, res) => {
+    const sol = dbActions.createSolution(req.body);
+    res.status(201).json(sol);
+  });
+
+  app.put('/api/solutions/:id', (req, res) => {
+    const updated = dbActions.updateSolution(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ error: 'Software Solution not found' });
+    }
+    res.json(updated);
+  });
+
+  app.delete('/api/solutions/:id', (req, res) => {
+    const success = dbActions.deleteSolution(req.params.id);
+    res.json({ success });
+  });
+
+  app.post('/api/solutions/bulk-delete', (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ error: 'Invalid or missing array of software IDs.' });
+    }
+    const success = dbActions.bulkDeleteSolutions(ids);
+    res.json({ success });
   });
 
   // Videos
@@ -1753,11 +1825,21 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       if (supabase) {
         try {
           const discountVal = fresh.discount_type === 'percentage' ? Number(fresh.discount_value) : 10;
+          let expiresByIso = new Date('2027-12-31').toISOString();
+          try {
+            const dateVal = fresh.valid_to || fresh.expiresBy || '2027-12-31';
+            const parsedDate = new Date(dateVal);
+            if (!isNaN(parsedDate.getTime())) {
+              expiresByIso = parsedDate.toISOString();
+            }
+          } catch (dateErr) {
+            console.error("Failed to parse creative expires_by date:", dateErr);
+          }
           await supabase.from('coupons').upsert({
             code: fresh.coupon_code || fresh.code,
             discount_percent: discountVal,
             active: fresh.status === 'active' || fresh.active === true,
-            expires_by: new Date(fresh.valid_to || fresh.expiresBy || '2027-12-31').toISOString()
+            expires_by: expiresByIso
           });
           console.log(`[SUPABASE SYNC] Coupon ${fresh.coupon_code} synchronized to public.coupons table.`);
         } catch (sbErr) {
@@ -1786,11 +1868,21 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     if (supabase) {
       try {
         const discountVal = updated.discount_type === 'percentage' ? Number(updated.discount_value) : 10;
+        let expiresByIso = new Date('2027-12-31').toISOString();
+        try {
+          const dateVal = updated.valid_to || updated.expiresBy || '2027-12-31';
+          const parsedDate = new Date(dateVal);
+          if (!isNaN(parsedDate.getTime())) {
+            expiresByIso = parsedDate.toISOString();
+          }
+        } catch (dateErr) {
+          console.error("Failed to parse updated expires_by date:", dateErr);
+        }
         await supabase.from('coupons').upsert({
           code: updated.coupon_code || updated.code,
           discount_percent: discountVal,
           active: updated.status === 'active' || updated.active === true,
-          expires_by: new Date(updated.valid_to || updated.expiresBy || '2027-12-31').toISOString()
+          expires_by: expiresByIso
         });
         console.log(`[SUPABASE SYNC] Coupon ${updated.coupon_code} update synchronized to public.coupons table.`);
       } catch (sbErr) {

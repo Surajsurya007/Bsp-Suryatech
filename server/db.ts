@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, CouponRedemption, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, SoftwareSolution } from '../src/types';
+import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, CouponRedemption, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, SoftwareSolution, SoftwareCategory } from '../src/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
@@ -25,6 +25,17 @@ export const defaultLanguageConfigs: LanguageConfig[] = [
   { code: 'kn', name: 'Kannada', flag: '🇮🇳', enabled: true },
   { code: 'ml', name: 'Malayalam', flag: '🇮🇳', enabled: true },
   { code: 'pa', name: 'Punjabi', flag: '🇮🇳', enabled: true }
+];
+
+export const defaultCategories: SoftwareCategory[] = [
+  { id: 'cat-billing', name: 'Billing Software', displayOrder: 1 },
+  { id: 'cat-transport', name: 'Transport Software', displayOrder: 2 },
+  { id: 'cat-hospital', name: 'Hospital Software', displayOrder: 3 },
+  { id: 'cat-school', name: 'School Software', displayOrder: 4 },
+  { id: 'cat-erp', name: 'ERP Software', displayOrder: 5 },
+  { id: 'cat-pharmacy', name: 'Pharmacy Software', displayOrder: 6 },
+  { id: 'cat-restaurant', name: 'Restaurant Software', displayOrder: 7 },
+  { id: 'cat-warehouse', name: 'Warehouse Software', displayOrder: 8 }
 ];
 
 // Cryto Helpers
@@ -73,6 +84,7 @@ interface DatabaseSchema {
   passwordHashes: Record<string, string>; // userId -> passwordHash
   customerProfiles: CustomerProfile[];
   products: Product[];
+  categories: SoftwareCategory[];
   orders: Order[];
   licenses: License[];
   downloads: DownloadInfo[];
@@ -112,6 +124,7 @@ export let db: DatabaseSchema = {
   passwordHashes: {},
   customerProfiles: [],
   products: [],
+  categories: [],
   orders: [],
   licenses: [],
   downloads: [],
@@ -164,18 +177,31 @@ const defaultProducts: Product[] = [
     downloadUrl: '/api/downloads/setup/prod-billing-pro',
     createdAt: '2026-01-10T00:00:00Z',
     connectedPlan: 'prod-billing-pro',
-    category: 'Retail & POS Billing',
+    category: 'Billing Software',
     fullDescription: "BSP Suryatech Retail Billing Pro is India's leading lightweight, ultra-fast and incredibly reliable offline desktop-first billing and inventory software. It provides out-of-the-box barcode creation, wholesale/retail billing, automated tax calculation, and profit and loss registers. Designed specifically for retail shop owners to streamline billing lanes and keep inventory in perfect synchronization without requiring internet connectivity.",
     systemRequirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
     licenseInfo: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
     demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     gallery: [
       'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
-      'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
-      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800'
+      'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800'
     ],
     manualUrl: '',
-    status: 'active'
+    status: 'active',
+    logoUrl: '🛍️',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
+    bannerUrl: 'https://images.unsplash.com/photo-1556740738-afe6f3816a5d?auto=format&fit=crop&q=80&w=800',
+    buyNowLink: '',
+    learnMoreLink: '',
+    trialDownloadUrl: '/api/downloads/setup/prod-billing-pro',
+    setupExeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe',
+    showInDownloadCenter: true,
+    isFeatured: true,
+    isNewArrival: true,
+    isBestseller: true,
+    isHidden: false,
+    displayOrder: 1,
+    isPinned: true
   },
   {
     id: 'prod-billing-enterprise',
@@ -198,18 +224,290 @@ const defaultProducts: Product[] = [
     downloadUrl: '/api/downloads/setup/prod-billing-enterprise',
     createdAt: '2026-03-15T00:00:00Z',
     connectedPlan: 'prod-billing-enterprise',
-    category: 'Enterprise GST Compliance',
+    category: 'ERP Software',
     fullDescription: 'The BSP Suryatech GST Enterprise Suite is the state-of-the-art POS & Accounting platform built for Indian enterprises, wholesalers, and multi-firm operations. It handles robust multi-firm and multi-branch structures on a single workstation terminal, exports GSTR-1 & GSTR-3B compliant JSON files direct to the GST portal, schedules real-time secure Google Drive cloud backups, and empowers admins with custom visually designable invoice layout designers. Backed by enterprise-rate 24/7 priority support.',
     systemRequirements: 'Operating System: Windows 10 or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i5 or AMD Ryzen 5 or equivalent\nMemory: 4 GB RAM recommended\nStorage: 200 MB free space\nDatabase: SQLite or cloud-integrated backup storage',
     licenseInfo: 'Multi-Firm Unlimited Terminal Site License Key. Priority 24/7 Telephone and On-Site Setup consultation support included.',
     demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     gallery: [
       'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
-      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
-      'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800'
+      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800'
     ],
     manualUrl: '',
-    status: 'active'
+    status: 'active',
+    logoUrl: '🏢',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
+    bannerUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
+    buyNowLink: '',
+    learnMoreLink: '',
+    trialDownloadUrl: '/api/downloads/setup/prod-billing-enterprise',
+    setupExeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe',
+    showInDownloadCenter: true,
+    isFeatured: true,
+    isNewArrival: false,
+    isBestseller: true,
+    isHidden: false,
+    displayOrder: 2,
+    isPinned: false
+  },
+  {
+    id: 'prod-restaurant-pos',
+    name: 'Restaurant POS & KOT Software',
+    version: 'v1.4.2',
+    size: '12.6 MB',
+    price: 3000,
+    originalPrice: 6999,
+    features: [
+      'Kitchen Order Tickets (KOT) Direct Printing',
+      'Live Table Status Mapping & Visual Layouts',
+      'Recipe Ingredient & Inventory Cost Control',
+      'Multi-terminal Billing lane split settlements',
+      'Android Captain / Waiter menu app syncing',
+      'Dynamic item discount with custom taxes support'
+    ],
+    description: 'Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.',
+    downloadUrl: '/api/downloads/setup/prod-restaurant-pos',
+    createdAt: '2026-04-18T00:00:00Z',
+    connectedPlan: 'prod-restaurant-pos',
+    category: 'Restaurant Software',
+    fullDescription: 'Manage busy dinner rushes with incredible confidence. BSP restaurant core software coordinates table timelines, fires KOT receipts directly to correct kitchen channels, monitors ingredient stock levels in real-time, splits table tickets during checkout, and syncs smoothly with waiter handheld machines.',
+    systemRequirements: 'OS: Windows 8/10/11\nMemory: 2 GB RAM minimum\nStorage: 100 MB minimum',
+    licenseInfo: 'Single-Terminal Lifetime License Key with free security updates.',
+    demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800'
+    ],
+    manualUrl: '',
+    status: 'active',
+    logoUrl: '🍽️',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400',
+    bannerUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400',
+    buyNowLink: '',
+    learnMoreLink: '',
+    trialDownloadUrl: '/api/downloads/setup/prod-restaurant-pos',
+    setupExeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-POS-KOT-v1.0.0.Setup.exe',
+    showInDownloadCenter: true,
+    isFeatured: true,
+    isNewArrival: false,
+    isBestseller: true,
+    isHidden: false,
+    displayOrder: 3,
+    isPinned: false
+  },
+  {
+    id: 'prod-mobile-billing',
+    name: 'Mobile Shop Billing Software',
+    version: 'v2.1.0',
+    size: '11.2 MB',
+    price: 3000,
+    originalPrice: 6999,
+    features: [
+      'IMEI, ESN & Serial number tracking logs',
+      'Dynamic Repairs & Job-Card tracking pipeline',
+      'Warranty status records with brand logs',
+      'Customer AMC service text reminders',
+      'Supplier serial matching and replacement checks'
+    ],
+    description: 'Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.',
+    downloadUrl: '/api/downloads/setup/prod-mobile-billing',
+    createdAt: '2026-05-10T00:00:00Z',
+    connectedPlan: 'prod-mobile-billing',
+    category: 'Billing Software',
+    fullDescription: 'Custom-tailored smartphone retail ERP. Log serial details of handset devices, manage workshop repair statuses, prints barcode labels directly for repair tickets, tracks outstanding vendor return credits and notifies clients of pending handovers.',
+    systemRequirements: 'OS: Windows 7/8/10/11\nMemory: 2 GB RAM minimum',
+    licenseInfo: 'Single-Terminal Lifetime License Key.',
+    demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800'
+    ],
+    manualUrl: '',
+    status: 'active',
+    logoUrl: '📱',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400',
+    bannerUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400',
+    buyNowLink: '',
+    learnMoreLink: '',
+    trialDownloadUrl: '/api/downloads/setup/prod-mobile-billing',
+    setupExeUrl: 'https://bspsuryatech.in/downloads/Mobile-Shop-Billing-v1.0.0.Setup.exe',
+    showInDownloadCenter: true,
+    isFeatured: true,
+    isNewArrival: true,
+    isBestseller: false,
+    isHidden: false,
+    displayOrder: 4,
+    isPinned: false
+  },
+  {
+    id: 'prod-electronics-billing',
+    name: 'Electronics Shop Billing Software',
+    version: 'v3.0.0',
+    size: '15.4 MB',
+    price: 3000,
+    originalPrice: 6999,
+    features: [
+      'Dual-Serial Number validation safeguards',
+      'Manufacturer Warranty portal linking',
+      'Installation schedules and technician ledgers',
+      'Commission agent tracking schemes',
+      'Multi-warehouse stock balancing mechanisms'
+    ],
+    description: 'Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.',
+    downloadUrl: '/api/downloads/setup/prod-electronics-billing',
+    createdAt: '2026-05-15T00:00:00Z',
+    connectedPlan: 'prod-electronics-billing',
+    category: 'Billing Software',
+    fullDescription: 'Heavy-duty workstation software for appliance, battery, and electrical dealerships. Handles multi-godown stock distribution, calculates complex sales rep commissions, schedules installation teams, and catalogs specific service parameters.',
+    systemRequirements: 'OS: Windows 10/11\nMemory: 4 GB RAM recommended',
+    licenseInfo: 'Unlimited lifetime workstation license.',
+    demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=800'
+    ],
+    manualUrl: '',
+    status: 'active',
+    logoUrl: '📺',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=400',
+    bannerUrl: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=400',
+    buyNowLink: '',
+    learnMoreLink: '',
+    trialDownloadUrl: '/api/downloads/setup/prod-electronics-billing',
+    setupExeUrl: 'https://bspsuryatech.in/downloads/Electronics-Shop-Billing-v1.0.0.Setup.exe',
+    showInDownloadCenter: true,
+    isFeatured: true,
+    isNewArrival: false,
+    isBestseller: false,
+    isHidden: false,
+    displayOrder: 5,
+    isPinned: false
+  },
+  {
+    id: 'prod-transport-management',
+    name: 'Transport Management Software',
+    version: 'v1.4.0',
+    size: '18.2 MB',
+    price: 3000,
+    originalPrice: 6999,
+    features: [
+      'Comprehensive Fleet logging system',
+      'Vehicle maintenance and trip sheet entries',
+      'Diesel expense trackers with fuel pump ledgers',
+      'Driver commissions and cash advancement accounts',
+      'Client bilti (L/R) generation and bills compiling'
+    ],
+    description: 'Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.',
+    downloadUrl: '/api/downloads/setup/prod-transport-management',
+    createdAt: '2026-05-20T00:00:00Z',
+    connectedPlan: 'prod-transport-management',
+    category: 'Transport Software',
+    fullDescription: 'The supreme command center for fleet and booking agencies. Handles vehicle trip sheets, issues precise L/R documents, manages diesel cards, checks outstanding client bills, keeps driver accounts balanced, and records tire/battery replacements.',
+    systemRequirements: 'OS: Windows 10/11 (32 or 64-bit)\nMemory: 4 GB RAM recommended',
+    licenseInfo: 'Lifetime License Key.',
+    demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1494412519320-aa613dfb7738?auto=format&fit=crop&w=800'
+    ],
+    manualUrl: '',
+    status: 'active',
+    logoUrl: '🚚',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1494412519320-aa613dfb7738?auto=format&fit=crop&w=400',
+    bannerUrl: 'https://images.unsplash.com/photo-1494412519320-aa613dfb7738?auto=format&fit=crop&w=400',
+    buyNowLink: '',
+    learnMoreLink: '',
+    trialDownloadUrl: '/api/downloads/setup/prod-transport-management',
+    setupExeUrl: 'https://bspsuryatech.in/downloads/SafeWheels-ERP-v1.0.0.Setup.exe',
+    showInDownloadCenter: true,
+    isFeatured: true,
+    isNewArrival: false,
+    isBestseller: true,
+    isHidden: false,
+    displayOrder: 6,
+    isPinned: false
+  },
+  {
+    id: 'prod-hospital-clinic',
+    name: 'Hospital & Clinic Software',
+    version: 'v3.1.2',
+    size: '25.6 MB',
+    price: 3000,
+    originalPrice: 6999,
+    features: [
+      'OPD patient registries with fast lookups',
+      'Inpatient Bed and ward scheduling dashboards',
+      'Electronic prescriptions & medicine histories',
+      'Diagnostic laboratory report generator modules',
+      'Hospital billing schemas with custom expense rates'
+    ],
+    description: 'In-patient/Out-patient registration, modular appointments, doctor scheduling, prescription prints, and laboratory logs.',
+    downloadUrl: '/api/downloads/setup/prod-hospital-clinic',
+    createdAt: '2026-05-22T00:00:00Z',
+    connectedPlan: 'prod-hospital-clinic',
+    category: 'Hospital Software',
+    fullDescription: 'All-inclusive medical clinic workstation software. Speeds up patient registration, maps appointments, generates digital prescription sheets with rapid medicine lookup triggers, and calculates patient discharge summaries.',
+    systemRequirements: 'OS: Windows 10/11\nMemory: 4 GB RAM recommended',
+    licenseInfo: 'Server node Lifetime Key.',
+    demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800'
+    ],
+    manualUrl: '',
+    status: 'active',
+    logoUrl: '🏥',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=400',
+    bannerUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=400',
+    buyNowLink: '',
+    learnMoreLink: '',
+    trialDownloadUrl: '/api/downloads/setup/prod-hospital-clinic',
+    setupExeUrl: 'https://bspsuryatech.in/downloads/Hospital-Management-ERP-v3.0.0.Setup.exe',
+    showInDownloadCenter: true,
+    isFeatured: true,
+    isNewArrival: false,
+    isBestseller: false,
+    isHidden: false,
+    displayOrder: 7,
+    isPinned: false
+  },
+  {
+    id: 'prod-school-erp',
+    name: 'School ERP Management Suite',
+    version: 'v2.8.0',
+    size: '28.4 MB',
+    price: 3000,
+    originalPrice: 6999,
+    features: [
+      'Comprehensive Student admissions logging',
+      'Configurable fee headers and receipts maker',
+      'Exams and marks ledger registers',
+      'Dynamic timetable schedule creator modules',
+      'Automated SMS alert gateways dispatcher'
+    ],
+    description: 'Robust student lifecycle bookkeeping. Integrated fee customizer modules, grades charts, schedule grids and bus tracking.',
+    downloadUrl: '/api/downloads/setup/prod-school-erp',
+    createdAt: '2026-05-25T00:00:00Z',
+    connectedPlan: 'prod-school-erp',
+    category: 'School Software',
+    fullDescription: 'Coordinate administrative processes effortlessly. Oversee dynamic student accounts, manage detailed fee headings, schedule term examinations, log visual mark registers and keep parents connected via automated updates.',
+    systemRequirements: 'OS: Windows 10/11\nMemory: 4 GB RAM recommended',
+    licenseInfo: 'Campus Lifetime site key.',
+    demoVideoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    gallery: [
+      'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&w=800'
+    ],
+    manualUrl: '',
+    status: 'active',
+    logoUrl: '🏫',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&w=400',
+    bannerUrl: 'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&w=400',
+    buyNowLink: '',
+    learnMoreLink: '',
+    trialDownloadUrl: '/api/downloads/setup/prod-school-erp',
+    setupExeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.Setup.exe',
+    showInDownloadCenter: true,
+    isFeatured: true,
+    isNewArrival: false,
+    isBestseller: false,
+    isHidden: false,
+    displayOrder: 8,
+    isPinned: false
   }
 ];
 
@@ -625,6 +923,20 @@ export const defaultSolutions: SoftwareSolution[] = [
     badge: 'Billing',
     badgeColor: 'emerald',
     exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-resort',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Resort & Spa PMS',
+    category: 'ERP Software',
+    subtitle: 'RESORT & PROPERTY PMS',
+    description: 'All-in-one resort property management. Online booking syncer, visual room availability grid, spa booking scheduler, table reservation, and guest CRM.',
+    price: '₹3,000',
+    features: ['Visual Room Availability Grid', 'Integrated Spa & Activity slots', 'Housekeeping & Maintenance status', 'Banquet & Event bookings planner', 'Fast Check-out & Ledger folio'],
+    icon: '🌴',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.Setup.exe'
   }
 ];
 
@@ -640,7 +952,10 @@ export function initDB() {
       db = JSON.parse(content);
       
       // Ensure seed lists exist if structural updates occurred
-      if (!db.products || db.products.length === 0) db.products = defaultProducts;
+      if (!db.products || db.products.length <= 2) {
+        db.products = defaultProducts;
+      }
+      if (!db.categories || db.categories.length === 0) db.categories = [...defaultCategories];
       if (!db.coupons || db.coupons.length === 0) db.coupons = defaultCoupons;
       if (!db.couponRedemptions) db.couponRedemptions = [];
 
@@ -739,6 +1054,7 @@ function seedDB() {
     passwordHashes: {},
     customerProfiles: [],
     products: defaultProducts,
+    categories: [...defaultCategories],
     orders: [],
     licenses: [],
     downloads: defaultDownloads,
@@ -963,13 +1279,41 @@ export const dbActions = {
 
   getProducts: () => db.products,
   getProductById: (id: string) => db.products.find(p => p.id === id),
-  createProduct: (product: Omit<Product, 'id' | 'createdAt'>) => {
-    const id = 'prod-' + Math.random().toString(36).substr(2, 9);
+  
+  getCategories: () => db.categories || [],
+  getCategoryById: (id: string) => (db.categories || []).find(c => c.id === id),
+  createCategory: (cat: SoftwareCategory) => {
+    if (!db.categories) db.categories = [];
+    db.categories.push(cat);
+    saveDB();
+    return cat;
+  },
+  updateCategory: (id: string, name: string) => {
+    const idx = (db.categories || []).findIndex(c => c.id === id);
+    if (idx > -1) {
+      db.categories[idx].name = name;
+      saveDB();
+      return db.categories[idx];
+    }
+    return null;
+  },
+  deleteCategory: (id: string) => {
+    db.categories = (db.categories || []).filter(c => c.id !== id);
+    saveDB();
+    return true;
+  },
+  saveCategoriesOrder: (orderedCats: SoftwareCategory[]) => {
+    db.categories = orderedCats;
+    saveDB();
+    return db.categories;
+  },
+  createProduct: (product: Partial<Product> & { name: string }) => {
+    const id = product.id || 'prod-' + Math.random().toString(36).substr(2, 9);
     const newProd: Product = {
       ...product,
       id,
       createdAt: new Date().toISOString()
-    };
+    } as Product;
     db.products.push(newProd);
     saveDB();
     return newProd;
@@ -1481,8 +1825,8 @@ export const dbActions = {
 
   // Solutions actions
   getSolutions: () => db.solutions || [],
-  createSolution: (sol: Omit<SoftwareSolution, 'id'>) => {
-    const id = 'sol-' + Math.random().toString(36).substr(2, 9);
+  createSolution: (sol: any) => {
+    const id = sol.id || 'sol-' + Math.random().toString(36).substring(2, 11);
     const newSol: SoftwareSolution = {
       ...sol,
       id
@@ -1505,6 +1849,12 @@ export const dbActions = {
   deleteSolution: (id: string) => {
     if (!db.solutions) db.solutions = [];
     db.solutions = db.solutions.filter(s => s.id !== id);
+    saveDB();
+    return true;
+  },
+  bulkDeleteSolutions: (ids: string[]) => {
+    if (!db.solutions) db.solutions = [];
+    db.solutions = db.solutions.filter(s => !ids.includes(s.id));
     saveDB();
     return true;
   }

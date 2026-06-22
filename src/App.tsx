@@ -294,6 +294,7 @@ export default function App() {
   }, [user, products, solutions]);
 
   const fetchProducts = async () => {
+    let loaded = false;
     try {
       console.log("App: Querying products directly from Supabase DB...");
       const { data: sbData, error: sbError } = await supabase.from('products').select('*');
@@ -315,12 +316,48 @@ export default function App() {
           status: item.status || 'active'
         }));
         setProducts(parsedProducts);
+        loaded = true;
       } else {
         if (sbError) console.log("App: Supabase products table fetch error:", sbError.message);
-        setProducts(defaultProducts);
       }
     } catch (err) {
-      console.warn('Products load exception. Using static defaults:', err);
+      console.warn('Products load from Supabase exception:', err);
+    }
+
+    if (!loaded) {
+      try {
+        console.log("App: Fetching products fallback from Express API...");
+        const res = await fetch('/api/products');
+        if (res.ok) {
+          const apiData = await res.json();
+          if (apiData && apiData.length > 0) {
+            const parsedProducts = apiData.map((item: any) => ({
+              ...item,
+              price: item.price ? Number(item.price) : (item.id === 'prod-billing-pro' ? 999 : 2999),
+              originalPrice: item.original_price || item.originalPrice ? Number(item.original_price || item.originalPrice) : (item.id === 'prod-billing-pro' ? 2499 : 4999),
+              downloadUrl: item.download_url || item.downloadUrl,
+              connectedPlan: item.connected_plan || item.connectedPlan,
+              category: item.category || 'Retail & POS Billing',
+              fullDescription: item.full_description || item.fullDescription || item.description || '',
+              systemRequirements: item.system_requirements || item.systemRequirements || '',
+              licenseInfo: item.license_info || item.licenseInfo || '',
+              demoVideoUrl: item.demo_video_url || item.demoVideoUrl || '',
+              gallery: typeof item.gallery === 'string' ? JSON.parse(item.gallery) : (Array.isArray(item.gallery) ? item.gallery : []),
+              features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || []),
+              manualUrl: item.manual_url || item.manualUrl,
+              status: item.status || 'active'
+            }));
+            setProducts(parsedProducts);
+            loaded = true;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('Products load from Local Express API exception:', apiErr);
+      }
+    }
+
+    if (!loaded) {
+      console.log("App: Falling back to static client-side defaultProducts");
       setProducts(defaultProducts);
     }
   };
@@ -391,45 +428,64 @@ export default function App() {
 
   const fetchSolutions = async () => {
     try {
-      console.log("App: Fetching solutions direct from Supabase...");
-      const { data, error } = await supabase.from('solutions').select('*');
-      if (data && !error && data.length > 0) {
-        const parsed = data.map((item: any) => ({
-          ...item,
-          price: item.id === 'sol-erp-warehouse' ? '₹3,000' : (item.price || '₹3,000')
-        }));
-        setSolutions(parsed);
-      } else {
-        console.log("App: Supabase solutions table empty, missing or gave error, loading from local Express API (/api/solutions)...", error?.message || "");
+      console.log("App: Loading Download Center software products directly from solutions datastore...");
+      const { data: sbData, error: sbError } = await supabase.from('solutions').select('*');
+      let solutionsList = sbData;
+      
+      if (!solutionsList || sbError || solutionsList.length === 0) {
+        console.log("App: Fallback to local Express API for solutions...");
         const localRes = await fetch('/api/solutions');
         if (localRes.ok) {
-          const localData = await localRes.json();
-          const parsed = localData.map((item: any) => ({
-            ...item,
-            price: item.id === 'sol-erp-warehouse' ? '₹3,000' : (item.price || '₹3,000')
-          }));
-          setSolutions(parsed);
-        } else {
-          setSolutions(defaultSolutions);
+          solutionsList = await localRes.json();
         }
       }
-    } catch (err: any) {
-      console.warn("Solutions load exception, attempting local Express API fallback...", err?.message || err);
-      try {
-        const localRes = await fetch('/api/solutions');
-        if (localRes.ok) {
-          const localData = await localRes.json();
-          const parsed = localData.map((item: any) => ({
-            ...item,
-            price: item.id === 'sol-erp-warehouse' ? '₹3,000' : (item.price || '₹3,000')
-          }));
-          setSolutions(parsed);
-        } else {
-          setSolutions(defaultSolutions);
-        }
-      } catch (innerErr) {
+
+      if (solutionsList && solutionsList.length > 0) {
+        const mapped = solutionsList.map((item: any) => {
+          let featuresArr: string[] = [];
+          if (Array.isArray(item.features)) {
+            featuresArr = item.features;
+          } else if (typeof item.features === 'string') {
+            try {
+              const parsed = JSON.parse(item.features);
+              featuresArr = Array.isArray(parsed) ? parsed : [];
+            } catch {
+              featuresArr = item.features.split('\n').map((f: string) => f.trim()).filter(Boolean);
+            }
+          }
+          
+          const titleVal = item.title || item.name || '';
+          const categoryVal = item.category || 'Billing Software';
+          const priceVal = typeof item.price === 'number' 
+            ? '₹' + item.price.toLocaleString() 
+            : (item.price ? (item.price.toString().startsWith('₹') ? item.price : '₹' + item.price.toString()) : '₹3,000');
+
+          return {
+            id: item.id,
+            mappedPlanId: item.mappedPlanId || item.id,
+            title: titleVal,
+            category: categoryVal,
+            subtitle: item.subtitle || (item.is_featured ? 'FEATURED PRODUCT' : categoryVal.toUpperCase()),
+            description: item.description || '',
+            price: priceVal,
+            features: featuresArr.length > 0 ? featuresArr : ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State'],
+            icon: item.icon || item.logo_url || '🛍️',
+            badge: item.badge || (item.is_featured ? 'Featured' : (item.is_new_arrival ? 'New' : (item.is_bestseller ? 'Bestseller' : 'Active'))),
+            badgeColor: item.badgeColor || (item.is_featured ? 'emerald' : (item.is_new_arrival ? 'blue' : (item.is_bestseller ? 'rose' : 'emerald'))),
+            exeUrl: item.exeUrl || item.trial_download_url || item.setup_exe_url || item.download_url || '',
+            status: item.status || (item.is_hidden ? 'inactive' : 'active'),
+            displayOrder: item.displayOrder !== undefined ? item.displayOrder : (item.display_order !== undefined ? item.display_order : 10)
+          };
+        });
+        
+        console.log("App: Dynamic solutions generated successfully from solutions:", mapped);
+        setSolutions(mapped);
+      } else {
         setSolutions(defaultSolutions);
       }
+    } catch (err: any) {
+      console.warn("Solutions mapping pipeline exception:", err?.message || err);
+      setSolutions(defaultSolutions);
     }
   };
 

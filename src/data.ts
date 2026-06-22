@@ -156,6 +156,62 @@ export const defaultVideos = [
 
 export const defaultSolutions = [
   {
+    id: 'sol-retail',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Retail Billing Software',
+    category: 'Billing Software',
+    subtitle: 'BESTSELLER FOR SHOPS',
+    description: 'Secure GST invoicing, fast item lookup, barcode tags generator & scanner speed-up integrations.',
+    price: '₹3,000',
+    features: ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State', 'Supplier & Client Ledgers'],
+    icon: '🛍️',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-supermarket',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Supermarket POS Software',
+    category: 'Billing Software',
+    subtitle: 'COMPLETE POS PACK',
+    description: 'High speed point of sales billing with barcode scanning, multiple registers support and WhatsApp notifications.',
+    price: '₹3,000',
+    features: ['High-Speed POS Checkout', 'Integrated Barcode Printing', 'Customer Loyalty Points', 'Multi-Terminal Syncing', 'Automatic Reorder Limits'],
+    icon: '🏪',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-grocery',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Grocery Billing Software',
+    category: 'Billing Software',
+    subtitle: 'FAST GROCERY STORE SPECIAL',
+    description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
+    price: '₹3,000',
+    features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
+    icon: '🍎',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-medical',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Medical Store Billing Software',
+    category: 'Billing Software',
+    subtitle: 'PHARMACY BATCH SPECIAL',
+    description: 'Secure pharmacy store ledger tracking medicines, scheduled drugs, batch expiries, lists, and doctors details.',
+    price: '₹3,000',
+    features: ['Batch Code Expiry tracking', 'Drug License verification', 'Salt-wise generic lookup', 'Supplier Invoice Sync', 'Doctor referrals lists'],
+    icon: '💊',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/Medical-Store-ERP-v3.0.0.Setup.exe'
+  },
+  {
     id: 'sol-restaurant',
     mappedPlanId: 'prod-billing-pro',
     title: 'Restaurant POS & KOT Software',
@@ -163,17 +219,11 @@ export const defaultSolutions = [
     subtitle: 'KITCHEN & HOTEL SPECIAL',
     description: 'Streamlined table menus ordering, instantaneous kitchen order tickets dispatching, split bills, and table mappings.',
     price: '₹3,000',
-    features: [
-      'Kitchen Order Tickets (KOT)',
-      'Table Mapping & Status',
-      'Split Billing & Discounts',
-      'Captains App Integration',
-      'Multi-payment checkout'
-    ],
+    features: ['Kitchen Order Tickets (KOT)', 'Table Mapping & Status', 'Recipe Ingredient Control', 'Split Bill Settlements', 'Waiter Android App link'],
     icon: '🍽️',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-v1.0.0-Setup.zip'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-POS-KOT-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-mobile',
@@ -183,17 +233,11 @@ export const defaultSolutions = [
     subtitle: 'IMEI & SERIAL TRACKER',
     description: 'Perfect for smartphone and electronics repair centers. Dynamic tracking of unique IMEI and serial tags.',
     price: '₹3,000',
-    features: [
-      'Unique IMEI/Serial logging',
-      'Dynamic Repairs Tracker',
-      'Accessories Inventory Control',
-      'Supplier Serial Sync',
-      'Technician assignments'
-    ],
+    features: ['Unique IMEI/Serial logging', 'Dynamic Repairs Tracker', 'Warranty Status Records', 'Brand & Model Catalog', 'Customer AMC reminders'],
     icon: '📱',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Mobile-Shop-Billing-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-electronics',
@@ -203,17 +247,11 @@ export const defaultSolutions = [
     subtitle: 'APPLIANCE SPECIAL',
     description: 'Robust billing with dual-serial numbers, warranty cards distribution, and multi-location warehouse sync.',
     price: '₹3,000',
-    features: [
-      'Dual-Serial Code validation',
-      'Manufacturer Warranty link',
-      'Installations tracking',
-      'Multi-warehouse logistics',
-      'Finance/EMI Checkout options'
-    ],
+    features: ['Dual-Serial Code validation', 'Manufacturer Warranty link', 'Installations Scheduler', 'Commission Agent ledger', 'Multi-Godown Stock check'],
     icon: '📺',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Electronics-Shop-Billing-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-transport',
@@ -223,96 +261,108 @@ export const defaultSolutions = [
     subtitle: 'LOGISTICS & FLEET STANDARD',
     description: 'Complete operations control. Manage vehicle tracking logs, trip expenses, diesel trackers, and driver payouts.',
     price: '₹3,000',
-    features: [
-      'Fleet Management',
-      'Vehicle Tracking',
-      'Driver Management',
-      'Route Planning',
-      'Trip Management'
-    ],
+    features: ['Fleet Management', 'Vehicle Tracking', 'Trip Sheet expense logs', 'Driver Commission accounts', 'Client & Consignee Ledgers'],
     icon: '🚚',
     badge: 'Transport',
     badgeColor: 'blue',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/SafeWheels-ERP-v1.0.0.Setup.exe'
   },
   {
     id: 'sol-hospital',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'Hospital Management Software',
+    title: 'Hospital & Clinic Software',
     category: 'Hospital Software',
-    subtitle: 'COMPLETE CLINICAL SUITE',
-    description: 'Enterprise-grade platform for managing multi-specialty clinical operations, patient registrations, IPD/OPD, and doctors slots.',
+    subtitle: 'HEALTHCARE INTEGRATED',
+    description: 'In-patient/Out-patient registration, modular appointments, doctor scheduling, prescription prints, and laboratory logs.',
     price: '₹3,000',
-    features: [
-      'Patient Registration',
-      'OPD Management',
-      'IPD Management',
-      'Doctor Management',
-      'Appointment Scheduling'
-    ],
+    features: ['OPD/IPD Patient Registry', 'Doctor Scheduler & Fees', 'EHR & Digital Prescriptions', 'Pharmacy & Lab Bilateral', 'Ward Bed Occupancy'],
     icon: '🏥',
     badge: 'Hospital',
     badgeColor: 'red',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Hospital-Management-ERP-v3.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-diagnostic',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Diagnostic Lab Manager',
+    category: 'Hospital Software',
+    subtitle: 'PATHOLOGY LABORATORY',
+    description: 'Streamlined report-making logs with custom layout sheets templates, sample collection workflows, and referral networks bookkeeping.',
+    price: '₹3,000',
+    features: ['Test Report Template Maker', 'Barcode Sample Tracker', 'Patient Bill & Due Receipts', 'B2B Lab Referral Account', 'Automated Analyzer Sync'],
+    icon: '🔬',
+    badge: 'Hospital',
+    badgeColor: 'red',
+    exeUrl: 'https://bspsuryatech.in/downloads/Laboratory-Management-ERP-v3.0.0.Setup.exe'
   },
   {
     id: 'sol-school',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'School Management Software',
+    title: 'School ERP Management Suite',
     category: 'School Software',
-    subtitle: 'CAMPUS ERP SUITE',
-    description: 'Consolidated school and college operations, managing admissions database, fee schedules collection, exams, and attendance.',
+    subtitle: 'ACADEMIC INSTITUTIONS',
+    description: 'Robust student lifecycle bookkeeping. Integrated fee customizer modules, grades charts, schedule grids and bus tracking.',
     price: '₹3,000',
-    features: [
-      'Student Management',
-      'Admission Management',
-      'Attendance Management',
-      'Fee Collection',
-      'Exam Management'
-    ],
+    features: ['Student Profile & Admissions', 'Dynamic Fee Structure Maker', 'Class Timetable Grid', 'Exam Marks & Report Cards', 'SMS & WhatsApp Notifications'],
     icon: '🏫',
     badge: 'School',
     badgeColor: 'indigo',
-    exeUrl: ''
-  },
-  {
-    id: 'sol-inventory',
-    mappedPlanId: 'prod-billing-pro',
-    title: 'Inventory Management Software',
-    category: 'Billing Software',
-    subtitle: 'STOCK CONTROL PRO',
-    description: 'Dedicated supply chain tracker with SKU code generation, multi-bin inventory controls, and automatic purchase orders.',
-    price: '₹3,000',
-    features: [
-      'Multi-warehouse SKU grids',
-      'Barcode layouts printing',
-      'Supplier Ledger balances',
-      'Automated Purchase PO',
-      'Dead Stock audit logs'
-    ],
-    icon: '📦',
-    badge: 'Billing',
-    badgeColor: 'emerald',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.Setup.exe'
   },
   {
     id: 'sol-erp-warehouse',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'ERP Management Software',
+    title: 'Enterprise ERP Suite',
     category: 'ERP Software',
-    subtitle: 'ENTERPRISE RESOURCE ERP',
-    description: 'Unified system combining production, accounts, sales forces CRM, human resource profiles, and payroll audits.',
+    subtitle: 'SUPPLY CHAIN SUITE',
+    description: 'Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.',
     price: '₹3,000',
-    features: [
-      'Sales Management',
-      'Purchase Management',
-      'Inventory Management',
-      'Accounts Management',
-      'CRM'
-    ],
-    icon: '⚙️',
+    features: ['Multi-Warehouse Transfer Logs', 'Manufacturing Bill of Materials', 'Advanced Batch/Lot Control', 'PO & SO Purchase Orders', 'Reorder Stock Estimations'],
+    icon: '🏭',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: ''
+    exeUrl: 'https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-hotel',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Hotel Management ERP',
+    category: 'ERP Software',
+    subtitle: 'HOTEL & HOSPITALITY SUITE',
+    description: 'Complete hotel checkout, room booking slots, check-in, housekeeping scheduler, guest ledgers, and seasonal tariff planners.',
+    price: '₹3,000',
+    features: ['Room Reservation Booking', 'Check-in & Check-out Folios', 'Housekeeping Scheduler', 'Laundry & Restaurant KOT Billing', 'Guest Ledger accounting'],
+    icon: '🏨',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-repairing',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Electrical & Repairing Shop',
+    category: 'Billing Software',
+    subtitle: 'SERVICE & WORKSHOP FLOW',
+    description: 'Specialized billing for electrical products, repairing job-cards logs, warranty claims, service reminders, and customer accounts ledger.',
+    price: '₹3,000',
+    features: ['Repairing Job-Cards Logs', 'Electrical Inventory Ledger', 'Serial / IMEI Warranty tracking', 'Technician Status Progress', 'Service SMS/WhatsApp alerts'],
+    icon: '🔌',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-resort',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Resort & Spa PMS',
+    category: 'ERP Software',
+    subtitle: 'RESORT & PROPERTY PMS',
+    description: 'All-in-one resort property management. Online booking syncer, visual room availability grid, spa booking scheduler, table reservation, and guest CRM.',
+    price: '₹3,000',
+    features: ['Visual Room Availability Grid', 'Integrated Spa & Activity slots', 'Housekeeping & Maintenance status', 'Banquet & Event bookings planner', 'Fast Check-out & Ledger folio'],
+    icon: '🌴',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.Setup.exe'
   }
 ];

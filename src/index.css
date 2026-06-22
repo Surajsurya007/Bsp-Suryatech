@@ -23,3 +23,16 @@
   }
 }
 
+/* Force all text color under the Customer Portal to be black, except success/error badges and white-text buttons */
+.customer-portal-container,
+.customer-portal-container *:not(.text-white):not(.text-white *):not([class*="text-white"]):not([class*="text-white"] *):not([class*="text-emerald-"]):not([class*="text-emerald-"] *):not([class*="text-green-"]):not([class*="text-green-"] *):not([class*="text-blue-"]):not([class*="text-blue-"] *):not([class*="text-indigo-"]):not([class*="text-indigo-"] *):not([class*="text-purple-"]):not([class*="text-purple-"] *):not([class*="text-red-"]):not([class*="text-red-"] *):not([class*="text-rose-"]):not([class*="text-rose-"] *):not([class*="text-yellow-"]):not([class*="text-yellow-"] *):not([class*="text-orange-"]):not([class*="text-orange-"] *):not([class*="text-amber-"]):not([class*="text-amber-"] *) {
+  color: #000000 !important;
+}
+
+/* Ensure placeholder text remains a readable grey instead of forced black so fields are distinct */
+.customer-portal-container input::placeholder,
+.customer-portal-container textarea::placeholder {
+  color: #64748b !important;
+  opacity: 0.75 !important;
+}
+

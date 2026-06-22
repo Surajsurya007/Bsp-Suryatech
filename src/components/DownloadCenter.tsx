@@ -40,11 +40,24 @@ interface SoftwareSolution {
   subtitle: string;
   description: string;
   price: string;
+  originalPrice?: string;
+  version?: string;
+  size?: string;
+  bannerUrl?: string;
+  banner_url?: string;
+  logo_url?: string;
+  trialUrl?: string;
+  trial_download_url?: string;
+  setup_exe_url?: string;
+  buy_now_link?: string;
+  learn_more_link?: string;
   features: string[];
   icon: string;
   badge: string;
   badgeColor: string;
   exeUrl?: string;
+  status?: 'active' | 'inactive';
+  displayOrder?: number;
 }
 
 const categories = [
@@ -260,9 +273,16 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
   const [selectedSolutionCategory, setSelectedSolutionCategory] = useState<string>('All Solutions');
 
   const activeSolutions = propSolutions && propSolutions.length > 0 ? propSolutions : solutions;
+  const visibleSolutions = activeSolutions.filter((sol) => sol.status !== 'inactive');
+  const sortedSolutions = [...visibleSolutions].sort((a, b) => {
+    const orderA = a.displayOrder !== undefined ? a.displayOrder : 1000;
+    const orderB = b.displayOrder !== undefined ? b.displayOrder : 1000;
+    return orderA - orderB;
+  });
+  
   const activeCategories = [
     'All Solutions',
-    ...Array.from(new Set(activeSolutions.map((sol) => sol.category))).filter((cat): cat is string => !!cat)
+    ...Array.from(new Set(sortedSolutions.map((sol) => sol.category))).filter((cat): cat is string => !!cat)
   ];
 
   const systemRequirements = [
@@ -328,7 +348,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
 
         {/* Dynamic Solutions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 select-none" id="solutions-interactive-grid">
-          {activeSolutions
+          {sortedSolutions
             .filter((sol) => selectedSolutionCategory === 'All Solutions' || sol.category === selectedSolutionCategory)
             .map((sol) => (
               <div 
@@ -337,7 +357,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                 id={`sol-card-${sol.id}`}
               >
                 {/* Desktop App frame container header */}
-                <div className="bg-[#090D1A] px-4 py-3 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                <div className="bg-[#090D1A] px-4 py-3 flex items-center justify-between border-b border-b-slate-800/60 shrink-0">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block opacity-90 animate-pulse" />
                     <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block opacity-90" />
@@ -358,27 +378,56 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                   {/* Glowing light effect behind icon */}
                   <div className="absolute inset-0 bg-blue-500/5 filter blur-2xl rounded-full scale-75" />
                   
-                  {/* Huge software asset placeholder icon as emoji */}
-                  <span className="text-5xl drop-shadow-md transform group-hover/card:scale-110 transition-transform duration-300 relative z-10">
-                    {sol.icon}
-                  </span>
+                  {/* Huge software asset placeholder icon as emoji or logo */}
+                  {sol.logo_url ? (
+                    <img 
+                      src={sol.logo_url} 
+                      alt={sol.title} 
+                      className="w-16 h-16 object-contain relative z-10 transform group-hover/card:scale-110 transition-transform duration-300" 
+                      referrerPolicy="no-referrer" 
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }} 
+                    />
+                  ) : (
+                    <span className="text-5xl drop-shadow-md transform group-hover/card:scale-110 transition-transform duration-300 relative z-10">
+                      {sol.icon || '🛍️'}
+                    </span>
+                  )}
 
                   {/* Specific themed category badge under the icon */}
-                  <span 
-                    className={`px-3.5 py-1 text-[11px] font-bold rounded-full tracking-wide border absolute bottom-4 shadow-sm ${
-                      sol.badge === 'Billing' 
-                        ? 'bg-[#DCFCE7] text-[#15803D] border-emerald-200' 
-                        : sol.badge === 'Transport'
-                        ? 'bg-[#E0F2FE] text-[#0369A1] border-sky-200'
-                        : sol.badge === 'Hospital'
-                        ? 'bg-[#FEE2E2] text-[#B91C1C] border-rose-200'
-                        : sol.badge === 'School'
-                        ? 'bg-[#EEF2FF] text-[#4338CA] border-indigo-200'
-                        : 'bg-[#FEF3C7] text-[#B45309] border-amber-200'
-                    }`}
-                  >
-                    {sol.badge || sol.category}
-                  </span>
+                  {(() => {
+                    const cat = (sol.category || '').toLowerCase();
+                    const b = (sol.badge || '').toLowerCase();
+                    let badgeLabel = 'Billing';
+                    let badgeClass = 'bg-[#DCFCE7] text-[#15803D] border-emerald-200';
+
+                    if (cat.includes('billing') || b === 'billing') {
+                      badgeLabel = 'Billing';
+                      badgeClass = 'bg-[#DCFCE7] text-[#15803D] border-emerald-200';
+                    } else if (cat.includes('transport') || b === 'transport' || cat.includes('logistic')) {
+                      badgeLabel = 'Transport';
+                      badgeClass = 'bg-[#E0F2FE] text-[#0369A1] border-sky-200';
+                    } else if (cat.includes('hospital') || b === 'hospital' || cat.includes('clinic')) {
+                      badgeLabel = 'Hospital';
+                      badgeClass = 'bg-[#FEE2E2] text-[#B91C1C] border-rose-200';
+                    } else if (cat.includes('school') || b === 'school' || cat.includes('campus') || cat.includes('college')) {
+                      badgeLabel = 'School';
+                      badgeClass = 'bg-[#EEF2FF] text-[#4338CA] border-indigo-200';
+                    } else if (cat.includes('erp') || b === 'erp' || cat.includes('enterprise')) {
+                      badgeLabel = 'ERP';
+                      badgeClass = 'bg-[#FEF3C7] text-[#B45309] border-amber-200';
+                    } else {
+                      badgeLabel = sol.badge || 'Billing';
+                      badgeClass = sol.badge === 'Billing' ? 'bg-[#DCFCE7] text-[#15803D] border-emerald-200' : 'bg-[#FEF3C7] text-[#B45309] border-amber-200';
+                    }
+
+                    return (
+                      <span className={`px-3.5 py-1 text-[11px] font-bold rounded-full tracking-wide border absolute bottom-4 shadow-sm z-10 ${badgeClass}`}>
+                        {badgeLabel}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {/* Information contents block */}
@@ -386,7 +435,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                   <div className="space-y-4">
                     {/* Bestseller/Special subtag */}
                     <span className="text-[10px] font-black text-blue-600 font-sans tracking-wide uppercase bg-blue-50 px-2.5 py-1 rounded">
-                      {sol.subtitle || 'Business Solution'}
+                      {sol.subtitle || 'BUSINESS SOLUTION'}
                     </span>
 
                     <h3 className="text-lg font-bold text-slate-900 leading-tight mt-2.5 tracking-tight group-hover/card:text-blue-600 transition-colors">
@@ -402,7 +451,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">KEY FEATURES:</span>
                       <ul className="space-y-2">
                         {sol.features.map((feat, fidx) => (
-                          <li key={fidx} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                           <li key={fidx} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                             <span className="text-[#10B981] font-bold text-sm shrink-0">✓</span>
                             <span className="truncate">{feat}</span>
                           </li>
