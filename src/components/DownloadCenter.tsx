@@ -265,6 +265,20 @@ const solutions: SoftwareSolution[] = [
     badge: 'Billing',
     badgeColor: 'emerald',
     exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.Setup.exe'
+  },
+  {
+    id: 'sol-resort',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Resort & Spa PMS',
+    category: 'ERP Software',
+    subtitle: 'RESORT & PROPERTY PMS',
+    description: 'All-in-one resort property management. Online booking syncer, visual room availability grid, spa booking scheduler, table reservation, and guest CRM.',
+    price: '₹3,000',
+    features: ['Visual Room Availability Grid', 'Integrated Spa & Activity slots', 'Housekeeping & Maintenance status', 'Banquet & Event bookings planner', 'Fast Check-out & Ledger folio'],
+    icon: '🌴',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.Setup.exe'
   }
 ];
 
@@ -471,16 +485,21 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                       </div>
                     </div>
 
-                    <button
+                    {/* Direct download button requested by customer */}
+                    <a
+                      href={sol.exeUrl || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
                       onClick={() => {
-                        console.log(`DownloadCenter: Adding ${sol.title} Solution (${sol.id}) to cart...`);
-                        onAddToCart?.(sol.id);
+                        console.log(`DownloadCenter: Downloading setup file directly: ${sol.exeUrl}`);
                       }}
-                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 mt-4 transition-all duration-150 cursor-pointer shadow-md hover:shadow-blue-500/10 active:scale-97"
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 mt-4 transition-all duration-155 cursor-pointer shadow-md hover:shadow-emerald-500/10 active:scale-97 text-center decoration-none inline-flex"
+                      id={`sol-download-link-${sol.id}`}
                     >
-                      <Zap className="w-3.5 h-3.5 fill-current text-white shrink-0" />
-                      <span>Buy Now</span>
-                    </button>
+                      <Download className="w-3.5 h-3.5 text-white shrink-0" />
+                      <span>Download Setup</span>
+                    </a>
 
                     <div className="grid grid-cols-2 gap-3 mt-2">
                       <button
@@ -488,9 +507,10 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                           console.log(`DownloadCenter: Adding ${sol.title} Solution (${sol.id}) to cart...`);
                           onAddToCart?.(sol.id);
                         }}
-                        className="py-3 bg-white border border-slate-250 hover:bg-slate-50 text-slate-800 hover:text-slate-950 font-extrabold rounded-xl text-xs flex items-center justify-center transition-all duration-150 cursor-pointer text-center shadow-sm"
+                        className="py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-1 transition-all duration-150 cursor-pointer text-center shadow-sm"
                       >
-                        Add to Cart
+                        <Zap className="w-3 h-3 fill-current text-white shrink-0" />
+                        <span>Buy Now</span>
                       </button>
                       <button
                         onClick={() => {
