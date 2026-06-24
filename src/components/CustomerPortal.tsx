@@ -3845,25 +3845,25 @@ export default function CustomerPortal({
                       <div 
                         key={notif.id} 
                         className={`p-4 rounded-2xl border transition-all text-left flex gap-4 ${
-                          notif.read ? 'bg-white border-slate-150' : 'bg-blue-50/30 border-blue-150/80 shadow-sm'
+                          notif.read ? 'bg-slate-700 border-slate-600' : 'bg-slate-900 border-slate-800 shadow-md ring-1 ring-blue-500/20'
                         }`}
                         id={`notif-card-${notif.id}`}
                       >
-                        <div className={`p-2 rounded-xl shrink-0 ${notif.read ? 'bg-slate-50 text-slate-400' : 'bg-blue-100 text-blue-600 animate-pulse'}`}>
+                        <div className={`p-2 rounded-xl shrink-0 ${notif.read ? 'bg-slate-600 text-slate-300' : 'bg-blue-950 text-blue-400 animate-pulse'}`}>
                           <Bell className="w-4.5 h-4.5" />
                         </div>
 
                         <div className="space-y-1 flex-grow">
                           <div className="flex items-start justify-between gap-4">
-                            <h5 className="font-extrabold text-slate-800 text-sm leading-tight">{notif.title}</h5>
-                            <span className="text-[9px] text-slate-400 font-mono font-medium">{new Date(notif.createdAt).toLocaleDateString()}</span>
+                            <h5 className="font-extrabold text-white text-sm leading-tight">{notif.title}</h5>
+                            <span className="text-[9px] text-slate-300 font-mono font-medium">{new Date(notif.createdAt).toLocaleDateString()}</span>
                           </div>
-                          <p className="text-slate-600 text-xs leading-normal">{notif.message}</p>
+                          <p className="text-white text-xs leading-normal font-medium">{notif.message}</p>
                           
                           {!notif.read && (
                             <button
                               onClick={() => handleMarkNotificationRead(notif.id)}
-                              className="text-[10px] font-mono leading-none font-bold uppercase text-blue-600 hover:text-blue-700 pt-1 block cursor-pointer"
+                              className="text-[10px] font-mono leading-none font-bold uppercase text-blue-400 hover:text-blue-300 pt-1.5 block cursor-pointer"
                             >
                               Mark as Read
                             </button>
