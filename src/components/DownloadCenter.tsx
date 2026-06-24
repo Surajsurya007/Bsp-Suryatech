@@ -82,7 +82,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🛍️',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip'
   },
   {
     id: 'sol-supermarket',
@@ -96,7 +96,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🏪',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip'
   },
   {
     id: 'sol-grocery',
@@ -110,7 +110,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🍎',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip'
   },
   {
     id: 'sol-medical',
@@ -124,7 +124,7 @@ const solutions: SoftwareSolution[] = [
     icon: '💊',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/Medical-Store-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Medical-Store-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-restaurant',
@@ -138,7 +138,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🍽️',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-POS-KOT-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-POS-KOT-v1.0.0.zip'
   },
   {
     id: 'sol-mobile',
@@ -152,7 +152,7 @@ const solutions: SoftwareSolution[] = [
     icon: '📱',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/Mobile-Shop-Billing-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Mobile-Shop-Billing-v1.0.0.zip'
   },
   {
     id: 'sol-electronics',
@@ -166,7 +166,7 @@ const solutions: SoftwareSolution[] = [
     icon: '📺',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/Electronics-Shop-Billing-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Electronics-Shop-Billing-v1.0.0.zip'
   },
   {
     id: 'sol-transport',
@@ -180,7 +180,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🚚',
     badge: 'Transport',
     badgeColor: 'blue',
-    exeUrl: 'https://bspsuryatech.in/downloads/SafeWheels-ERP-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/SafeWheels-ERP-v1.0.0.zip'
   },
   {
     id: 'sol-hospital',
@@ -194,7 +194,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🏥',
     badge: 'Hospital',
     badgeColor: 'red',
-    exeUrl: 'https://bspsuryatech.in/downloads/Hospital-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Hospital-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-diagnostic',
@@ -208,7 +208,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🔬',
     badge: 'Hospital',
     badgeColor: 'red',
-    exeUrl: 'https://bspsuryatech.in/downloads/Laboratory-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Laboratory-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-school',
@@ -222,7 +222,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🏫',
     badge: 'School',
     badgeColor: 'indigo',
-    exeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-erp-warehouse',
@@ -236,7 +236,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🏭',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-hotel',
@@ -250,7 +250,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🏨',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-repairing',
@@ -264,7 +264,7 @@ const solutions: SoftwareSolution[] = [
     icon: '🔌',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.zip'
   },
   {
     id: 'sol-resort',
@@ -278,9 +278,27 @@ const solutions: SoftwareSolution[] = [
     icon: '🌴',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.zip'
   }
 ];
+
+export const getCleanDownloadFileName = (url?: string): string => {
+  if (!url) return 'Setup.zip';
+  const parts = url.split('/');
+  let filename = parts[parts.length - 1];
+  
+  filename = filename
+    .replace(/\.Setup\.exe\.zip$/i, '.zip')
+    .replace(/\.Setup\.zip$/i, '.zip')
+    .replace(/\.Setup\.exe$/i, '.zip')
+    .replace(/\.exe\.zip$/i, '.zip')
+    .replace(/\.exe$/i, '.zip');
+    
+  if (!filename.toLowerCase().endsWith('.zip')) {
+    filename = filename + '.zip';
+  }
+  return filename;
+};
 
 export default function DownloadCenter({ downloads, totalDownloads, onTriggerTrialDownload, onPageChange, onAddToCart, solutions: propSolutions = [] }: DownloadCenterProps) {
   const [downloadFilter, setDownloadFilter] = useState<'all' | 'stable' | 'manuals'>('all');
@@ -490,7 +508,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                       href={sol.exeUrl || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      download
+                      download={getCleanDownloadFileName(sol.exeUrl)}
                       onClick={() => {
                         console.log(`DownloadCenter: Downloading setup file directly: ${sol.exeUrl}`);
                       }}

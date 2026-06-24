@@ -74,6 +74,13 @@ export default function SoftwareDetails({
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [galleryViewMode, setGalleryViewMode] = useState<'slider' | 'grid'>('slider');
+  const [failedHostingerIndices, setFailedHostingerIndices] = useState<Record<number, boolean>>({});
+
+  // Reset failed indices and reset gallery carousel when product changes
+  useEffect(() => {
+    setFailedHostingerIndices({});
+    setActiveGalleryIndex(0);
+  }, [product?.id]);
 
   // Related products
   const relatedSoftware = products.filter(p => p.id !== product.id);
@@ -108,20 +115,39 @@ export default function SoftwareDetails({
   const sysReqsStr = product.systemRequirements || 'Operating System: Windows 7, 8, 10, or 11\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free database folders space';
   const licenseInfoStr = product.licenseInfo || 'Standard Lifetime Desktop License Key with 1-Year free security patches and updates.';
   const demoUrlStr = product.demoVideoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ';
-  const galleryImages = product.gallery && product.gallery.length > 0 
+
+  // Preference Hostinger uploaded screenshots with fallback values if they fail to load (i.e. before user has uploaded them)
+  const hostingerUrls = [
+    `https://bspsuryatech.in/images/${product.id}_screenshot1.jpg`,
+    `https://bspsuryatech.in/images/${product.id}_screenshot2.jpg`,
+    `https://bspsuryatech.in/images/${product.id}_screenshot3.jpg`
+  ];
+
+  const systemFallbackImages = [
+    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
+    'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
+    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800'
+  ];
+
+  const fallbackImages = product.gallery && product.gallery.length > 0 
     ? product.gallery 
-    : [
-        'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
-        'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
-        'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800'
-      ];
+    : systemFallbackImages;
+
+  const getImageUrl = (idx: number) => {
+    if (failedHostingerIndices[idx]) {
+      return fallbackImages[idx] || systemFallbackImages[idx % systemFallbackImages.length];
+    }
+    return hostingerUrls[idx] || fallbackImages[idx];
+  };
+
+  const galleryImagesKeys = Array.from({ length: Math.max(hostingerUrls.length, fallbackImages.length) }, (_, i) => i);
 
   const handleNextCarousel = () => {
-    setActiveGalleryIndex((prev) => (prev + 1) % galleryImages.length);
+    setActiveGalleryIndex((prev) => (prev + 1) % galleryImagesKeys.length);
   };
 
   const handlePrevCarousel = () => {
-    setActiveGalleryIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+    setActiveGalleryIndex((prev) => (prev - 1 + galleryImagesKeys.length) % galleryImagesKeys.length);
   };
 
   return (
@@ -188,10 +214,15 @@ export default function SoftwareDetails({
               {galleryViewMode === 'slider' ? (
                 <div className="relative aspect-video bg-slate-950 rounded-2xl overflow-hidden group">
                   <img 
-                    src={galleryImages[activeGalleryIndex]} 
+                    src={getImageUrl(activeGalleryIndex)} 
                     alt={`${product.name} interface visual ${activeGalleryIndex + 1}`}
                     className="w-full h-full object-cover select-none transition-all duration-300"
                     referrerPolicy="no-referrer"
+                    onError={() => {
+                      if (!failedHostingerIndices[activeGalleryIndex]) {
+                        setFailedHostingerIndices(prev => ({ ...prev, [activeGalleryIndex]: true }));
+                      }
+                    }}
                   />
                   
                   {/* Aspect Shadows overlays */}
@@ -222,23 +253,28 @@ export default function SoftwareDetails({
 
                   {/* Slide Indicators Counter */}
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 px-3 py-1 rounded-full text-[10px] font-mono text-white tracking-widest uppercase">
-                    {activeGalleryIndex + 1} / {galleryImages.length}
+                    {activeGalleryIndex + 1} / {galleryImagesKeys.length}
                   </div>
                 </div>
               ) : (
                 /* Grid Mode */
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {galleryImages.map((src, idx) => (
+                  {galleryImagesKeys.map((idx) => (
                     <div 
                       key={idx} 
                       className="relative aspect-video bg-slate-100 rounded-xl overflow-hidden group cursor-pointer border border-slate-200/50"
                       onClick={() => setLightboxIndex(idx)}
                     >
                       <img 
-                        src={src} 
+                        src={getImageUrl(idx)} 
                         alt={`${product.name} layout grid item ${idx+1}`}
                         className="w-full h-full object-cover transition duration-350 group-hover:scale-105"
                         referrerPolicy="no-referrer"
+                        onError={() => {
+                          if (!failedHostingerIndices[idx]) {
+                            setFailedHostingerIndices(prev => ({ ...prev, [idx]: true }));
+                          }
+                        }}
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
                         <Maximize2 className="w-5 h-5 scale-90 group-hover:scale-100 transition" />
@@ -251,7 +287,7 @@ export default function SoftwareDetails({
               {/* Bullet thumbnail index selectors */}
               {galleryViewMode === 'slider' && (
                 <div className="flex gap-2 justify-center">
-                  {galleryImages.map((_, idx) => (
+                  {galleryImagesKeys.map((idx) => (
                     <button 
                       key={idx}
                       onClick={() => setActiveGalleryIndex(idx)}
@@ -489,7 +525,6 @@ export default function SoftwareDetails({
                         </span>
                         <h4 className="font-extrabold text-slate-900 text-lg mt-1.5">{relatedProd.name}</h4>
                       </div>
-                      <span className="font-mono font-extrabold text-blue-600 text-lg">₹{relatedProd.price}</span>
                     </div>
                     <p className="text-slate-500 text-xs line-clamp-2 leading-relaxed">
                       {relatedProd.description}
@@ -548,21 +583,26 @@ export default function SoftwareDetails({
           <div className="relative max-w-4xl max-h-[80vh] px-4 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
             {/* Carousel navigation controls inside lightbox */}
             <button 
-              onClick={() => setLightboxIndex((prev) => prev !== null ? (prev - 1 + galleryImages.length) % galleryImages.length : 0)}
+              onClick={() => setLightboxIndex((prev) => prev !== null ? (prev - 1 + galleryImagesKeys.length) % galleryImagesKeys.length : 0)}
               className="absolute left-6 p-2 bg-white/10 hover:bg-white/20 hover:scale-110 text-white rounded-full transition-all cursor-pointer font-sans text-xl"
             >
               ❮
             </button>
             
             <img 
-              src={galleryImages[lightboxIndex]} 
+              src={getImageUrl(lightboxIndex)} 
               alt="Enlarged screenshot slide view" 
               className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl border border-white/10"
               referrerPolicy="no-referrer"
+              onError={() => {
+                if (lightboxIndex !== null && !failedHostingerIndices[lightboxIndex]) {
+                  setFailedHostingerIndices(prev => ({ ...prev, [lightboxIndex]: true }));
+                }
+              }}
             />
 
             <button 
-              onClick={() => setLightboxIndex((prev) => prev !== null ? (prev + 1) % galleryImages.length : 0)}
+              onClick={() => setLightboxIndex((prev) => prev !== null ? (prev + 1) % galleryImagesKeys.length : 0)}
               className="absolute right-6 p-2 bg-white/10 hover:bg-white/20 hover:scale-110 text-white rounded-full transition-all cursor-pointer font-sans text-xl"
             >
               ❯
@@ -570,7 +610,7 @@ export default function SoftwareDetails({
           </div>
 
           <p className="text-white/60 font-mono text-xs mt-4">
-            Screenshot {lightboxIndex + 1} of {galleryImages.length} | Click anywhere around the dark area to close preview
+            Screenshot {lightboxIndex + 1} of {galleryImagesKeys.length} | Click anywhere around the dark area to close preview
           </p>
         </div>
       )}

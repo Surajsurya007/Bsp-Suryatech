@@ -43,7 +43,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode; user: an
     if (onUserLanguageLoaded) {
       onUserLanguageLoaded('en');
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Handle standard link hreflang standard alternate tags (keep it clean with English x-default)
   useEffect(() => {

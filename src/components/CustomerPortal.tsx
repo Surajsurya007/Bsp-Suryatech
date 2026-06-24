@@ -117,7 +117,7 @@ export default function CustomerPortal({
     } else {
       setDevAdminMode(false);
     }
-  }, [user]);
+  }, [user?.email]);
 
   // Inline proof upload parameters
   const [submittingOrderId, setSubmittingOrderId] = useState<string | null>(null);
@@ -188,7 +188,7 @@ export default function CustomerPortal({
     product: 'Retail Billing',
     version: 'v4.2.2',
     changelog: 'Minor UI/UX polishing and speed-up optimization.',
-    exeUrl: 'https://bspsuryatech.in/downloads/setup-pro.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/setup-pro.zip'
   });
   const [softwareReleaseHistory, setSoftwareReleaseHistory] = useState<any[]>([
     { product: 'Retail Billing', version: 'v4.2.1', changelog: 'Stable release, thermal receipt print layout fixes', date: '2026-06-01' },
@@ -546,20 +546,20 @@ export default function CustomerPortal({
     };
     window.addEventListener('reload_customer_datastore', handleReloadEvent);
     return () => window.removeEventListener('reload_customer_datastore', handleReloadEvent);
-  }, [user, activePortalView, devAdminMode]);
+  }, [user?.id, activePortalView, devAdminMode]);
 
   useEffect(() => {
     if (user) {
       fetchCustomerData();
       fetchCustomerProfile();
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (user && (activePortalView === 'admin' || devAdminMode)) {
       fetchAdminOrders();
     }
-  }, [user, activePortalView, devAdminMode]);
+  }, [user?.id, activePortalView, devAdminMode]);
 
   // Forgot Password actions
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
@@ -3565,7 +3565,7 @@ export default function CustomerPortal({
 
                           {/* Option to download latest installer */}
                           <button
-                            onClick={() => onTriggerTrialDownload(lic.productId, true)}
+                            onClick={() => onTriggerTrialDownload(lic.productId || lic.productName || 'erp', true)}
                             className="w-full py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -4267,15 +4267,20 @@ export default function CustomerPortal({
               }
             `}</style>
 
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full p-6 sm:p-10 shrink-0 text-left my-8 relative overflow-hidden flex flex-col gap-6" id="invoices-tax-receipt-printout-wrapper">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full p-6 sm:p-10 shrink-0 text-left my-8 relative overflow-hidden flex flex-col gap-5" id="invoices-tax-receipt-printout-wrapper">
               
               {/* Subtle building wallpaper watermark */}
               <div className="absolute inset-0 pointer-events-none select-none flex items-center justify-center overflow-hidden opacity-[0.02]">
                 <Building className="w-96 h-96 text-slate-800" strokeWidth={1} />
               </div>
 
-              {/* Modal action bar */}
-              <div className="flex justify-between items-center pb-4 border-b border-slate-100 no-print">
+              {/* Original Recipient Badge matching screenshot corner placement */}
+              <div className="absolute top-0 right-0 bg-[#C00030] text-white text-[10px] tracking-wider uppercase font-black px-5 py-2.5 rounded-bl-3xl z-20 font-sans shadow-xs leading-none">
+                Original Recipient
+              </div>
+
+              {/* Modal action bar (hidden during printing) */}
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 no-print">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-xs uppercase font-extrabold text-emerald-600 font-mono tracking-wider">GST Compliant Invoice Logged</span>
@@ -4297,342 +4302,214 @@ export default function CustomerPortal({
                 </div>
               </div>
 
-              {/* Invoicing Main Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start z-10">
-                
-                {/* Top-Left Company Segment */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-blue-600 rounded-xl text-white shadow-md shadow-blue-500/10">
-                      <Building className="w-7 h-7" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-extrabold text-xl tracking-tight text-slate-900 leading-none">
-                        BSP <span className="text-blue-600">Suryatech</span>
-                      </span>
-                      <span className="text-[9px] font-black tracking-widest text-[#2563EB] font-mono mt-1 uppercase">
-                        Suryatech Solutions
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 text-xs leading-normal font-sans text-slate-500 invoice-text-soft">
-                    <p className="font-bold text-slate-800 invoice-text-dark">BSP Suryatech Solutions</p>
-                    <p>SSD Tower, Sector 3, Shivanand Nagar</p>
-                    <p>Raipur, Chhattisgarh - 492008, India</p>
-                    <div className="pt-2 flex flex-wrap gap-2 text-[10px] font-mono">
-                      <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-600 border border-slate-1.50"><strong>GSTIN:</strong> 22AAIFB7315M1ZK</span>
-                      <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-600 border border-slate-1.50"><strong>PAN:</strong> AAIFB7315M</span>
-                    </div>
-                    <p className="pt-1 text-[11px] text-slate-400 invoice-text-muted">
-                      Support Email: <span className="text-blue-605 font-mono">support@bspsuryatech.in</span><br />
-                      Website: <span className="text-blue-605 font-mono">https://bspsuryatech.in</span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Top-Right Parameters Card */}
-                <div className="md:text-right flex flex-col md:items-end gap-1.5">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black tracking-widest uppercase rounded-full border border-emerald-250/50 shadow-xs leading-none">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                    PAID TAX RECEIPT
+              {/* Header Company Information (Screenshot Style) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end z-10 pt-2">
+                <div className="flex flex-col">
+                  <span className="font-sans font-black text-2xl tracking-tight text-[#C00030] leading-none">
+                    BSP SURYATECH
                   </span>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1 invoice-text-dark">TAX INVOICE</h1>
-                  
-                  <div className="mt-2 space-y-1 text-xs text-slate-605 invoice-text-soft font-sans md:text-right">
-                    <p><span className="text-slate-400 font-medium invoice-text-muted">Invoice Number:</span> <strong className="font-mono text-slate-900 invoice-text-dark">{selectedInvoice.invoiceNumber}</strong></p>
-                    <p><span className="text-slate-400 font-medium invoice-text-muted">Order ID:</span> <strong className="font-mono text-slate-900 invoice-text-dark">{selectedInvoice.orderId}</strong></p>
-                    <p><span className="text-slate-400 font-medium invoice-text-muted">Razorpay Payment ID:</span> <strong className="font-mono text-slate-900 invoice-text-dark">{razorpayPaymentId}</strong></p>
-                    <p className="pt-1.5"><span className="text-slate-400 font-medium invoice-text-muted">Invoice Date:</span> <strong className="text-slate-900 invoice-text-dark">{formattedInvoiceDate}</strong></p>
-                    <p><span className="text-slate-400 font-medium invoice-text-muted">Due Date:</span> <strong className="text-slate-900 invoice-text-dark">Immediate / Paid</strong></p>
-                  </div>
+                  <span className="text-[10px] font-bold tracking-[0.25em] text-slate-400 font-sans uppercase mt-1 leading-none">
+                    SOFTWARE SOLUTIONS
+                  </span>
                 </div>
-
+                <div className="md:text-right font-sans text-xs text-slate-500 leading-normal font-medium">
+                  <p className="font-extrabold text-slate-800 text-sm leading-snug">BSP SURYATECH PRIVATE LTD</p>
+                  <p>Shankar Nagar, Raipur (CG) 492004</p>
+                  <p className="font-mono mt-0.5 text-slate-500 font-semibold text-[11px]">GSTIN: 22AAIFB7315M1ZK</p>
+                </div>
               </div>
 
-              {/* Customer Division (Two Bordered Cards) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 z-10">
-                
-                {/* Card 1: Bill To */}
-                <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/40 hover:bg-slate-50/80 transition-all flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 font-mono block mb-3 invoice-text-muted">Bill To (Client Details)</span>
-                    <h4 className="text-base font-extrabold text-slate-900 block mb-1.5 invoice-text-dark">{selectedInvoice.clientName}</h4>
-                    
-                    <div className="text-xs text-slate-600 invoice-text-soft space-y-1 font-sans">
-                      <p className="flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{selectedInvoice.emailAddress}</span>
-                      </p>
-                      {selectedInvoice.contactNumber && (
-                        <p className="flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{selectedInvoice.contactNumber}</span>
-                        </p>
-                      )}
-                      <p className="flex items-start gap-1.5 pt-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                        <span>{selectedInvoice.businessAddress || 'India POS terminal station'}</span>
-                      </p>
-                    </div>
-                  </div>
+              {/* First Horizontal Separator */}
+              <div className="border-t border-slate-300 my-1 z-10 w-full" />
 
-                  <div className="mt-5 pt-3.5 border-t border-slate-200/60 flex justify-between items-center text-xs">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono invoice-text-muted">Client GSTIN</span>
-                    <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-mono font-bold text-slate-650 uppercase">
-                      {selectedInvoice.gstNumber || 'B2C UNREGISTERED'}
+              {/* Invoiced To & Invoice Metadata Dual-Column Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1 z-10 w-full">
+                
+                {/* Left Column: Client Billing details */}
+                <div className="space-y-1.5 font-sans text-xs">
+                  <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">INVOICED TO</span>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">{selectedInvoice.clientName || 'Suraj Suryavanshi'}</h3>
+                  <p className="text-slate-500 font-medium leading-none">{selectedInvoice.businessName || 'bsp surya'}</p>
+                  <p className="text-slate-400 font-mono leading-none">{selectedInvoice.emailAddress || 'surajsurya200@gmail.com'}</p>
+                  <div className="pt-1.5">
+                    <span className="inline-block px-2.5 py-0.5 bg-red-50 border border-red-100 rounded text-[9px] font-mono font-bold text-[#C00030] uppercase tracking-wide">
+                      GSTIN: {selectedInvoice.gstNumber || 'B2C UNREGISTERED'}
                     </span>
                   </div>
                 </div>
 
-                {/* Card 2: Company Details */}
-                <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/40 hover:bg-slate-50/80 transition-all flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 font-mono block mb-3 invoice-text-muted">Company Details</span>
-                    <h4 className="text-base font-extrabold text-slate-900 block mb-1.5 invoice-text-dark">{selectedInvoice.businessName || 'Individual / Business Client'}</h4>
-                    
-                    <div className="text-xs text-slate-600 invoice-text-soft space-y-1 leading-normal font-sans">
-                      <p>
-                        <span className="text-slate-400 invoice-text-muted font-medium">Business Name:</span>{' '}
-                        <strong className="text-slate-800 invoice-text-dark font-semibold">{selectedInvoice.businessName || 'BSP Suryatech Retail Partner'}</strong>
-                      </p>
-                      <p>
-                        <span className="text-slate-400 invoice-text-muted font-medium">GSTIN Support ID:</span>{' '}
-                        <strong className="text-slate-800 invoice-text-dark font-semibold uppercase">{selectedInvoice.gstNumber || 'B2C UNREGISTERED'}</strong>
-                      </p>
-                      {selectedInvoice.contactNumber && (
-                        <p>
-                          <span className="text-slate-400 invoice-text-muted font-medium">Support Contact:</span>{' '}
-                          <strong className="text-slate-800 invoice-text-dark font-semibold">{selectedInvoice.contactNumber}</strong>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 pt-3.5 border-t border-slate-200/60 flex justify-between items-center text-xs">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono invoice-text-muted">Business GSTIN</span>
-                    <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-[10px] font-mono font-black text-blue-600 uppercase">
-                      {selectedInvoice.gstNumber || 'B2C UNREGISTERED'}
-                    </span>
-                  </div>
+                {/* Right Column: Invoice Attributes */}
+                <div className="space-y-1 md:text-right font-sans text-xs text-slate-600">
+                  <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block md:text-right">INVOICE METADATA</span>
+                  <p className="font-medium leading-normal">
+                    <span className="text-slate-450">Invoice No:</span>{' '}
+                    <strong className="font-mono text-[#C00030] font-extrabold text-xs sm:text-[13px]">{selectedInvoice.invoiceNumber || 'INV-549951-97'}</strong>
+                  </p>
+                  <p className="font-medium leading-normal">
+                    <span className="text-slate-450">Dated:</span>{' '}
+                    <strong className="text-slate-800 font-bold">{formattedInvoiceDate || '21 Jun 2026'}</strong>
+                  </p>
+                  <p className="font-medium leading-normal">
+                    <span className="text-slate-450">Order ID:</span>{' '}
+                    <strong className="font-mono text-slate-800 font-bold">{selectedInvoice.orderId || 'BSP-ORD-SL0T'}</strong>
+                  </p>
+                  <p className="font-medium leading-normal">
+                    <span className="text-slate-450">Place of Supply:</span>{' '}
+                    <strong className="text-slate-800 font-bold">{isChhattisgarh ? 'CG (Code 22)' : 'Inter-State'}</strong>
+                  </p>
                 </div>
 
               </div>
 
-              {/* Product Listing Table */}
-              <div className="overflow-x-auto border border-slate-200 rounded-2xl z-10">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-900 text-white font-mono uppercase text-[9px] tracking-wider border-b border-slate-950">
-                      <th className="p-3.5 font-bold">Product Name</th>
-                      <th className="p-3.5 font-bold">Description</th>
-                      <th className="p-3.5 font-bold text-center">Activation Key</th>
-                      <th className="p-3.5 font-bold text-center">Qty</th>
-                      <th className="p-3.5 font-bold text-right">Unit Price</th>
-                      <th className="p-3.5 font-bold text-right">Taxable Amount</th>
-                      <th className="p-3.5 font-bold text-center">GST %</th>
-                      <th className="p-3.5 font-bold text-right">GST Amount</th>
-                      <th className="p-3.5 font-bold text-right">Discount</th>
-                      <th className="p-3.5 font-bold text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-150">
-                    <tr className="bg-white hover:bg-slate-50/30">
-                      <td className="p-3.5 font-extrabold text-slate-950 invoice-text-dark align-top max-w-[150px]">
-                        {selectedInvoice.productName}
-                      </td>
-                      <td className="p-3.5 text-slate-500 invoice-text-soft align-top max-w-[180px] leading-relaxed">
-                        Lifetime Single Terminal software license activation with Indian HSN-998314 tax compliant schemes.
-                      </td>
-                      <td className="p-3.5 text-center align-top whitespace-nowrap">
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(selectedInvoice.licenseKey);
-                            setKeyCopied(true);
-                            setTimeout(() => setKeyCopied(false), 2000);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-lg text-[10px] font-mono font-bold border border-slate-200 transition-all cursor-pointer group shadow-sm print:border-none print:shadow-none"
-                          title="Click to copy Activation Key"
-                        >
-                          {keyCopied ? (
-                            <>
-                              <ClipboardCheck className="w-3.5 h-3.5 text-emerald-600" />
-                              <span className="text-emerald-700 font-extrabold">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Clipboard className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
-                              <span className="font-mono tracking-tight text-slate-700 invoice-text-navy">{selectedInvoice.licenseKey}</span>
-                            </>
-                          )}
-                        </button>
-                      </td>
-                      <td className="p-3.5 text-center align-top font-mono font-bold text-slate-800 invoice-text-navy">1</td>
-                      <td className="p-3.5 text-right align-top font-mono text-slate-600 invoice-text-soft">₹{taxableValue}</td>
-                      <td className="p-3.5 text-right align-top font-mono font-extrabold text-slate-900 invoice-text-dark">₹{taxableValue}</td>
-                      <td className="p-3.5 text-center align-top font-mono text-slate-500 invoice-text-soft">18%</td>
-                      <td className="p-3.5 text-right align-top font-mono text-slate-600 invoice-text-soft">₹{gstAmount}</td>
-                      <td className="p-3.5 text-right align-top font-mono text-emerald-600 font-semibold invoice-text-emerald">₹{discountAmount}</td>
-                      <td className="p-3.5 text-right align-top font-mono font-black text-slate-950 invoice-text-dark">₹{totalAmount}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              {/* Second Horizontal Separator */}
+              <div className="border-t border-slate-300 my-1 z-10 w-full" />
+
+              {/* Taxable Service Components Table Grid Container */}
+              <div className="flex flex-col z-10 w-full">
+                <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-3 block">
+                  TAXABLE SERVICE COMPONENTS
+                </span>
+                
+                {/* Bordered grid structure matching the screenshot precisely */}
+                <div className="border border-slate-600 rounded-2xl overflow-hidden bg-white">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-600 text-[10px] font-bold text-slate-500 uppercase">
+                        <th className="p-4 font-bold text-left tracking-wider">Item Description</th>
+                        <th className="p-4 font-bold text-center tracking-wider w-24">HSN</th>
+                        <th className="p-4 font-bold text-right tracking-wider w-36">Base Rate</th>
+                        <th className="p-4 font-bold text-center tracking-wider w-24">GST</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="font-sans">
+                        <td className="p-4 text-left font-bold text-slate-800 text-xs sm:text-[13px] leading-snug">
+                          {selectedInvoice.productName || 'ERP Management Software'}
+                        </td>
+                        <td className="p-4 text-center font-mono text-slate-500 text-xs">
+                          997331
+                        </td>
+                        <td className="p-4 text-right font-mono text-slate-800 text-xs font-semibold">
+                          ₹{taxableValue}
+                        </td>
+                        <td className="p-4 text-center font-mono text-[#C00030] text-xs font-extrabold">
+                          18%
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {/* Summary Totals & Verification Blocks */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start z-10 pt-2 pb-1">
+              {/* Summary Calculations (Right-Aligned) & Scan/Security Area */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-2 z-10 w-full">
                 
-                {/* Left: QR Secure Verification & Razorpay Seal */}
-                <div className="md:col-span-6 space-y-4">
-                  
-                  {/* QR Core Code Box */}
-                  <div className="flex gap-4 items-center bg-slate-50/80 p-4 border border-slate-200 rounded-2xl">
-                    <div className="bg-white p-2.5 rounded-xl border border-slate-250/60 shadow-sm shrink-0">
-                      <svg viewBox="0 0 100 100" className="w-16 h-16 text-slate-900" fill="currentColor">
+                {/* Left: Interactive elements (hidden on print for clean look) */}
+                <div className="md:col-span-6 space-y-3.5 no-print">
+                  <div className="flex gap-4 items-center bg-slate-50 p-4 border border-slate-150 rounded-2xl">
+                    <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-xs shrink-0 select-none">
+                      <svg viewBox="0 0 100 100" className="w-12 h-12 text-slate-800" fill="currentColor">
                         {/* Finder Pattern Top Left */}
-                        <path d="M0,0 h25 v7 h-18 v18 h-7 z" />
-                        <path d="M7,7 h11 v11 h-11 z" />
-                        <rect x="10" y="10" width="5" height="5" />
-                        
+                        <path d="M0,0 h20 v6 h-14 v14 h-6 z" />
+                        <path d="M5,5 h10 v10 h-10 z" />
+                        <rect x="7.5" y="7.5" width="5" height="5" />
                         {/* Finder Pattern Top Right */}
-                        <path d="M75,0 h25 v25 h-7 v-18 h-18 z" />
-                        <path d="M82,7 h11 v11 h-11 z" />
-                        <rect x="85" y="10" width="5" height="5" />
-
+                        <path d="M80,0 h20 v20 h-6 v-14 h-14 z" />
+                        <path d="M85,5 h10 v10 h-10 z" />
+                        <rect x="87.5" y="7.5" width="5" height="5" />
                         {/* Finder Pattern Bottom Left */}
-                        <path d="M0,75 h7 v18 h18 v7 h-25 z" />
-                        <path d="M7,82 h11 v11 h-11 z" />
-                        <rect x="10" y="85" width="5" height="5" />
-
-                        {/* QR Pixels Matrix */}
-                        <rect x="30" y="10" width="6" height="5" />
-                        <rect x="42" y="5" width="5" height="8" />
-                        <rect x="52" y="12" width="8" height="4" />
-                        <rect x="65" y="6" width="4" height="6" />
-
-                        <rect x="10" y="30" width="5" height="8" />
-                        <rect x="20" y="42" width="8" height="5" />
-                        <rect x="5" y="52" width="4" height="7" />
-                        <rect x="22" y="62" width="6" height="6" />
-
-                        <rect x="30" y="30" width="6" height="6" />
-                        <rect x="40" y="32" width="4" height="8" />
-                        <rect x="48" y="30" width="8" height="4" />
-                        <rect x="62" y="34" width="7" height="6" />
-                        
-                        <rect x="32" y="45" width="8" height="5" />
-                        <rect x="44" y="44" width="5" height="5" />
-                        <rect x="54" y="48" width="6" height="7" />
-                        <rect x="64" y="42" width="8" height="4" />
-
-                        <rect x="30" y="58" width="5" height="8" />
-                        <rect x="38" y="68" width="8" height="4" />
-                        <rect x="48" y="58" width="4" height="10" />
-                        <rect x="60" y="64" width="9" height="5" />
-
-                        <rect x="75" y="30" width="5" height="10" />
-                        <rect x="84" y="33" width="7" height="5" />
-                        <rect x="78" y="48" width="8" height="4" />
-                        <rect x="88" y="42" width="6" height="8" />
-
-                        <rect x="75" y="60" width="8" height="5" />
-                        <rect x="88" y="55" width="4" height="9" />
-                        <rect x="80" y="70" width="7" height="7" />
-                        <rect x="90" y="72" width="5" height="4" />
-
-                        <rect x="30" y="75" width="6" height="6" />
-                        <rect x="42" y="80" width="8" height="4" />
-                        <rect x="54" y="76" width="5" height="8" />
-                        <rect x="63" y="82" width="6" height="5" />
-
-                        <rect x="32" y="88" width="10" height="4" />
-                        <rect x="48" y="88" width="6" height="5" />
-                        <rect x="60" y="90" width="8" height="4" />
-
-                        <rect x="42" y="42" width="16" height="16" fill="white" />
-                        <rect x="46" y="46" width="8" height="8" fill="#2563eb" />
+                        <path d="M0,80 h6 v14 h14 v6 h-20 z" />
+                        <path d="M5,85 h10 v10 h-10 z" />
+                        <rect x="7.5" y="87.5" width="5" height="5" />
+                        {/* Mock pixels */}
+                        <rect x="25" y="10" width="4" height="4" /><rect x="35" y="15" width="6" height="4" />
+                        <rect x="45" y="5" width="4" height="6" /><rect x="55" y="10" width="5" height="4" />
+                        <rect x="25" y="25" width="6" height="6" /><rect x="45" y="20" width="5" height="5" />
+                        <rect x="65" y="15" width="4" height="8" /><rect x="75" y="25" width="5" height="5" />
+                        <rect x="25" y="45" width="5" height="5" /><rect x="35" y="35" width="8" height="4" />
+                        <rect x="45" y="45" width="4" height="4" /><rect x="55" y="35" width="6" height="5" />
+                        <rect x="25" y="60" width="4" height="8" /><rect x="35" y="55" width="5" height="4" />
+                        <rect x="45" y="65" width="8" height="4" /><rect x="60" y="55" width="4" height="6" />
+                        <rect x="25" y="75" width="6" height="4" /><rect x="35" y="75" width="4" height="6" />
+                        <rect x="50" y="75" width="5" height="5" /><rect x="65" y="75" width="6" height="4" />
                       </svg>
                     </div>
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-extrabold text-slate-400 font-mono block uppercase tracking-widest invoice-text-muted">GST E-Invoice QR Code</span>
-                      <span className="text-xs font-black text-slate-800 block invoice-text-dark">Scan to Verify Authenticity</span>
-                      <p className="text-[10.5px] text-slate-500 invoice-text-soft leading-normal font-medium">
-                        Use any mobile camera / GST verify tool to cross-reference authenticity of this recorded tax receipt directly on our core digital channels.
+                      <span className="text-[9px] font-black text-slate-400 font-mono block uppercase tracking-widest leading-none">E-INVOICE QR CODE</span>
+                      <span className="text-xs font-bold text-slate-800 block">Digitally Certified Receipt</span>
+                      <p className="text-[10px] text-slate-500 leading-normal">
+                        Certified transaction clearance logs for secure digital record auditing.
                       </p>
                     </div>
                   </div>
-
-                  {/* Razorpay Indicator Code Box */}
-                  <div className="flex items-center gap-3.5 bg-emerald-50/50 p-4 border border-emerald-100 rounded-2xl">
-                    <div className="p-2 bg-emerald-600 rounded-xl text-white shadow shadow-emerald-500/10">
-                      <CheckCircle2 className="w-5 h-5 text-white" />
-                    </div>
+                  
+                  {/* Razorpay gateway verification */}
+                  <div className="flex items-center gap-3 bg-emerald-50/40 p-4 border border-emerald-100 rounded-2xl">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-extrabold text-emerald-850 font-mono tracking-widest uppercase block">PAID VIA RAZORPAY</span>
-                      <p className="text-[11px] text-slate-500 invoice-text-soft leading-normal font-medium">
-                        Merchant Clearance Done • Secured gateway checkout certified • Razorpay transaction reference: <strong className="font-mono text-slate-800 invoice-text-dark">{razorpayPaymentId}</strong>.
+                      <span className="text-[9px] font-extrabold text-emerald-700 font-mono tracking-widest uppercase block leading-none">RAZORPAY PAYMENT RECORDED</span>
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        Reference Hash ID Code: <strong className="font-mono text-slate-800">{razorpayPaymentId}</strong>.
                       </p>
                     </div>
                   </div>
-
                 </div>
 
-                {/* Right: Totals Summary Card */}
-                <div className="md:col-span-6 md:justify-self-end w-full max-w-sm">
-                  <div className="border border-slate-200 rounded-2xl overflow-hidden invoice-card-shadow text-xs">
-                    <div className="bg-slate-50/80 p-4 border-b border-slate-100">
-                      <span className="text-[10px] font-bold text-slate-450 font-mono uppercase tracking-widest block invoice-text-muted">Detailed Calculations Summary</span>
+                {/* Right: Calculations List (Screenshot format with underlining) */}
+                <div className="md:col-span-6 flex flex-col items-end w-full space-y-3">
+                  <div className="w-full max-w-sm space-y-2 text-xs font-medium text-slate-500 font-sans">
+                    
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between font-mono text-emerald-600 font-semibold px-1">
+                        <span>Applied Coupon Discount:</span>
+                        <span>- ₹{discountAmount}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between font-mono text-slate-800 font-bold border-b border-slate-300 pb-1.5 px-1">
+                      <span>Taxable Val (Base):</span>
+                      <span className="text-slate-900 font-extrabold">₹{taxableValue}</span>
                     </div>
                     
-                    <div className="p-5 space-y-3 font-medium text-slate-600 invoice-text-soft">
-                      <div className="flex justify-between font-mono">
-                        <span>Gross Base Cost:</span>
-                        <span>₹{(listPrice / 1.18).toFixed(2)}</span>
-                      </div>
-                      
-                      {discountAmount > 0 && (
-                        <div className="flex justify-between font-mono text-emerald-600 font-semibold invoice-text-emerald">
-                          <span>Applied Campaign Promo Code:</span>
-                          <span>- ₹{discountAmount}</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between font-mono text-slate-800 font-extrabold border-t border-dashed pt-2.5 invoice-text-navy">
-                        <span>Taxable Value (Net):</span>
-                        <span>₹{taxableValue}</span>
-                      </div>
-                      
-                      <div className="flex justify-between font-mono pl-3 text-slate-500 invoice-text-muted">
-                        <span>CGST (9.0% Central):</span>
-                        <span>₹{cgstAmount}</span>
-                      </div>
-                      
-                      <div className="flex justify-between font-mono pl-3 text-slate-500 invoice-text-muted">
-                        <span>SGST (9.0% Chhattisgarh):</span>
-                        <span>₹{sgstAmount}</span>
-                      </div>
-                      
-                      <div className="flex justify-between font-mono pl-3 text-slate-400 invoice-text-light border-b border-slate-100 pb-2.5">
-                        <span>IGST (0.0% Inter-State):</span>
-                        <span>₹{igstAmount}</span>
-                      </div>
+                    <div className="flex justify-between font-mono px-1">
+                      <span>CGST (9.0%):</span>
+                      <span className="text-slate-800 font-semibold">₹{cgstAmount}</span>
                     </div>
-
-                    <div className="bg-[#0f172a] text-white p-5 flex justify-between items-center border-t border-slate-950">
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-black text-slate-400 font-mono uppercase tracking-widest leading-none">GRAND TOTAL RECEIPT</span>
-                        <span className="text-[9.5px] font-mono text-slate-550 leading-none mt-1.5 font-medium">All CGST/SGST Taxes Included</span>
-                      </div>
-                      <span className="text-xl font-black font-mono text-white tracking-tight">₹{totalAmount}</span>
+                    
+                    <div className="flex justify-between font-mono border-b border-slate-300 pb-1.5 px-1">
+                      <span>SGST (9.0%):</span>
+                      <span className="text-slate-800 font-semibold">₹{sgstAmount}</span>
                     </div>
+                  </div>
 
+                  {/* Solid pill-shaped banner highlight for Gross Bill Total */}
+                  <div className="w-full max-w-sm bg-rose-50/70 border border-rose-100 rounded-2xl px-5 py-3.5 flex justify-between items-center shadow-xs">
+                    <span className="text-xs font-bold text-[#C00030] tracking-wide uppercase">
+                      Gross Bill Total:
+                    </span>
+                    <span className="text-xl font-black font-mono text-[#C00030]">
+                      ₹{totalAmount}
+                    </span>
                   </div>
                 </div>
 
               </div>
 
-              {/* Invoicing Footer Guidance */}
-              <div className="border-t border-slate-100 pt-5 text-center text-[10px] text-slate-400 invoice-text-light leading-normal max-w-xl mx-auto z-10">
+              {/* Activated License Serial Key Block */}
+              <div className="border border-slate-600 rounded-2xl p-5 mt-3 z-10 w-full bg-white font-sans">
+                <span className="text-[9px] font-black text-slate-400 font-mono tracking-widest uppercase block mb-2.5 leading-none">
+                  ACTIVATED LICENSE SERIAL KEY
+                </span>
+                <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-rose-50 border border-rose-100 rounded-xl shadow-xs select-all">
+                  <span className="text-sm select-none">🔑</span>
+                  <span className="font-mono text-xs sm:text-[13px] font-black tracking-wider text-[#C00030]">
+                    {selectedInvoice.licenseKey}
+                  </span>
+                </div>
+              </div>
+
+              {/* Invoicing Footer Jurisdictional Guidance */}
+              <div className="border-t border-slate-200 pt-4 text-center text-[10px] text-slate-400 invoice-text-light leading-normal max-w-xl mx-auto z-10">
                 <span className="font-extrabold block text-slate-500 invoice-text-soft mb-0.5">Subject to Raipur Court Jurisdiction</span>
                 <p>This is a certified digital tax invoice generated dynamically on secure payment clearings. No physical seal or active signatures are required to endorse validity. BSP Suryatech software products are sold under official license activations agreements.</p>
               </div>

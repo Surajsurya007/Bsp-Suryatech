@@ -374,10 +374,10 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
   const [generatedLicense, setGeneratedLicense] = useState('');
 
   // Module 5 (Software release form)
-  const [newVersion, setNewVersion] = useState({ name: 'Pharmacy Plus POS', version: 'v1.4.0', size: '38.4 MB', changelog: 'Optimized stock alert formulas', downloadUrl: 'https://bspsuryatech.in/hosted/pharmacy-setup.exe' });
+  const [newVersion, setNewVersion] = useState({ name: 'Pharmacy Plus POS', version: 'v1.4.0', size: '38.4 MB', changelog: 'Optimized stock alert formulas', downloadUrl: 'https://bspsuryatech.in/hosted/pharmacy-setup.zip' });
   const [softwareReleases, setSoftwareReleases] = useState<any[]>([
-    { id: '1', name: 'BSP Suryatech Retail Billing Pro', version: 'v4.2.2', size: '42.1 MB', changelog: 'Stable build, fast receipt layouts', status: 'Stable', downloadUrl: 'https://bspsuryatech.in/downloads/setup-pro.exe' },
-    { id: '2', name: 'BSP Suryatech GST Enterprise Suite', version: 'v2.1.0', size: '108.5 MB', changelog: 'Multi-device GST ledger compilation', status: 'Stable', downloadUrl: 'https://bspsuryatech.in/downloads/gst-setup.exe' }
+    { id: '1', name: 'BSP Suryatech Retail Billing Pro', version: 'v4.2.2', size: '42.1 MB', changelog: 'Stable build, fast receipt layouts', status: 'Stable', downloadUrl: 'https://bspsuryatech.in/downloads/setup-pro.zip' },
+    { id: '2', name: 'BSP Suryatech GST Enterprise Suite', version: 'v2.1.0', size: '108.5 MB', changelog: 'Multi-device GST ledger compilation', status: 'Stable', downloadUrl: 'https://bspsuryatech.in/downloads/gst-setup.zip' }
   ]);
 
   // --- DOWNLOAD CENTER DYNAMIC SOLUTIONS MANAGEMENT STATE ---

@@ -2071,26 +2071,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       }
     }
 
-    // Proxy the download of the EXE file securely from its source url
+    // Redirect the client browser directly to the direct high-speed setup file URL
     try {
-      console.log(`[SECURE DOWNLOAD] Fetching actual setup file from configuration securely for ${resolvedKey}: ${downloadItem.file}`);
-      const fileResponse = await fetch(downloadItem.file);
-      if (!fileResponse.ok) {
-        throw new Error(`Failed to fetch file from storage server: ${fileResponse.statusText}`);
-      }
-      
-      const arrayBuffer = await fileResponse.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      const downloadFilename = downloadItem.file.split('/').pop() || `${resolvedKey}-Setup.exe`;
-      
-      res.header('Content-Type', 'application/octet-stream');
-      res.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);
-      return res.send(buffer);
+      console.log(`[SECURE DOWNLOAD] Issuing direct redirect for ${resolvedKey} to: ${downloadItem.file}`);
+      return res.redirect(302, downloadItem.file);
     } catch (error: any) {
-      console.log('[SECURE DOWNLOAD ERROR] Failed secure download proxy stream:', error);
+      console.log('[SECURE DOWNLOAD ERROR] Failed secure download redirect:', error);
       return res.status(500).json({ 
-        error: 'Secured setup download server stream failed. Please contact admin.',
+        error: 'Secured setup download redirection failed. Please contact admin.',
         details: error.message
       });
     }
@@ -2944,7 +2932,10 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // --- VITE AND FE STATIC SERVICES INTEGRATION ---
 
-  const isProd = process.env.NODE_ENV === 'production';
+  const isProd = process.env.NODE_ENV === 'production' || 
+                 process.env.NODE_ENV === 'prod' || 
+                 (typeof __filename !== 'undefined' && __filename.indexOf('server.cjs') !== -1) ||
+                 process.env.NODE_ENV !== 'development';
 
   if (!isProd) {
     try {

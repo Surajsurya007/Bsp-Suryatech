@@ -79,7 +79,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [adminPayments, setAdminPayments] = useState<any[]>([]);
   const [adminInvoices, setAdminInvoices] = useState<any[]>([]);
   const [adminContactMessages, setAdminContactMessages] = useState<any[]>(() => {
-    const cached = localStorage.getItem('bsp_contact_messages');
+    let cached = null;
+    try {
+      cached = localStorage.getItem('bsp_contact_messages');
+    } catch (e) {
+      console.warn("bsp_contact_messages read from localStorage restricted:", e);
+    }
     if (cached) {
       try {
         return JSON.parse(cached);
@@ -140,7 +145,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ])
       }
     ];
-    localStorage.setItem('bsp_contact_messages', JSON.stringify(defaultMessages));
+    try {
+      localStorage.setItem('bsp_contact_messages', JSON.stringify(defaultMessages));
+    } catch (e) {
+      console.warn("bsp_contact_messages write to localStorage restricted:", e);
+    }
     return defaultMessages;
   });
   
@@ -234,7 +243,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const { data: contacts, error: errContacts } = await supabase.from('contact_messages').select('*');
         if (!errContacts && contacts && contacts.length > 0) {
           setAdminContactMessages(contacts);
-          localStorage.setItem('bsp_contact_messages', JSON.stringify(contacts));
+          try {
+            localStorage.setItem('bsp_contact_messages', JSON.stringify(contacts));
+          } catch (e) {
+            console.warn("bsp_contact_messages sync write to localStorage restricted:", e);
+          }
         } else if (errContacts) {
           console.log("Supabase contact_messages not found or error, using localStorage fallback:", errContacts.message);
         }

@@ -167,7 +167,7 @@ export const defaultSolutions = [
     icon: '🛍️',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip'
   },
   {
     id: 'sol-supermarket',
@@ -181,7 +181,7 @@ export const defaultSolutions = [
     icon: '🏪',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip'
   },
   {
     id: 'sol-grocery',
@@ -195,7 +195,7 @@ export const defaultSolutions = [
     icon: '🍎',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip'
   },
   {
     id: 'sol-medical',
@@ -209,7 +209,7 @@ export const defaultSolutions = [
     icon: '💊',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/Medical-Store-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Medical-Store-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-restaurant',
@@ -223,7 +223,7 @@ export const defaultSolutions = [
     icon: '🍽️',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-POS-KOT-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Restaurant-POS-KOT-v1.0.0.zip'
   },
   {
     id: 'sol-mobile',
@@ -237,7 +237,7 @@ export const defaultSolutions = [
     icon: '📱',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/Mobile-Shop-Billing-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Mobile-Shop-Billing-v1.0.0.zip'
   },
   {
     id: 'sol-electronics',
@@ -251,7 +251,7 @@ export const defaultSolutions = [
     icon: '📺',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/Electronics-Shop-Billing-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Electronics-Shop-Billing-v1.0.0.zip'
   },
   {
     id: 'sol-transport',
@@ -265,7 +265,7 @@ export const defaultSolutions = [
     icon: '🚚',
     badge: 'Transport',
     badgeColor: 'blue',
-    exeUrl: 'https://bspsuryatech.in/downloads/SafeWheels-ERP-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/SafeWheels-ERP-v1.0.0.zip'
   },
   {
     id: 'sol-hospital',
@@ -279,7 +279,7 @@ export const defaultSolutions = [
     icon: '🏥',
     badge: 'Hospital',
     badgeColor: 'red',
-    exeUrl: 'https://bspsuryatech.in/downloads/Hospital-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Hospital-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-diagnostic',
@@ -293,7 +293,7 @@ export const defaultSolutions = [
     icon: '🔬',
     badge: 'Hospital',
     badgeColor: 'red',
-    exeUrl: 'https://bspsuryatech.in/downloads/Laboratory-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Laboratory-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-school',
@@ -307,7 +307,7 @@ export const defaultSolutions = [
     icon: '🏫',
     badge: 'School',
     badgeColor: 'indigo',
-    exeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-erp-warehouse',
@@ -321,7 +321,7 @@ export const defaultSolutions = [
     icon: '🏭',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-hotel',
@@ -335,7 +335,7 @@ export const defaultSolutions = [
     icon: '🏨',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-repairing',
@@ -349,7 +349,7 @@ export const defaultSolutions = [
     icon: '🔌',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.zip'
   },
   {
     id: 'sol-resort',
@@ -363,6 +363,6 @@ export const defaultSolutions = [
     icon: '🌴',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.zip'
   }
 ];

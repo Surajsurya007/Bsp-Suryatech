@@ -420,7 +420,7 @@ export default function Home({ onPageChange, products, onTriggerTrialDownload, t
               <div className="space-y-4">
                 {/* Stars ratings */}
                 <div className="flex gap-1">
-                  {[...Array(test.rating)].map((_, idx) => (
+                  {[...Array(Number(test.rating || 5))].map((_, idx) => (
                     <Star key={idx} className="w-4 h-4 fill-amber-400 text-amber-400 border-none outline-none" />
                   ))}
                 </div>
@@ -431,7 +431,7 @@ export default function Home({ onPageChange, products, onTriggerTrialDownload, t
 
               <div className="flex items-center gap-3.5 pt-6 mt-6 border-t border-slate-800">
                 <div className="w-10 h-10 bg-[#2563EB] rounded-sm flex items-center justify-center font-black text-white text-sm shadow-inner uppercase font-mono">
-                  {test.name[0]}
+                  {test.name ? test.name[0] : 'U'}
                 </div>
                 <div>
                   <h4 className="font-black text-white text-sm uppercase tracking-tight leading-none">{test.name}</h4>

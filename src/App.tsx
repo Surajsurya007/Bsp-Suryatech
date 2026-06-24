@@ -43,6 +43,8 @@ import { TranslationProvider } from './components/TranslationContext';
 import { useAdmin } from './components/AdminContext';
 import { AdminDashboard } from './components/AdminDashboard';
 
+let isInitialAuthCheckDone = false;
+
 export default function App() {
   const { isAdminMode } = useAdmin();
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -174,6 +176,18 @@ export default function App() {
                   };
                   setUser(u);
                   handleNavigatePage('portal');
+                })
+                .catch((profileErr: any) => {
+                  console.warn("App: Non-blocking customer profiles look up error on Google login redirect:", profileErr);
+                  const u = {
+                    id: data.user!.id,
+                    email: data.user!.email,
+                    name: data.user!.user_metadata?.full_name || data.user!.user_metadata?.name || data.user!.email?.split('@')[0],
+                    role: 'customer',
+                    profile: null
+                  };
+                  setUser(u);
+                  handleNavigatePage('portal');
                 });
             }
           }
@@ -209,16 +223,46 @@ export default function App() {
         } else {
           // Backward compatible token fallback
           const localToken = localStorage.getItem('bsp_token');
-          if (localToken) {
+          if (localToken && !isInitialAuthCheckDone) {
             console.log("App: Local storage authentication fallback active, but no active Supabase session found.");
           }
         }
+        isInitialAuthCheckDone = true;
       } catch (err) {
         console.warn("App: Exception restoring serverless user session on mount:", err);
       }
     };
 
     checkSupabaseSession();
+
+    // 3) Hook up a single onAuthStateChange listener to keep auth state perfectly reactive
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`App: Supabase Auth state changed event [${event}]`);
+      if (session && session.user) {
+        try {
+          const { data: profile } = await supabase
+            .from('customer_profiles')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+
+          const u = {
+            id: session.user.id,
+            email: session.user.email,
+            name: profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
+            role: 'customer',
+            profile: profile || null
+          };
+          setUser(u);
+          localStorage.setItem('bsp_token', session.access_token);
+        } catch (e) {
+          console.warn("App: Exception syncing user profile on auth change event:", e);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        localStorage.removeItem('bsp_token');
+      }
+    });
 
     // Check deep links or manual redirection paths
     const path = window.location.pathname;
@@ -248,6 +292,9 @@ export default function App() {
     return () => {
       clearInterval(pollInterval);
       window.removeEventListener('products_updated', handleProductsUpdated);
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
@@ -291,31 +338,35 @@ export default function App() {
     };
     window.addEventListener('trigger_automated_checkout', handleAutomatedCheckoutTrigger);
     return () => window.removeEventListener('trigger_automated_checkout', handleAutomatedCheckoutTrigger);
-  }, [user, products, solutions]);
+  }, [user?.id, products?.length, solutions?.length]);
 
   const fetchProducts = async () => {
     let loaded = false;
     try {
       console.log("App: Querying products directly from Supabase DB...");
       const { data: sbData, error: sbError } = await supabase.from('products').select('*');
-      if (sbData && !sbError && sbData.length > 0) {
-        const parsedProducts = sbData.map(item => ({
-          ...item,
-          price: item.price ? Number(item.price) : (item.id === 'prod-billing-pro' ? 999 : 2999),
-          originalPrice: item.original_price ? Number(item.original_price) : (item.id === 'prod-billing-pro' ? 2499 : 4999),
-          downloadUrl: item.download_url || item.downloadUrl,
-          connectedPlan: item.connected_plan || item.connectedPlan,
-          category: item.category || 'Retail & POS Billing',
-          fullDescription: item.full_description || item.fullDescription || item.description || '',
-          systemRequirements: item.system_requirements || item.systemRequirements || '',
-          licenseInfo: item.license_info || item.licenseInfo || '',
-          demoVideoUrl: item.demo_video_url || item.demoVideoUrl || '',
-          gallery: typeof item.gallery === 'string' ? JSON.parse(item.gallery) : (Array.isArray(item.gallery) ? item.gallery : []),
-          features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || []),
-          manualUrl: item.manual_url || item.manualUrl,
-          status: item.status || 'active'
-        }));
-        setProducts(parsedProducts);
+      if (sbData && !sbError) {
+        if (sbData.length > 0) {
+          const parsedProducts = sbData.map(item => ({
+            ...item,
+            price: item.price ? Number(item.price) : (item.id === 'prod-billing-pro' ? 999 : 2999),
+            originalPrice: item.original_price ? Number(item.original_price) : (item.id === 'prod-billing-pro' ? 2499 : 4999),
+            downloadUrl: item.download_url || item.downloadUrl,
+            connectedPlan: item.connected_plan || item.connectedPlan,
+            category: item.category || 'Retail & POS Billing',
+            fullDescription: item.full_description || item.fullDescription || item.description || '',
+            systemRequirements: item.system_requirements || item.systemRequirements || '',
+            licenseInfo: item.license_info || item.licenseInfo || '',
+            demoVideoUrl: item.demo_video_url || item.demoVideoUrl || '',
+            gallery: typeof item.gallery === 'string' ? JSON.parse(item.gallery) : (Array.isArray(item.gallery) ? item.gallery : []),
+            features: typeof item.features === 'string' ? JSON.parse(item.features) : (item.features || []),
+            manualUrl: item.manual_url || item.manualUrl,
+            status: item.status || 'active'
+          }));
+          setProducts(parsedProducts);
+        } else {
+          setProducts([]);
+        }
         loaded = true;
       } else {
         if (sbError) console.log("App: Supabase products table fetch error:", sbError.message);
@@ -432,7 +483,7 @@ export default function App() {
       const { data: sbData, error: sbError } = await supabase.from('solutions').select('*');
       let solutionsList = sbData;
       
-      if (!solutionsList || sbError || solutionsList.length === 0) {
+      if (sbError || !solutionsList) {
         console.log("App: Fallback to local Express API for solutions...");
         const localRes = await fetch('/api/solutions');
         if (localRes.ok) {
@@ -643,19 +694,95 @@ export default function App() {
     // Serve the real POS executable setup if they complete payment (isFull version download is active)
     try {
       console.log("App: Triggering binary download setup of:", prodId);
-      const link = document.createElement('a');
-      if (isFull) {
-        const token = localStorage.getItem('bsp_token') || '';
-        link.href = `/api/downloads/secure/${encodeURIComponent(prodId)}?token=${encodeURIComponent(token)}`;
-        link.download = `${prodId}_Setup.exe`;
-      } else {
-        const exeName = prodId.endsWith('.exe') ? prodId : `BSPSuryatech_${prodId}_v${prodId.includes('enterprise')? '5.0.3':'4.2.1'}_Setup.exe`;
-        const blob = new Blob(["BSP Suryatech Retail Billing installation setup executable file stream. Runs 100% offline."], { type: "application/octet-stream" });
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = exeName;
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      
+      let cleanId = prodId.toLowerCase();
+      // Inspect owned licenses to find a matching one and get the real productName to resolve the correct setup download file format
+      const matchingLic = userLicenses.find(lic => 
+        lic.productId === prodId || 
+        lic.id === prodId ||
+        (lic.productName && lic.productName.toLowerCase().includes(prodId.toLowerCase())) ||
+        (lic.productName && prodId.toLowerCase().includes(lic.productName.toLowerCase()))
+      );
+      if (matchingLic && matchingLic.productName) {
+        cleanId = (cleanId + " " + matchingLic.productName.toLowerCase()).trim();
       }
+
+      // Look up matching solution to retrieve precise exeUrl format
+      const matchedSol = solutions.find(s => 
+        s.id === prodId || 
+        (s.mappedPlanId && s.mappedPlanId === prodId) ||
+        (s.title && s.title.toLowerCase() === prodId.toLowerCase()) ||
+        (s.title && prodId.toLowerCase().includes(s.title.toLowerCase())) ||
+        (s.title && s.title.toLowerCase().includes(prodId.toLowerCase()))
+      ) || defaultSolutions.find(s => 
+        s.id === prodId || 
+        (s.mappedPlanId && s.mappedPlanId === prodId) ||
+        (s.title && s.title.toLowerCase() === prodId.toLowerCase()) ||
+        (s.title && prodId.toLowerCase().includes(s.title.toLowerCase())) ||
+        (s.title && s.title.toLowerCase().includes(prodId.toLowerCase()))
+      );
+
+      // Construct standard fallback if no solution found
+      let fallbackExeName = prodId;
+      if (cleanId.includes('restaurant')) fallbackExeName = 'BSP-Restaurant-POS-KOT-v1.0.0';
+      else if (cleanId.includes('mobile')) fallbackExeName = 'Mobile-Shop-Billing-v1.0.0';
+      else if (cleanId.includes('electronics')) fallbackExeName = 'Electronics-Shop-Billing-v1.0.0';
+      else if (cleanId.includes('transport') || cleanId.includes('safewheels')) fallbackExeName = 'SafeWheels-ERP-v1.0.0';
+      else if (cleanId.includes('hospital') || cleanId.includes('clinic')) fallbackExeName = 'Hospital-Management-ERP-v3.0.0';
+      else if (cleanId.includes('diagnostic') || cleanId.includes('lab') || cleanId.includes('laboratory')) fallbackExeName = 'Laboratory-Management-ERP-v3.0.0';
+      else if (cleanId.includes('school')) fallbackExeName = 'School-Management-ERP-v3.0.0';
+      else if (cleanId.includes('hotel')) fallbackExeName = 'Hotel-Management-ERP-v3.0.0';
+      else if (cleanId.includes('repairing') || cleanId.includes('electrical')) fallbackExeName = 'BSP-SuryaTech-Flow-ERP-v1.0.0';
+      else if (cleanId.includes('medical')) fallbackExeName = 'Medical-Store-ERP-v3.0.0';
+      else if (cleanId.includes('grocery')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
+      else if (cleanId.includes('supermarket')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
+      else if (cleanId.includes('billing-pro') || cleanId.includes('retail') || cleanId.includes('pro')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
+      else if (cleanId.includes('enterprise') || cleanId.includes('warehouse') || cleanId.includes('inventory') || cleanId.includes('erp')) fallbackExeName = 'Inventory-Management-ERP-v3.0.0';
+      
+      let directUrl = matchedSol?.exeUrl || `https://bspsuryatech.in/downloads/${fallbackExeName}`;
+      if (directUrl) {
+        // Strip out any unwanted setup / setup.exe / exe extensions to format perfectly
+        directUrl = directUrl
+          .replace(/\.Setup\.exe\.zip$/i, '.zip')
+          .replace(/\.Setup\.zip$/i, '.zip')
+          .replace(/\.Setup\.exe$/i, '.zip')
+          .replace(/\.exe\.zip$/i, '.zip')
+          .replace(/\.Setup$/i, '')
+          .replace(/\.exe$/i, '');
+      }
+      if (directUrl && !directUrl.toLowerCase().endsWith('.zip')) {
+        directUrl = `${directUrl}.zip`;
+      }
+
+      // Format final download name to match clean zip structure BSP-Mart-POS-v1.0.0.zip
+      let finalDownloadName = '';
+      if (directUrl) {
+        const urlParts = directUrl.split('/');
+        finalDownloadName = urlParts[urlParts.length - 1];
+      } else {
+        finalDownloadName = fallbackExeName;
+      }
+
+      finalDownloadName = finalDownloadName
+        .replace(/\.Setup\.exe\.zip$/i, '.zip')
+        .replace(/\.Setup\.zip$/i, '.zip')
+        .replace(/\.Setup\.exe$/i, '.zip')
+        .replace(/\.exe\.zip$/i, '.zip')
+        .replace(/\.exe$/i, '.zip')
+        .replace(/\.Setup$/i, '');
+
+      if (!finalDownloadName.toLowerCase().endsWith('.zip')) {
+        finalDownloadName = finalDownloadName + '.zip';
+      }
+
+      console.log("App: Clean direct download URL resolved for setup:", directUrl, "Saving as:", finalDownloadName);
+
+      // Create a temporary anchor element to trigger high-speed direct stream securely and safely in iframes
+      const link = document.createElement('a');
+      link.href = directUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.setAttribute('download', finalDownloadName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

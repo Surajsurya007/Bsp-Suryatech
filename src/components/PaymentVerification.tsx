@@ -87,7 +87,7 @@ export default function PaymentVerification({
       setCustomerName(user.name || user.email?.split('@')[0] || '');
       setCustomerEmail(user.email || '');
     }
-  }, [user]);
+  }, [user?.id, user?.name, user?.email]);
 
   if (!user) {
     return (
