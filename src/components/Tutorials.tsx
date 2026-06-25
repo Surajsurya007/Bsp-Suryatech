@@ -68,13 +68,13 @@ export default function Tutorials({ videos }: { videos?: VideoTutorial[] }) {
       return youtubeId;
     }
     if (youtubeId === 'bsp_overview_embed') {
-      return 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+      return 'https://www.youtube.com/embed/zy7emgkNgzA';
     }
     if (youtubeId === 'bsp_printer_embed') {
-      return 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+      return 'https://www.youtube.com/embed/zy7emgkNgzA';
     }
     if (youtubeId === 'bsp_import_embed') {
-      return 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+      return 'https://www.youtube.com/embed/zy7emgkNgzA';
     }
     return `https://www.youtube.com/embed/${youtubeId}`;
   };

@@ -97,6 +97,27 @@ async function safeParseJson(response: Response, defaultError = 'Request failed'
   }
 }
 
+const highlightNotificationText = (text: string) => {
+  if (!text) return null;
+  // Regex to match Ticket ID values (tic_...), prefixes "Ticket ID" / "Status" (with optional colon), and status words (Open/Closed/Pending/Resolved)
+  const regex = /(tic_[A-Za-z0-9_]+|\bTicket\s+ID:?\b|\bStatus:?\b|\b(?:Open|Closed|Pending|Resolved|open|closed|pending|resolved)\b)/gi;
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (regex.test(part)) {
+          return (
+            <span key={index} className="text-yellow-200 font-bold">
+              {part}
+            </span>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
+};
+
 export default function CustomerPortal({ 
   user, 
   onLoginSuccess, 
@@ -3855,10 +3876,10 @@ export default function CustomerPortal({
 
                         <div className="space-y-1 flex-grow">
                           <div className="flex items-start justify-between gap-4">
-                            <h5 className="font-extrabold text-white text-sm leading-tight">{notif.title}</h5>
+                            <h5 className="font-extrabold text-white text-sm leading-tight">{highlightNotificationText(notif.title)}</h5>
                             <span className="text-[9px] text-slate-300 font-mono font-medium">{new Date(notif.createdAt).toLocaleDateString()}</span>
                           </div>
-                          <p className="text-white text-xs leading-normal font-medium">{notif.message}</p>
+                          <p className="text-white text-xs leading-normal font-medium">{highlightNotificationText(notif.message)}</p>
                           
                           {!notif.read && (
                             <button

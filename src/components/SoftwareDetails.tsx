@@ -23,6 +23,49 @@ import {
 } from 'lucide-react';
 import { Product } from '../types';
 
+import hospitalDashboard from '../assets/images/hospital_dashboard_1782360732649.jpg';
+import hospitalDoctors from '../assets/images/hospital_doctors_1782360746478.jpg';
+import hospitalBeds from '../assets/images/hospital_beds_1782360761921.jpg';
+
+import hotelDashboard from '../assets/images/hotel_dashboard_1782361119044.jpg';
+import hotelRooms from '../assets/images/hotel_rooms_1782361140793.jpg';
+import hotelReservations from '../assets/images/hotel_reservations_1782361163232.jpg';
+
+import retailPos from '../assets/images/retail_pos_screenshot_1782370523407.jpg';
+import restaurantPos from '../assets/images/restaurant_pos_screenshot_1782370541831.jpg';
+import schoolErp from '../assets/images/school_erp_screenshot_1782370555778.jpg';
+import warehouseErp from '../assets/images/warehouse_erp_screenshot_1782370569719.jpg';
+
+import bspMartDashboard from '../assets/images/bsp_mart_dashboard_1782373570083.jpg';
+import bspMartTerminal from '../assets/images/bsp_mart_terminal_1782373583600.jpg';
+import bspMartLogin from '../assets/images/bsp_mart_login_1782373595684.jpg';
+
+function getYouTubeEmbedUrl(url: string): string {
+  if (!url) return 'https://www.youtube.com/embed/zy7emgkNgzA';
+  
+  if (url.includes('/embed/')) {
+    return url;
+  }
+  
+  let videoId = '';
+  const shortMatch = url.match(/youtu\.be\/([^?#]+)/);
+  if (shortMatch) {
+    videoId = shortMatch[1];
+  } else {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      videoId = match[2];
+    }
+  }
+  
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}`;
+  }
+  
+  return url;
+}
+
 interface SoftwareDetailsProps {
   productId: string;
   products: Product[];
@@ -74,11 +117,11 @@ export default function SoftwareDetails({
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [galleryViewMode, setGalleryViewMode] = useState<'slider' | 'grid'>('slider');
-  const [failedHostingerIndices, setFailedHostingerIndices] = useState<Record<number, boolean>>({});
+  const [hostingerTryIndex, setHostingerTryIndex] = useState<Record<number, number>>({});
 
-  // Reset failed indices and reset gallery carousel when product changes
+  // Reset try indices and reset gallery carousel when product changes
   useEffect(() => {
-    setFailedHostingerIndices({});
+    setHostingerTryIndex({});
     setActiveGalleryIndex(0);
   }, [product?.id]);
 
@@ -114,14 +157,7 @@ export default function SoftwareDetails({
   const fullDescStr = product.fullDescription || product.description;
   const sysReqsStr = product.systemRequirements || 'Operating System: Windows 7, 8, 10, or 11\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free database folders space';
   const licenseInfoStr = product.licenseInfo || 'Standard Lifetime Desktop License Key with 1-Year free security patches and updates.';
-  const demoUrlStr = product.demoVideoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ';
-
-  // Preference Hostinger uploaded screenshots with fallback values if they fail to load (i.e. before user has uploaded them)
-  const hostingerUrls = [
-    `https://bspsuryatech.in/images/${product.id}_screenshot1.jpg`,
-    `https://bspsuryatech.in/images/${product.id}_screenshot2.jpg`,
-    `https://bspsuryatech.in/images/${product.id}_screenshot3.jpg`
-  ];
+  const demoUrlStr = getYouTubeEmbedUrl(product.demoVideoUrl || 'https://www.youtube.com/embed/zy7emgkNgzA');
 
   const systemFallbackImages = [
     'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800',
@@ -133,14 +169,195 @@ export default function SoftwareDetails({
     ? product.gallery 
     : systemFallbackImages;
 
-  const getImageUrl = (idx: number) => {
-    if (failedHostingerIndices[idx]) {
-      return fallbackImages[idx] || systemFallbackImages[idx % systemFallbackImages.length];
+  const getSpecificPrefix = (id: string): string => {
+    if (id === 'sol-retail' || id === 'prod-billing-pro') {
+      return 'sol-retail';
+    } else if (id === 'sol-supermarket' || id === 'prod-billing-enterprise') {
+      return 'sol-supermarket';
+    } else if (id === 'sol-grocery') {
+      return 'sol-grocery';
+    } else if (id === 'sol-medical') {
+      return 'sol-medical';
+    } else if (id === 'sol-restaurant' || id === 'prod-restaurant-pos') {
+      return 'sol-restaurant';
+    } else if (id === 'sol-mobile' || id === 'prod-mobile-billing') {
+      return 'sol-mobile';
+    } else if (id === 'sol-electronics' || id === 'prod-electronics-billing') {
+      return 'sol-electronics';
+    } else if (id === 'sol-transport' || id === 'prod-transport-management') {
+      return 'sol-transport';
+    } else if (id === 'sol-hospital' || id === 'prod-hospital-clinic') {
+      return 'sol-hospital';
+    } else if (id === 'sol-diagnostic') {
+      return 'sol-diagnostic';
+    } else if (id === 'sol-school' || id === 'prod-school-erp') {
+      return 'sol-school';
+    } else if (id === 'sol-erp-warehouse') {
+      return 'sol-erp-warehouse';
+    } else if (id === 'sol-hotel') {
+      return 'sol-hotel';
+    } else if (id === 'sol-repairing') {
+      return 'sol-repairing';
+    } else if (id === 'sol-resort') {
+      return 'sol-resort';
     }
-    return hostingerUrls[idx] || fallbackImages[idx];
+
+    const titleLower = (product?.name || '').toLowerCase();
+    if (titleLower.includes('retail')) return 'sol-retail';
+    if (titleLower.includes('supermarket')) return 'sol-supermarket';
+    if (titleLower.includes('grocery')) return 'sol-grocery';
+    if (titleLower.includes('medical') || titleLower.includes('pharmacy')) return 'sol-medical';
+    if (titleLower.includes('restaurant') || titleLower.includes('kot')) return 'sol-restaurant';
+    if (titleLower.includes('mobile')) return 'sol-mobile';
+    if (titleLower.includes('electronics')) return 'sol-electronics';
+    if (titleLower.includes('transport') || titleLower.includes('fleet') || titleLower.includes('logistics')) return 'sol-transport';
+    if (titleLower.includes('hospital') || titleLower.includes('clinic')) return 'sol-hospital';
+    if (titleLower.includes('diagnostic') || titleLower.includes('lab') || titleLower.includes('pathology')) return 'sol-diagnostic';
+    if (titleLower.includes('school')) return 'sol-school';
+    if (titleLower.includes('warehouse') || titleLower.includes('enterprise erp suite')) return 'sol-erp-warehouse';
+    if (titleLower.includes('hotel')) return 'sol-hotel';
+    if (titleLower.includes('repairing') || titleLower.includes('electrical')) return 'sol-repairing';
+    if (titleLower.includes('resort') || titleLower.includes('spa')) return 'sol-resort';
+
+    return 'sol-retail';
   };
 
-  const galleryImagesKeys = Array.from({ length: Math.max(hostingerUrls.length, fallbackImages.length) }, (_, i) => i);
+  const getCategoryFallbackImages = (prefix: string) => {
+    switch (prefix) {
+      case 'sol-retail':
+      case 'sol-supermarket':
+      case 'sol-grocery':
+        return [
+          bspMartDashboard,
+          bspMartTerminal,
+          bspMartLogin
+        ];
+      case 'sol-medical':
+        return [
+          bspMartTerminal,
+          hospitalDoctors,
+          hospitalBeds
+        ];
+      case 'sol-restaurant':
+        return [
+          restaurantPos,
+          hotelReservations,
+          bspMartTerminal
+        ];
+      case 'sol-mobile':
+      case 'sol-electronics':
+      case 'sol-repairing':
+        return [
+          bspMartTerminal,
+          warehouseErp,
+          hotelReservations
+        ];
+      case 'sol-transport':
+        return [
+          warehouseErp,
+          bspMartTerminal,
+          hotelReservations
+        ];
+      case 'sol-hospital':
+        return [
+          hospitalDashboard,
+          hospitalDoctors,
+          hospitalBeds
+        ];
+      case 'sol-diagnostic':
+        return [
+          hospitalDoctors,
+          hospitalBeds,
+          bspMartTerminal
+        ];
+      case 'sol-school':
+        return [
+          schoolErp,
+          warehouseErp,
+          bspMartTerminal
+        ];
+      case 'sol-erp-warehouse':
+        return [
+          warehouseErp,
+          bspMartTerminal,
+          hotelRooms
+        ];
+      case 'sol-hotel':
+      case 'sol-resort':
+        return [
+          hotelDashboard,
+          hotelRooms,
+          hotelReservations
+        ];
+      default:
+        return [
+          bspMartTerminal,
+          warehouseErp,
+          restaurantPos
+        ];
+    }
+  };
+
+  // Generate dynamic Hostinger candidates matching many naming variations & extensions
+  const getHostingerCandidates = (idx: number) => {
+    const num = idx + 1;
+    const id = product.id || '';
+    const specificPrefix = getSpecificPrefix(id);
+
+    // For BSP Mart Retail, Supermarket, Grocery POS systems, load the authentic local screenshots immediately!
+    if (specificPrefix === 'sol-retail' || specificPrefix === 'sol-supermarket' || specificPrefix === 'sol-grocery') {
+      const originalScreenshots = [bspMartDashboard, bspMartTerminal, bspMartLogin];
+      return [
+        originalScreenshots[idx] || originalScreenshots[0],
+        `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.jpg`,
+        `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.png`,
+        `/images/${specificPrefix}_screenshot${num}.jpg`
+      ];
+    }
+
+    // Return the exact Hostinger screenshot path as specified by the user, with local options too
+    return [
+      `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.jpg`,
+      `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.png`,
+      `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.jpeg`,
+      `https://bspsuryatech.in/uploads/images/${specificPrefix}_screenshot${num}.jpg`,
+      `https://bspsuryatech.in/uploads/images/${specificPrefix}_screenshot${num}.png`,
+      `https://bspsuryatech.in/uploads/images/${specificPrefix}_screenshot${num}.jpeg`,
+      `/uploads/images/${specificPrefix}_screenshot${num}.jpg`,
+      `/uploads/images/${specificPrefix}_screenshot${num}.png`,
+      `/uploads/images/${specificPrefix}_screenshot${num}.jpeg`,
+      `/images/${specificPrefix}_screenshot${num}.jpg`,
+      `/images/${specificPrefix}_screenshot${num}.png`,
+      `/images/${specificPrefix}_screenshot${num}.jpeg`
+    ];
+  };
+
+  const getImageUrl = (idx: number) => {
+    const prefix = getSpecificPrefix(product.id || '');
+    const candidates = getHostingerCandidates(idx);
+    const tryIdx = hostingerTryIndex[idx] || 0;
+    
+    if (tryIdx < candidates.length) {
+      return candidates[tryIdx];
+    }
+    
+    const categoryFallbacks = getCategoryFallbackImages(prefix);
+    return categoryFallbacks[idx] || categoryFallbacks[0];
+  };
+
+  const handleImageError = (idx: number) => {
+    const candidates = getHostingerCandidates(idx);
+    const currentTry = hostingerTryIndex[idx] || 0;
+    
+    if (currentTry < candidates.length) {
+      setHostingerTryIndex(prev => ({
+        ...prev,
+        [idx]: currentTry + 1
+      }));
+    }
+  };
+
+  const galleryImagesKeys = [0, 1, 2];
 
   const handleNextCarousel = () => {
     setActiveGalleryIndex((prev) => (prev + 1) % galleryImagesKeys.length);
@@ -190,20 +407,20 @@ export default function SoftwareDetails({
             {/* Gallery card container */}
             <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm space-y-4" id="software-gallery-card">
               <div className="flex items-center justify-between border-b pb-3 border-slate-100">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-slate-800">
                   <Images className="w-4 h-4 text-slate-500" />
                   <h3 className="font-extrabold text-slate-850 text-sm tracking-tight">Software Screenshots & User Interfaces</h3>
                 </div>
                 <div className="flex bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold font-mono">
                   <button 
                     onClick={() => setGalleryViewMode('slider')}
-                    className={`px-2.5 py-1 rounded-md transition ${galleryViewMode === 'slider' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                    className={`px-2.5 py-1 rounded-md transition cursor-pointer ${galleryViewMode === 'slider' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
                   >
                     SLIDER
                   </button>
                   <button 
                     onClick={() => setGalleryViewMode('grid')}
-                    className={`px-2.5 py-1 rounded-md transition ${galleryViewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                    className={`px-2.5 py-1 rounded-md transition cursor-pointer ${galleryViewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
                   >
                     GRID
                   </button>
@@ -216,13 +433,9 @@ export default function SoftwareDetails({
                   <img 
                     src={getImageUrl(activeGalleryIndex)} 
                     alt={`${product.name} interface visual ${activeGalleryIndex + 1}`}
-                    className="w-full h-full object-cover select-none transition-all duration-300"
+                    className="w-full h-full object-cover select-none transition-all duration-500 ease-in-out transform hover:scale-[1.03] hover:brightness-[1.03] cursor-pointer"
                     referrerPolicy="no-referrer"
-                    onError={() => {
-                      if (!failedHostingerIndices[activeGalleryIndex]) {
-                        setFailedHostingerIndices(prev => ({ ...prev, [activeGalleryIndex]: true }));
-                      }
-                    }}
+                    onError={() => handleImageError(activeGalleryIndex)}
                   />
                   
                   {/* Aspect Shadows overlays */}
@@ -262,7 +475,7 @@ export default function SoftwareDetails({
                   {galleryImagesKeys.map((idx) => (
                     <div 
                       key={idx} 
-                      className="relative aspect-video bg-slate-100 rounded-xl overflow-hidden group cursor-pointer border border-slate-200/50"
+                      className="relative aspect-video bg-slate-950 rounded-xl overflow-hidden group cursor-pointer border border-slate-200/50"
                       onClick={() => setLightboxIndex(idx)}
                     >
                       <img 
@@ -270,11 +483,7 @@ export default function SoftwareDetails({
                         alt={`${product.name} layout grid item ${idx+1}`}
                         className="w-full h-full object-cover transition duration-350 group-hover:scale-105"
                         referrerPolicy="no-referrer"
-                        onError={() => {
-                          if (!failedHostingerIndices[idx]) {
-                            setFailedHostingerIndices(prev => ({ ...prev, [idx]: true }));
-                          }
-                        }}
+                        onError={() => handleImageError(idx)}
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
                         <Maximize2 className="w-5 h-5 scale-90 group-hover:scale-100 transition" />
@@ -595,8 +804,8 @@ export default function SoftwareDetails({
               className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl border border-white/10"
               referrerPolicy="no-referrer"
               onError={() => {
-                if (lightboxIndex !== null && !failedHostingerIndices[lightboxIndex]) {
-                  setFailedHostingerIndices(prev => ({ ...prev, [lightboxIndex]: true }));
+                if (lightboxIndex !== null) {
+                  handleImageError(lightboxIndex);
                 }
               }}
             />

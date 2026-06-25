@@ -4,6 +4,9 @@
  */
 
 import React, { useState } from 'react';
+import bspMartDashboard from '../assets/images/bsp_mart_dashboard_1782373570083.jpg';
+import bspMartTerminal from '../assets/images/bsp_mart_terminal_1782373583600.jpg';
+import bspMartLogin from '../assets/images/bsp_mart_login_1782373595684.jpg';
 import { 
   Download, 
   Terminal, 
@@ -304,6 +307,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
   const [downloadFilter, setDownloadFilter] = useState<'all' | 'stable' | 'manuals'>('all');
   const [selectedSolutionCategory, setSelectedSolutionCategory] = useState<string>('All Solutions');
 
+
   const activeSolutions = propSolutions && propSolutions.length > 0 ? propSolutions : solutions;
   const visibleSolutions = activeSolutions.filter((sol) => sol.status !== 'inactive');
   const sortedSolutions = [...visibleSolutions].sort((a, b) => {
@@ -326,7 +330,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
   ];
 
   return (
-    <div className="py-16 space-y-20 pb-24">
+    <div className="py-16 space-y-20 pb-24" id="page-downloads">
       {/* HEADER WITH DOWNLOAD COUNTER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
         <h1 className="text-xs font-mono font-bold uppercase tracking-widest text-[#10B981]">Download Center</h1>
@@ -582,51 +586,12 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
             </div>
           </div>
           <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              console.log("DownloadCenter: Generating installation user manual PDF client-side...");
-              const textContent = `BSP Suryatech Retail Billing & GST Enterprise Software
-------------------------------------------------------------
-COMPLETE WINDOWS INSTALLATION & USER GUIDE (v4.2.1 - v5.0.3)
-
-1. SYSTEM REQUIREMENTS:
-   - Operating System: Windows 7, 8, 10, 11 (32-bit or 64-bit)
-   - .NET Framework v4.7.2 or higher
-   - Min Resolution: 1024x768 (Optimal: 1366x768 POS layout)
-   - Printer Compatability: Any 2-inch or 3-inch USB, thermal printer (58mm / 80mm)
-
-2. INSTALLATION PROCEDURES:
-   - Double-click the BSPSuryatech_Setup.exe installation payload.
-   - Authorize Windows Administrator dialog permission controls.
-   - Follow prompt instructions and click Complete Install.
-   - Double-click desktop shortcut launch icon.
-
-3. SETTING UP COMPACT WORKSPACE:
-   - Complete client info settings on startup.
-   - Enter your unique 24-digit activated serial security key.
-   - Use Excel sheet loaders to import bulk inventory products lists.
-   - Go to print layout customizer designer to add custom retail headers or GST numbers.
-
-4. USER ACTIONS & BILLING:
-   - Use Barcode scanner or press F2 to lookup product lists indices.
-   - Enter customer names and contact phones to accumulate loyalty.
-   - Press Enter to automatically print the receipt and save logs in database.
-   
-Need Support? Call Suryatech helpline details: +91 95169 16415
-Email contacts: Support@bspsuryatech.in
-Corporate Address: Sector 62, Raipur, Chhattisgarh, India.`;
-              const blob = new Blob([textContent], { type: 'application/pdf' });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = 'BSPSuryatech_UserManual_v4.2.1.pdf';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              URL.revokeObjectURL(url);
-            }}
-            className="px-6 py-3 bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase rounded-xl tracking-wider flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            href="https://www.bspsuryatech.in/download/Complete-PDF-Installation-User-Manual.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            download="Complete-PDF-Installation-User-Manual.pdf"
+            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase rounded-xl tracking-wider flex items-center justify-center gap-2 cursor-pointer shrink-0 transition-all duration-300 shadow-md shadow-red-500/15 hover:shadow-red-500/25"
+            style={{ minWidth: '200px' }}
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download PDF (4.8 MB)</span>
