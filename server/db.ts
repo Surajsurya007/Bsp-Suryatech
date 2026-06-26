@@ -12,7 +12,7 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
 
 // JWT Secret
-export const JWT_SECRET = process.env.JWT_SECRET || 'bsp-suryatech-secure-hmac-secret-key-2026';
+export const JWT_SECRET = process.env.JWT_SECRET || 'bsp_secret_key';
 
 export const defaultLanguageConfigs: LanguageConfig[] = [
   { code: 'en', name: 'English', flag: '🇺🇸', enabled: true },

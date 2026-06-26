@@ -75,18 +75,18 @@ PORT=3000
 HOST=127.0.0.1
 
 # JWT Token Cryptographic Secret (Replace with a random 64-char string)
-JWT_SECRET=super_secure_bsp_suryatech_jwt_production_signer_key_2026_x92a
+JWT_SECRET=your_production_secure_jwt_secret_here
 
 # Admin Panel Credentials
-ADMIN_EMAIL=admin@suryatech.com
-ADMIN_PASSWORD=Suryatech_Admin_2026_SecurePass!
+ADMIN_EMAIL=your_admin_email_here@example.com
+ADMIN_PASSWORD=your_production_secure_password_here
 
 # ==========================================
 # Supabase Cloud Database Integration
 # ==========================================
 # Paste your Supabase project parameters below to allow full master-slave dual writes
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-anon-key-here
+SUPABASE_URL=your_supabase_project_url_here
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
 ---
