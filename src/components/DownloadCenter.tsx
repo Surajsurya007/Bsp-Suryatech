@@ -282,6 +282,20 @@ const solutions: SoftwareSolution[] = [
     badge: 'ERP',
     badgeColor: 'purple',
     exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.zip'
+  },
+  {
+    id: 'sol-jewelry',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Jewelry Shop ERP Software',
+    category: 'Billing Software',
+    subtitle: 'GOLD, SILVER & ORNAMENT ERP',
+    description: 'Advanced jewelry inventory software tracking gold/silver weight (carats, grams), stone weight, making charges, purity (hallmark), and dynamic daily metal rate updates.',
+    price: '₹3,000',
+    features: ['Dynamic Metal Rate updates', 'Purity & Karat configuration', 'Making Charges & Waste calculations', 'Hallmarked HUID Barcoding', 'Old Gold Exchange Ledger'],
+    icon: '💎',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/Jewelry-Shop-ERP-v3.0.0.zip'
   }
 ];
 
@@ -586,7 +600,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
             </div>
           </div>
           <a
-            href="https://www.bspsuryatech.in/download/Complete-PDF-Installation-User-Manual.pdf"
+            href="https://bspsuryatech.in/downloads/Complete-PDF-Installation-User-Manual.pdf"
             target="_blank"
             rel="noopener noreferrer"
             download="Complete-PDF-Installation-User-Manual.pdf"

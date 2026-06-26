@@ -146,11 +146,11 @@ export const defaultVideos = [
   },
   {
     id: 'vid-3',
-    title: 'Bulk Stocks Catalogue Imports Using Excel Sheet Templates',
+    title: 'Click Here to Visit Our YouTube Channel',
     duration: '05:40 Mins',
     youtubeId: 'bsp_import_embed',
     thumbnail: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
-    description: 'How to easily compile columns in Excel sheets, configure tax rates, stock minimum levels, barcodes, and upload directly to BSP Suryatech local database with no syntax issues.'
+    description: 'Visit our official YouTube Channel to watch all BSP Suryatech POS ERP training playlists, printer setup guides, and latest version updates.'
   }
 ];
 
@@ -364,5 +364,19 @@ export const defaultSolutions = [
     badge: 'ERP',
     badgeColor: 'purple',
     exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.zip'
+  },
+  {
+    id: 'sol-jewelry',
+    mappedPlanId: 'prod-billing-enterprise',
+    title: 'Jewelry Shop ERP Software',
+    category: 'Billing Software',
+    subtitle: 'GOLD, SILVER & ORNAMENT ERP',
+    description: 'Advanced jewelry inventory software tracking gold/silver weight (carats, grams), stone weight, making charges, purity (hallmark), and dynamic daily metal rate updates.',
+    price: '₹3,000',
+    features: ['Dynamic Metal Rate updates', 'Purity & Karat configuration', 'Making Charges & Waste calculations', 'Hallmarked HUID Barcoding', 'Old Gold Exchange Ledger'],
+    icon: '💎',
+    badge: 'Billing',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/Jewelry-Shop-ERP-v3.0.0.zip'
   }
 ];

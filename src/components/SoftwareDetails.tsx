@@ -200,6 +200,8 @@ export default function SoftwareDetails({
       return 'sol-repairing';
     } else if (id === 'sol-resort') {
       return 'sol-resort';
+    } else if (id === 'sol-jewelry') {
+      return 'sol-jewelry';
     }
 
     const titleLower = (product?.name || '').toLowerCase();
@@ -218,6 +220,7 @@ export default function SoftwareDetails({
     if (titleLower.includes('hotel')) return 'sol-hotel';
     if (titleLower.includes('repairing') || titleLower.includes('electrical')) return 'sol-repairing';
     if (titleLower.includes('resort') || titleLower.includes('spa')) return 'sol-resort';
+    if (titleLower.includes('jewelry') || titleLower.includes('jewellery')) return 'sol-jewelry';
 
     return 'sol-retail';
   };
@@ -289,6 +292,12 @@ export default function SoftwareDetails({
           hotelRooms,
           hotelReservations
         ];
+      case 'sol-jewelry':
+        return [
+          bspMartTerminal,
+          warehouseErp,
+          retailPos
+        ];
       default:
         return [
           bspMartTerminal,
@@ -303,32 +312,14 @@ export default function SoftwareDetails({
     const num = idx + 1;
     const id = product.id || '';
     const specificPrefix = getSpecificPrefix(id);
+    const categoryFallbacks = getCategoryFallbackImages(specificPrefix);
+    const primaryLocal = categoryFallbacks[idx] || categoryFallbacks[0];
 
-    // For BSP Mart Retail, Supermarket, Grocery POS systems, load the authentic local screenshots immediately!
-    if (specificPrefix === 'sol-retail' || specificPrefix === 'sol-supermarket' || specificPrefix === 'sol-grocery') {
-      const originalScreenshots = [bspMartDashboard, bspMartTerminal, bspMartLogin];
-      return [
-        originalScreenshots[idx] || originalScreenshots[0],
-        `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.jpg`,
-        `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.png`,
-        `/images/${specificPrefix}_screenshot${num}.jpg`
-      ];
-    }
-
-    // Return the exact Hostinger screenshot path as specified by the user, with local options too
     return [
+      primaryLocal,
       `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.jpg`,
       `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.png`,
-      `https://bspsuryatech.in/images/${specificPrefix}_screenshot${num}.jpeg`,
-      `https://bspsuryatech.in/uploads/images/${specificPrefix}_screenshot${num}.jpg`,
-      `https://bspsuryatech.in/uploads/images/${specificPrefix}_screenshot${num}.png`,
-      `https://bspsuryatech.in/uploads/images/${specificPrefix}_screenshot${num}.jpeg`,
-      `/uploads/images/${specificPrefix}_screenshot${num}.jpg`,
-      `/uploads/images/${specificPrefix}_screenshot${num}.png`,
-      `/uploads/images/${specificPrefix}_screenshot${num}.jpeg`,
-      `/images/${specificPrefix}_screenshot${num}.jpg`,
-      `/images/${specificPrefix}_screenshot${num}.png`,
-      `/images/${specificPrefix}_screenshot${num}.jpeg`
+      `/images/${specificPrefix}_screenshot${num}.jpg`
     ];
   };
 

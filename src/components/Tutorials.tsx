@@ -14,7 +14,8 @@ import {
   Layers, 
   Workflow, 
   ListTodo,
-  FileImage
+  FileImage,
+  Youtube
 } from 'lucide-react';
 
 import { VideoTutorial } from '../types';
@@ -39,15 +40,25 @@ export default function Tutorials({ videos }: { videos?: VideoTutorial[] }) {
       description: 'Step-by-step instructions details covering TVS, Sewoo, Epson, Rongta driver settings, adjusting paper limits parameters, line margins offset spacing, and footer text customizer layouts.'
     },
     {
-      title: 'Bulk Stocks Catalogue Imports Using Excel Sheet Templates',
+      title: 'Click Here to Visit Our YouTube Channel',
       duration: '05:40 Mins',
       youtubeId: 'bsp_import_embed',
       thumbnail: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
-      description: 'How to easily compile columns in Excel sheets, configure tax rates, stock minimum levels, barcodes, and upload directly to BSP Suryatech local database with no syntax issues.'
+      description: 'Visit our official YouTube Channel to watch all BSP Suryatech POS ERP training playlists, printer setup guides, and latest version updates.'
     }
   ];
 
-  const videoTutorials = videos && videos.length > 0 ? videos : defaultVideoTutorials;
+  const rawVideoTutorials = videos && videos.length > 0 ? videos : defaultVideoTutorials;
+  const videoTutorials = rawVideoTutorials.map((vid, vI) => {
+    if (vI === 2) {
+      return {
+        ...vid,
+        title: 'Click Here to Visit Our YouTube Channel',
+        description: 'Visit our official YouTube Channel to watch all BSP Suryatech POS ERP training playlists, printer setup guides, and latest version updates.'
+      };
+    }
+    return vid;
+  });
 
   const getYoutubeEmbedUrl = (youtubeId: string) => {
     if (!youtubeId) return '';
@@ -176,29 +187,52 @@ export default function Tutorials({ videos }: { videos?: VideoTutorial[] }) {
             <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider mb-4 font-mono">Tutorial Videos Playlist:</h4>
             
             <div className="space-y-3">
-              {videoTutorials.map((vid, vI) => (
-                <div
-                  key={vI}
-                  onClick={() => {
-                    setActiveVideoIndex(vI);
-                    setIsPlaying(false);
-                  }}
-                  className={`p-4 border rounded-2xl cursor-pointer transition-all flex gap-4 text-left items-start ${
-                    activeVideoIndex === vI 
-                      ? 'border-blue-500 bg-blue-50/40 shadow-sm' 
-                      : 'border-slate-200 bg-white hover:border-slate-350'
-                  }`}
-                  id={`video-playlist-item-${vI}`}
-                >
-                  <div className="p-2.5 bg-slate-50 rounded-xl text-blue-600 shrink-0 border border-slate-100">
-                    <Tv className="w-4.5 h-4.5" />
+              {videoTutorials.map((vid, vI) => {
+                const isYouTubeLink = vI === 2;
+                if (isYouTubeLink) {
+                  return (
+                    <a
+                      key={vI}
+                      href="https://www.youtube.com/@bspsuryatech"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-4 border rounded-2xl cursor-pointer transition-all flex gap-4 text-left items-start border-slate-200 bg-white hover:border-slate-350 hover:bg-slate-50/30 group"
+                      id={`video-playlist-item-${vI}`}
+                    >
+                      <div className="p-2.5 bg-slate-50 rounded-xl text-red-600 shrink-0 border border-slate-100 transition-colors">
+                        <Youtube className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-slate-450 font-mono font-bold block">{vid.duration}</span>
+                        <h5 className="font-extrabold text-slate-800 text-sm leading-tight group-hover:text-red-600 transition-colors">{vid.title}</h5>
+                      </div>
+                    </a>
+                  );
+                }
+                return (
+                  <div
+                    key={vI}
+                    onClick={() => {
+                      setActiveVideoIndex(vI);
+                      setIsPlaying(false);
+                    }}
+                    className={`p-4 border rounded-2xl cursor-pointer transition-all flex gap-4 text-left items-start ${
+                      activeVideoIndex === vI 
+                        ? 'border-blue-500 bg-blue-50/40 shadow-sm' 
+                        : 'border-slate-200 bg-white hover:border-slate-350 hover:bg-slate-50/30'
+                    }`}
+                    id={`video-playlist-item-${vI}`}
+                  >
+                    <div className="p-2.5 bg-slate-50 rounded-xl text-blue-600 shrink-0 border border-slate-100">
+                      <Tv className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-450 font-mono font-bold block">{vid.duration}</span>
+                      <h5 className="font-extrabold text-slate-800 text-sm leading-tight group-hover:text-blue-600">{vid.title}</h5>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-slate-450 font-mono font-bold block">{vid.duration}</span>
-                    <h5 className="font-extrabold text-slate-800 text-sm leading-tight group-hover:text-blue-600">{vid.title}</h5>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

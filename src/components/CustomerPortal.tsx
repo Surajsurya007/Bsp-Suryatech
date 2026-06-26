@@ -4335,8 +4335,8 @@ export default function CustomerPortal({
                 </div>
                 <div className="md:text-right font-sans text-xs text-slate-500 leading-normal font-medium">
                   <p className="font-extrabold text-slate-800 text-sm leading-snug">BSP SURYATECH PRIVATE LTD</p>
-                  <p>Shankar Nagar, Raipur (CG) 492004</p>
-                  <p className="font-mono mt-0.5 text-slate-500 font-semibold text-[11px]">GSTIN: 22AAIFB7315M1ZK</p>
+                  <p>Shivanand Nagar, Raipur (CG) 492004</p>
+                  <p className="font-mono mt-0.5 text-slate-500 font-semibold text-[11px]"><a href="mailto:Support@bspsuryatech.in" className="hover:underline">Support@bspsuryatech.in</a></p>
                 </div>
               </div>
 

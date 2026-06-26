@@ -202,8 +202,8 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
             </div>
             <div class="corp-details">
               <strong>BSP SURYATECH SOFTWARE PRIVATE LTD</strong><br/>
-              MIG-15, Sector-1, Shankar Nagar, Raipur, CG - 492004<br/>
-              GSTIN: 22AAIFB7315M1ZK | PAN: AAIFB7315M<br/>
+              MIG-15, Sector-1, Shivanand Nagar, Raipur, CG - 492004<br/>
+              <a href="mailto:Support@bspsuryatech.in">Support@bspsuryatech.in</a> | PAN: AAIFB7315M<br/>
               support@bspsuryatech.in | +91 95169 16415
             </div>
           </div>
@@ -3766,8 +3766,8 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                             </div>
                             <div className="text-right text-[10px] text-slate-500 leading-normal">
                               <span className="font-extrabold text-slate-800">BSP SURYATECH PRIVATE LTD</span><br />
-                              Shankar Nagar, Raipur (CG) 492004<br />
-                              GSTIN: 22AAIFB7315M1ZK
+                              Shivanand Nagar, Raipur (CG) 492004<br />
+                              <a href="mailto:Support@bspsuryatech.in" className="hover:underline">Support@bspsuryatech.in</a>
                             </div>
                           </div>
 
