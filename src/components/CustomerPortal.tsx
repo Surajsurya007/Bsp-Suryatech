@@ -40,7 +40,11 @@ import {
   Chrome,
   Upload,
   Printer,
-  Globe
+  Globe,
+  Search,
+  Trash,
+  Trash2,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useAdmin } from './AdminContext';
 import { softwareDownloads } from '../softwareDownloads';
@@ -116,6 +120,110 @@ const highlightNotificationText = (text: string) => {
       })}
     </>
   );
+};
+
+const parseNotificationDetails = (notif: any, tickets: any[]) => {
+  let ticketId = null;
+  let status = null;
+  let subject = null;
+  let clientMessage = null;
+  let supportReply = null;
+
+  // 1. Try to find Ticket ID from title or message
+  const ticketIdMatch = notif.title.match(/tic_[A-Z0-9]+/i) || notif.message.match(/tic_[A-Z0-9]+/i);
+  if (ticketIdMatch) {
+    ticketId = ticketIdMatch[0];
+  }
+
+  // 2. Try to find subject
+  if (notif.title.includes('New Reply on Ticket:')) {
+    subject = notif.title.replace('New Reply on Ticket:', '').trim();
+  } else if (notif.title.includes('Ticket:')) {
+    subject = notif.title.replace('Ticket:', '').trim();
+  } else {
+    const quotedMatch = notif.message.match(/"([^"]+)"/);
+    if (quotedMatch) {
+      subject = quotedMatch[1];
+    }
+  }
+
+  // If we have a Ticket ID or Subject, try to find the matching ticket in user's tickets
+  const matchingTicket = tickets.find(t => 
+    (ticketId && t.id.toLowerCase() === ticketId.toLowerCase()) || 
+    (subject && t.title.toLowerCase().includes(subject.toLowerCase()))
+  );
+
+  if (matchingTicket) {
+    if (!ticketId) ticketId = matchingTicket.id;
+    if (!subject) subject = matchingTicket.title;
+    status = matchingTicket.status; // 'open' | 'in_progress' | 'closed' | 'resolved'
+    clientMessage = matchingTicket.description;
+    
+    // Get latest admin reply
+    const adminReplies = matchingTicket.replies.filter((r: any) => r.authorRole === 'admin');
+    if (adminReplies.length > 0) {
+      supportReply = adminReplies[adminReplies.length - 1].message;
+    }
+  }
+
+  // Parse status updates or reply messages if not found in matching ticket
+  const lowerMessage = notif.message.toLowerCase();
+  const lowerTitle = notif.title.toLowerCase();
+  
+  // Extract status if mentioned
+  if (lowerMessage.includes('updated to closed') || lowerMessage.includes('status: closed') || lowerTitle.includes('closed') || lowerMessage.includes('was closed')) {
+    status = 'closed';
+  } else if (lowerMessage.includes('updated to resolved') || lowerMessage.includes('status: resolved') || lowerTitle.includes('resolved') || lowerMessage.includes('was resolved')) {
+    status = 'resolved';
+  } else if (lowerMessage.includes('updated to open') || lowerMessage.includes('status: open') || lowerTitle.includes('open')) {
+    status = 'open';
+  } else if (lowerMessage.includes('updated to pending') || lowerMessage.includes('status: pending') || lowerTitle.includes('pending')) {
+    status = 'pending';
+  } else if (lowerMessage.includes('updated to in progress') || lowerMessage.includes('in progress')) {
+    status = 'in_progress';
+  }
+
+  // Extract support reply from the notification message itself
+  if (!supportReply) {
+    const replyMatch = notif.message.match(/Support Executive replied:\s*"([^"]+)"/i) || 
+                       notif.message.match(/replied:\s*"([^"]+)"/i);
+    if (replyMatch) {
+      supportReply = replyMatch[1];
+    } else if (notif.title.toLowerCase().includes('reply') || notif.message.toLowerCase().includes('replied')) {
+      supportReply = notif.message;
+    }
+  }
+
+  // Determine Notification Type
+  let notifType: 'ticket_update' | 'support_reply' | 'client_reply' | 'ticket_closed' | 'pending_response' | 'ticket_resolved' | 'subscription' | 'license' | 'other' = 'other';
+  
+  const titleLower = notif.title.toLowerCase();
+  const messageLower = notif.message.toLowerCase();
+
+  if (titleLower.includes('subscription') || messageLower.includes('subscription')) {
+    notifType = 'subscription';
+  } else if (titleLower.includes('license') || titleLower.includes('key activated') || messageLower.includes('license') || messageLower.includes('activation key')) {
+    notifType = 'license';
+  } else if (titleLower.includes('ticket closed') || messageLower.includes('ticket closed') || status === 'closed') {
+    notifType = 'ticket_closed';
+  } else if (titleLower.includes('resolved') || messageLower.includes('resolved') || status === 'resolved') {
+    notifType = 'ticket_resolved';
+  } else if (titleLower.includes('new reply on ticket') || messageLower.includes('replied')) {
+    notifType = 'support_reply';
+  } else if (titleLower.includes('pending') || messageLower.includes('pending')) {
+    notifType = 'pending_response';
+  } else if (titleLower.includes('status updated') || titleLower.includes('status update') || messageLower.includes('status')) {
+    notifType = 'ticket_update';
+  }
+
+  return {
+    ticketId,
+    status: status || 'open',
+    subject: subject || 'Support Ticket',
+    clientMessage,
+    supportReply,
+    notifType
+  };
 };
 
 export default function CustomerPortal({ 
@@ -263,6 +371,11 @@ export default function CustomerPortal({
   const [payments, setPayments] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [notificationsList, setNotificationsList] = useState<any[]>([]);
+  const [notifSearch, setNotifSearch] = useState('');
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread' | 'ticket_update' | 'support_reply' | 'orders' | 'subscription'>('all');
+  const [notifSort, setNotifSort] = useState<'newest' | 'oldest'>('newest');
+  const [notifPage, setNotifPage] = useState(1);
+  const [notifPerPage] = useState(5);
   const [dataLoading, setDataLoading] = useState(false);
 
   // Profile Edit fields (Editable Profile parameters target)
@@ -998,6 +1111,54 @@ export default function CustomerPortal({
       setNotificationsList(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     } catch (err) {
       console.warn('Failed completing notification state read', err);
+    }
+  };
+
+  // Delete notification handler
+  const handleDeleteNotification = async (id: string) => {
+    console.log("CustomerPortal: Deleting notification securely from Supabase...", id);
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setNotificationsList(prev => prev.filter(n => n.id !== id));
+      onAddNotification('Notification deleted successfully.', 'success');
+    } catch (err: any) {
+      console.error('Failed deleting notification', err);
+      onAddNotification('Failed to delete notification: ' + err.message, 'error');
+    }
+  };
+
+  // Mark all notifications read handler
+  const handleMarkAllNotificationsRead = async () => {
+    console.log("CustomerPortal: Marking all notifications as read in Supabase...");
+    const unreadIds = notificationsList.filter(n => !n.read).map(n => n.id);
+    if (unreadIds.length === 0) {
+      onAddNotification('All notifications are already read.', 'info');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .in('id', unreadIds);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setNotificationsList(prev => prev.map(n => ({ ...n, read: true })));
+      onAddNotification('All notifications marked as read successfully.', 'success');
+    } catch (err: any) {
+      console.error('Failed marking all read', err);
+      onAddNotification('Failed to mark all as read: ' + err.message, 'error');
     }
   };
 
@@ -3849,50 +4010,561 @@ export default function CustomerPortal({
 
             {/* View 5: NOTIFICATIONS */}
             {activePortalView === 'notifications' && (
-              <div className="space-y-8 animate-fade-in" id="customer-notifications-center">
-                <div className="border-b border-slate-200 pb-4">
-                  <h2 className="text-2xl font-black text-slate-900 leading-none">Notifications Center</h2>
-                  <p className="text-xs text-slate-400 mt-1.5">Gain critical alerts for software updates availability, payment actions receipt, and license verification indicators.</p>
-                </div>
-
-                <div className="space-y-3">
-                  {notificationsList.length === 0 ? (
-                    <div className="bg-white border p-16 rounded-3xl text-center text-slate-400 flex flex-col items-center gap-3">
-                      <Bell className="w-8 h-8 text-slate-350" />
-                      <span>You have zero alert notifications in logs.</span>
-                    </div>
-                  ) : (
-                    notificationsList.map((notif) => (
-                      <div 
-                        key={notif.id} 
-                        className={`p-4 rounded-2xl border transition-all text-left flex gap-4 ${
-                          notif.read ? 'bg-slate-700 border-slate-600' : 'bg-slate-900 border-slate-800 shadow-md ring-1 ring-blue-500/20'
-                        }`}
-                        id={`notif-card-${notif.id}`}
-                      >
-                        <div className={`p-2 rounded-xl shrink-0 ${notif.read ? 'bg-slate-600 text-slate-300' : 'bg-blue-950 text-blue-400 animate-pulse'}`}>
-                          <Bell className="w-4.5 h-4.5" />
-                        </div>
-
-                        <div className="space-y-1 flex-grow">
-                          <div className="flex items-start justify-between gap-4">
-                            <h5 className="font-extrabold text-white text-sm leading-tight">{highlightNotificationText(notif.title)}</h5>
-                            <span className="text-[9px] text-slate-300 font-mono font-medium">{new Date(notif.createdAt).toLocaleDateString()}</span>
-                          </div>
-                          <p className="text-white text-xs leading-normal font-medium">{highlightNotificationText(notif.message)}</p>
-                          
-                          {!notif.read && (
-                            <button
-                              onClick={() => handleMarkNotificationRead(notif.id)}
-                              className="text-[10px] font-mono leading-none font-bold uppercase text-blue-400 hover:text-blue-300 pt-1.5 block cursor-pointer"
-                            >
-                              Mark as Read
-                            </button>
-                          )}
-                        </div>
+              <div className="space-y-6 animate-fade-in text-slate-100" id="customer-notifications-center">
+                {/* Embedded Dark Theme Portal Wrapper */}
+                <div className="bg-[#0F172A] border border-[#334155] rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+                  
+                  {/* Dashboard Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#334155] pb-5">
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-2xl font-bold text-white tracking-tight leading-none">Notifications</h2>
+                        {notificationsList.filter(n => !n.read).length > 0 && (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#2563EB] text-white animate-pulse">
+                            {notificationsList.filter(n => !n.read).length} New
+                          </span>
+                        )}
                       </div>
-                    ))
-                  )}
+                      <p className="text-sm text-[#94A3B8] mt-2">
+                        Track system alerts, hardware ticket updates, billing invoices, and subscription actions in real-time.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={handleMarkAllNotificationsRead}
+                        className="px-4 py-2 bg-[#1E293B] hover:bg-slate-800 text-white rounded-xl text-xs font-bold border border-[#334155] flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow"
+                      >
+                        <Check className="w-3.5 h-3.5 text-[#22C55E]" />
+                        Mark All as Read
+                      </button>
+                      <button
+                        onClick={() => setActivePortalView('dashboard')}
+                        className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-500/15"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                        Back to Dashboard
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filters and Search Bar Row */}
+                  <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-center bg-[#1E293B]/40 p-4 rounded-2xl border border-[#334155]">
+                    {/* Search Field */}
+                    <div className="xl:col-span-4 relative">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+                      <input
+                        type="text"
+                        placeholder="Search notifications..."
+                        value={notifSearch}
+                        onChange={(e) => {
+                          setNotifSearch(e.target.value);
+                          setNotifPage(1); // reset to page 1 on search
+                        }}
+                        className="w-full pl-10 pr-8 py-2 bg-[#0F172A] border border-[#334155] rounded-xl text-xs text-white placeholder-[#94A3B8] focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] outline-none transition-all"
+                      />
+                      {notifSearch && (
+                        <button
+                          onClick={() => setNotifSearch('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full flex items-center justify-center hover:bg-slate-800 text-[#94A3B8] hover:text-white text-[10px]"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filter Pills */}
+                    <div className="xl:col-span-6 flex flex-wrap gap-1.5 items-center">
+                      {(['all', 'unread', 'ticket_update', 'support_reply', 'orders', 'subscription'] as const).map((filter) => {
+                        const counts = (() => {
+                          const c = {
+                            all: notificationsList.length,
+                            unread: notificationsList.filter(n => !n.read).length,
+                            ticket_update: 0,
+                            support_reply: 0,
+                            orders: 0,
+                            subscription: 0
+                          };
+                          notificationsList.forEach(n => {
+                            const parsed = parseNotificationDetails(n, tickets);
+                            if (parsed.notifType === 'ticket_update' || parsed.notifType === 'ticket_closed' || parsed.notifType === 'ticket_resolved') {
+                              c.ticket_update++;
+                            } else if (parsed.notifType === 'support_reply' || parsed.notifType === 'pending_response') {
+                              c.support_reply++;
+                            } else if (parsed.notifType === 'license') {
+                              c.orders++;
+                            } else if (parsed.notifType === 'subscription') {
+                              c.subscription++;
+                            }
+                          });
+                          return c;
+                        })();
+                        
+                        const count = counts[filter];
+                        const labels: Record<string, string> = {
+                          all: 'All',
+                          unread: 'Unread',
+                          ticket_update: 'Ticket Updates',
+                          support_reply: 'Replies',
+                          orders: 'Orders',
+                          subscription: 'Subscriptions'
+                        };
+                        const isActive = notifFilter === filter;
+                        return (
+                          <button
+                            key={filter}
+                            onClick={() => {
+                              setNotifFilter(filter);
+                              setNotifPage(1); // reset page
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-[#2563EB] text-white shadow-md'
+                                : 'bg-[#0F172A] hover:bg-slate-800 text-[#E5E7EB] border border-[#334155]'
+                            }`}
+                          >
+                            <span>{labels[filter]}</span>
+                            <span className={`px-1.5 py-0.2 text-[9px] rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-[#1E293B] text-[#94A3B8]'}`}>
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Sorting */}
+                    <div className="xl:col-span-2 flex justify-end gap-2">
+                      <button
+                        onClick={() => setNotifSort(prev => prev === 'newest' ? 'oldest' : 'newest')}
+                        className="px-3 py-2 bg-[#0F172A] hover:bg-slate-800 border border-[#334155] rounded-xl text-xs font-semibold flex items-center gap-1.5 text-white transition-all cursor-pointer"
+                        title={notifSort === 'newest' ? 'Sorted: Newest First' : 'Sorted: Oldest First'}
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-[#94A3B8]" />
+                        <span className="hidden sm:inline font-mono text-[10px]">
+                          {notifSort === 'newest' ? 'Newest' : 'Oldest'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Notifications Listing */}
+                  <div className="space-y-4">
+                    {(() => {
+                      const formatNotifDate = (dateString: string) => {
+                        try {
+                          const date = new Date(dateString);
+                          if (isNaN(date.getTime())) return dateString;
+                          const day = date.getDate();
+                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          const month = months[date.getMonth()];
+                          const year = date.getFullYear();
+                          let hours = date.getHours();
+                          const minutes = date.getMinutes().toString().padStart(2, '0');
+                          const ampm = hours >= 12 ? 'PM' : 'AM';
+                          hours = hours % 12;
+                          hours = hours ? hours : 12;
+                          return `${day} ${month} ${year} • ${hours}:${minutes} ${ampm}`;
+                        } catch {
+                          return dateString;
+                        }
+                      };
+
+                      const getNotifTypeConfig = (typeStr: string) => {
+                        switch (typeStr) {
+                          case 'ticket_update':
+                            return {
+                              icon: <Bell className="w-4 h-4 text-amber-400 animate-pulse" />,
+                              borderColor: 'border-l-4 border-amber-500',
+                              titlePrefix: '🔔 Ticket Status Updated',
+                              iconBg: 'bg-amber-500/10'
+                            };
+                          case 'support_reply':
+                            return {
+                              icon: <Mail className="w-4 h-4 text-blue-400" />,
+                              borderColor: 'border-l-4 border-[#2563EB]',
+                              titlePrefix: '📩 New Reply from Support',
+                              iconBg: 'bg-blue-500/10'
+                            };
+                          case 'client_reply':
+                            return {
+                              icon: <User className="w-4 h-4 text-sky-400" />,
+                              borderColor: 'border-l-4 border-sky-400',
+                              titlePrefix: '👤 client Reply',
+                              iconBg: 'bg-sky-500/10'
+                            };
+                          case 'ticket_closed':
+                            return {
+                              icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
+                              borderColor: 'border-l-4 border-[#22C55E]',
+                              titlePrefix: '✅ Ticket Closed',
+                              iconBg: 'bg-emerald-500/10'
+                            };
+                          case 'pending_response':
+                            return {
+                              icon: <AlertTriangle className="w-4 h-4 text-yellow-400" />,
+                              borderColor: 'border-l-4 border-yellow-500',
+                              titlePrefix: '🟡 Pending Response',
+                              iconBg: 'bg-yellow-500/10'
+                            };
+                          case 'ticket_resolved':
+                            return {
+                              icon: <CheckCircle2 className="w-4 h-4 text-indigo-400" />,
+                              borderColor: 'border-l-4 border-indigo-500',
+                              titlePrefix: '🔵 Ticket Resolved',
+                              iconBg: 'bg-indigo-500/10'
+                            };
+                          case 'subscription':
+                            return {
+                              icon: <Sparkles className="w-4 h-4 text-emerald-400" />,
+                              borderColor: 'border-l-4 border-[#22C55E]',
+                              titlePrefix: '🎉 Subscription Activated',
+                              iconBg: 'bg-emerald-500/10'
+                            };
+                          case 'license':
+                            return {
+                              icon: <Key className="w-4 h-4 text-teal-400" />,
+                              borderColor: 'border-l-4 border-teal-500',
+                              titlePrefix: '🔑 License Key Generated',
+                              iconBg: 'bg-teal-500/10'
+                            };
+                          default:
+                            return {
+                              icon: <Bell className="w-4 h-4 text-[#2563EB]" />,
+                              borderColor: 'border-l-4 border-[#334155]',
+                              titlePrefix: '📢 Alert Dispatch',
+                              iconBg: 'bg-slate-500/10'
+                            };
+                        }
+                      };
+
+                      const renderStatusBadge = (statusStr: string) => {
+                        const norm = (statusStr || '').toLowerCase().trim();
+                        let bg = 'bg-slate-800';
+                        let text = 'text-slate-400';
+                        let label = statusStr || 'Unknown';
+                        if (norm === 'open') {
+                          bg = 'bg-[#7C2D12]';
+                          text = 'text-[#FB923C]';
+                          label = 'Open';
+                        } else if (norm === 'pending' || norm === 'in_progress' || norm === 'in progress') {
+                          bg = 'bg-[#78350F]';
+                          text = 'text-[#FBBF24]';
+                          label = norm === 'pending' ? 'Pending' : 'In Progress';
+                        } else if (norm === 'resolved') {
+                          bg = 'bg-[#164E63]';
+                          text = 'text-[#22D3EE]';
+                          label = 'Resolved';
+                        } else if (norm === 'closed') {
+                          bg = 'bg-[#14532D]';
+                          text = 'text-[#4ADE80]';
+                          label = 'Closed';
+                        }
+                        return (
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-bold ${bg} ${text} inline-flex items-center gap-1.5`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                            {label}
+                          </span>
+                        );
+                      };
+
+                      // 1. Filter by Search Query
+                      let filteredList = [...notificationsList];
+                      if (notifSearch.trim()) {
+                        const q = notifSearch.toLowerCase();
+                        filteredList = filteredList.filter(n => {
+                          const parsed = parseNotificationDetails(n, tickets);
+                          return (
+                            n.title.toLowerCase().includes(q) ||
+                            n.message.toLowerCase().includes(q) ||
+                            (parsed.ticketId && parsed.ticketId.toLowerCase().includes(q)) ||
+                            (parsed.subject && parsed.subject.toLowerCase().includes(q)) ||
+                            (parsed.clientMessage && parsed.clientMessage.toLowerCase().includes(q)) ||
+                            (parsed.supportReply && parsed.supportReply.toLowerCase().includes(q))
+                          );
+                        });
+                      }
+
+                      // 2. Filter by Category
+                      if (notifFilter !== 'all') {
+                        filteredList = filteredList.filter(n => {
+                          const parsed = parseNotificationDetails(n, tickets);
+                          if (notifFilter === 'unread') {
+                            return !n.read;
+                          }
+                          if (notifFilter === 'ticket_update') {
+                            return parsed.notifType === 'ticket_update' || parsed.notifType === 'ticket_closed' || parsed.notifType === 'ticket_resolved';
+                          }
+                          if (notifFilter === 'support_reply') {
+                            return parsed.notifType === 'support_reply' || parsed.notifType === 'pending_response';
+                          }
+                          if (notifFilter === 'orders') {
+                            return parsed.notifType === 'license';
+                          }
+                          if (notifFilter === 'subscription') {
+                            return parsed.notifType === 'subscription';
+                          }
+                          return true;
+                        });
+                      }
+
+                      // 3. Sort by Date
+                      filteredList.sort((a, b) => {
+                        const dateA = new Date(a.createdAt || a.created_at).getTime();
+                        const dateB = new Date(b.createdAt || b.created_at).getTime();
+                        return notifSort === 'newest' ? dateB - dateA : dateA - dateB;
+                      });
+
+                      if (filteredList.length === 0) {
+                        return (
+                          <div className="bg-[#1E293B] border border-[#334155] p-16 rounded-2xl text-center flex flex-col items-center gap-4 animate-fade-in">
+                            <div className="p-4 rounded-full bg-[#0F172A] border border-[#334155] text-[#94A3B8] shadow-inner">
+                              <Bell className="w-10 h-10 text-[#334155] animate-bounce" />
+                            </div>
+                            <div className="space-y-1 max-w-md mx-auto">
+                              <h3 className="text-lg font-bold text-white">No Notifications Yet</h3>
+                              <p className="text-xs text-[#94A3B8] leading-relaxed">
+                                You'll receive ticket updates, replies, invoices, and subscription alerts here.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setActivePortalView('dashboard')}
+                              className="px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md tracking-wider transition-all cursor-pointer"
+                            >
+                              Back to Dashboard
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      // Paginate local list
+                      const startIndex = (notifPage - 1) * notifPerPage;
+                      const endIndex = startIndex + notifPerPage;
+                      const paginatedList = filteredList.slice(startIndex, endIndex);
+                      const totalPages = Math.ceil(filteredList.length / notifPerPage);
+
+                      return (
+                        <>
+                          <div className="space-y-3">
+                            {paginatedList.map((notif) => {
+                              const isUnread = !notif.read;
+                              const parsed = parseNotificationDetails(notif, tickets);
+                              const config = getNotifTypeConfig(parsed.notifType);
+                              
+                              // Left border color behaves differently if unread: unread has blue left indicator
+                              const borderStyle = isUnread ? 'border-l-4 border-[#2563EB]' : config.borderColor;
+                              const cardBg = isUnread ? 'bg-[#1E293B] border-[#334155]' : 'bg-[#1E293B]/60 border-[#334155]/60';
+                              const titleWeight = isUnread ? 'font-bold text-white' : 'font-medium text-[#E5E7EB]';
+
+                              return (
+                                <div
+                                  key={notif.id}
+                                  className={`p-5 rounded-2xl border transition-all duration-300 text-left flex flex-col gap-3.5 relative shadow-sm hover:shadow-md hover:-translate-y-0.5 ${borderStyle} ${cardBg}`}
+                                  id={`notif-card-${notif.id}`}
+                                >
+                                  {/* Top Header Row */}
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                      {/* Icon Container */}
+                                      <div className={`p-2 rounded-xl shrink-0 ${config.iconBg}`}>
+                                        {config.icon}
+                                      </div>
+                                      <div>
+                                        {/* Notification Type header */}
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="text-xs font-bold text-[#94A3B8] tracking-wider uppercase">
+                                            {config.titlePrefix}
+                                          </span>
+                                          {isUnread && (
+                                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#2563EB] shadow shadow-blue-500 animate-ping" />
+                                          )}
+                                        </div>
+                                        {/* Notification Title */}
+                                        <h4 className={`text-base leading-snug mt-1 ${titleWeight}`}>
+                                          {notif.title}
+                                        </h4>
+                                      </div>
+                                    </div>
+
+                                    {/* Action buttons (Trash + Mark read) */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {isUnread && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMarkNotificationRead(notif.id);
+                                          }}
+                                          className="p-1.5 hover:bg-[#0F172A] rounded-lg text-blue-400 hover:text-blue-300 transition-all text-[11px] font-bold font-mono uppercase tracking-wider"
+                                          title="Mark as Read"
+                                        >
+                                          <Check className="w-4 h-4 inline mr-1" />
+                                          <span className="hidden sm:inline">Mark Read</span>
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteNotification(notif.id);
+                                        }}
+                                        className="p-1.5 hover:bg-[#0F172A] rounded-lg text-[#EF4444] hover:text-red-300 transition-all"
+                                        title="Delete Notification"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Middle Content Section (Tickets / Invoices / Alert Context) */}
+                                  {(parsed.ticketId || parsed.subject) && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-[#334155]/50 pt-3 text-xs text-[#94A3B8]">
+                                      {/* Subject & Ticket ID */}
+                                      <div className="space-y-1.5">
+                                        {parsed.ticketId && (
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-mono text-[11px] font-bold">Ticket ID:</span>
+                                            <span className="font-mono text-white bg-[#0F172A] px-2 py-0.5 rounded border border-[#334155] inline-flex items-center gap-1.5">
+                                              {parsed.ticketId}
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  navigator.clipboard.writeText(parsed.ticketId || '');
+                                                  onAddNotification(`Ticket ID ${parsed.ticketId} copied!`, 'success');
+                                                }}
+                                                className="hover:text-blue-400 font-mono font-medium text-[10px]"
+                                                title="Copy Ticket ID"
+                                              >
+                                                📋
+                                              </button>
+                                            </span>
+                                          </div>
+                                        )}
+                                        
+                                        {parsed.subject && (
+                                          <div>
+                                            <span className="font-bold">Subject:</span>{' '}
+                                            <span className="text-white font-medium">{parsed.subject}</span>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Status Badge */}
+                                      <div className="flex md:justify-end items-center gap-2">
+                                        {parsed.ticketId && (
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-xs text-[#94A3B8]">Status:</span>
+                                            {renderStatusBadge(parsed.status)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Detailed Client & Support Chat replies display */}
+                                  {(parsed.clientMessage || parsed.supportReply) && (
+                                    <div className="space-y-3.5 border-t border-[#334155]/40 pt-3.5">
+                                      
+                                      {/* Client Message (Original) */}
+                                      {parsed.clientMessage && (
+                                        <div className="text-xs space-y-1 bg-[#0F172A]/40 p-3 rounded-xl border border-[#334155]/40 text-left">
+                                          <span className="text-[#60A5FA] font-bold text-xs flex items-center gap-1 mb-1">
+                                            👤 client
+                                          </span>
+                                          <p className="text-[#E5E7EB] font-normal leading-relaxed whitespace-pre-wrap">
+                                            {parsed.clientMessage}
+                                          </p>
+                                        </div>
+                                      )}
+
+                                      {/* Support Team Reply */}
+                                      {parsed.supportReply && (
+                                        <div className="text-xs space-y-1 text-left">
+                                          <span className="text-[#22C55E] font-bold text-xs flex items-center gap-1 mb-1">
+                                            🛠 BSP Support Team
+                                          </span>
+                                          {/* Slightly darker reply container as specified */}
+                                          <div className="bg-[#0B1329] border border-[#334155]/80 rounded-xl p-3.5 text-white shadow-inner">
+                                            <p className="font-medium leading-relaxed whitespace-pre-wrap">
+                                              {parsed.supportReply}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                    </div>
+                                  )}
+
+                                  {/* Generic notification description (for system or billing notices that aren't support tickets) */}
+                                  {!parsed.clientMessage && !parsed.supportReply && notif.message && (
+                                    <p className="text-xs text-[#E5E7EB] leading-relaxed border-t border-[#334155]/30 pt-3 whitespace-pre-wrap font-normal">
+                                      {notif.message}
+                                    </p>
+                                  )}
+
+                                  {/* Footer: Date & Time as requested: e.g. 26 Jun 2026 • 10:45 AM */}
+                                  <div className="flex justify-between items-center text-[11px] text-[#94A3B8] pt-2.5 border-t border-[#334155]/20 mt-1">
+                                    <div className="flex items-center gap-1 font-mono text-[11.5px]">
+                                      <Calendar className="w-3.5 h-3.5 text-[#94A3B8]" />
+                                      <span>{formatNotifDate(notif.createdAt || notif.created_at)}</span>
+                                    </div>
+                                    <span className="text-[10px] uppercase font-mono tracking-wider opacity-60">ID: {notif.id}</span>
+                                  </div>
+
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Pagination controls */}
+                          {totalPages > 1 && (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#334155] pt-4 mt-6 text-xs text-[#94A3B8]">
+                              <p className="font-medium">
+                                Showing <span className="text-white font-bold">{startIndex + 1}</span> to{' '}
+                                <span className="text-white font-bold">
+                                  {Math.min(endIndex, filteredList.length)}
+                                </span>{' '}
+                                of <span className="text-white font-bold">{filteredList.length}</span> notifications
+                              </p>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setNotifPage(prev => Math.max(prev - 1, 1))}
+                                  disabled={notifPage === 1}
+                                  className="px-3 py-1.5 rounded-lg bg-[#1E293B] hover:bg-slate-800 disabled:opacity-40 border border-[#334155] text-white font-bold transition-all disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  Previous
+                                </button>
+                                
+                                {Array.from({ length: totalPages }).map((_, idx) => {
+                                  const pageNum = idx + 1;
+                                  return (
+                                    <button
+                                      key={pageNum}
+                                      onClick={() => setNotifPage(pageNum)}
+                                      className={`px-3 py-1.5 rounded-lg font-bold border transition-all cursor-pointer ${
+                                        notifPage === pageNum
+                                          ? 'bg-[#2563EB] text-white border-[#2563EB]'
+                                          : 'bg-[#1E293B] hover:bg-slate-800 border-[#334155] text-[#E5E7EB]'
+                                      }`}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  );
+                                })}
+
+                                <button
+                                  onClick={() => setNotifPage(prev => Math.min(prev + 1, totalPages))}
+                                  disabled={notifPage === totalPages}
+                                  className="px-3 py-1.5 rounded-lg bg-[#1E293B] hover:bg-slate-800 disabled:opacity-40 border border-[#334155] text-white font-bold transition-all disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+
                 </div>
               </div>
             )}

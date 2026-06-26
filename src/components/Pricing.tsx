@@ -6,8 +6,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
-  Check, 
-  X, 
   HelpCircle, 
   ShieldCheck, 
   Percent, 
@@ -523,49 +521,7 @@ export default function Pricing({
         )}
       </section>
 
-      {/* PLANS COMPARE MATRIX BULLETS MAP */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="text-center space-y-2 mb-10">
-          <span className="text-xs font-mono font-bold uppercase tracking-widest text-[#2563EB]">Features Grid</span>
-          <h3 className="text-2xl font-black text-white">Compare Editions</h3>
-          <p className="text-slate-450 text-xs">Review standard feature differences mapped between Pro and Enterprise licenses.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-          {/* Pro Column Bullet List comparison */}
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
-            <span className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/35 text-blue-400 text-[9px] rounded font-mono font-bold uppercase">
-              Retail Billing Pro
-            </span>
-            <ul className="space-y-3 text-xs text-slate-300">
-              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>UNLIMITED invoice generations & cashier lanes printing</span></li>
-              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>Thermal printer canvas size customizer (58mm / 80mm roll setups)</span></li>
-              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>Dynamic high speed PDF outputs formats generator</span></li>
-              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>Barcode automated printing & fast hardware scanning support</span></li>
-              <li className="flex gap-2"><Check className="text-blue-500 w-4 h-4 shrink-0 mt-0.5" /> <span>Supplier credit ledgers, dynamic cashbook registers balances</span></li>
-              <li className="flex gap-2 text-slate-500 line-through"><X className="w-4 h-4 shrink-0 mt-0.5" /> <span>Multi-firm ledger management (Single trading company file only)</span></li>
-              <li className="flex gap-2 text-slate-500 line-through"><X className="w-4 h-4 shrink-0 mt-0.5" /> <span>Direct government GST portal portal JSON uploads GSTR-1 formatted</span></li>
-            </ul>
-          </div>
-
-          {/* Enterprise Column Bullet List comparison */}
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
-            <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/35 text-emerald-400 text-[9px] rounded font-mono font-bold uppercase">
-              GST Enterprise Suite
-            </span>
-            <ul className="space-y-3 text-xs text-slate-300">
-              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span><strong>EVERY FEATURE</strong> included in the standard Retail Billing Pro</span></li>
-              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Unlimited physical firms, multiple branch databases records</span></li>
-              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Direct government GST format exporting files (JSON, CSV, XLS)</span></li>
-              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Auto-scheduled drive data cloud synchronization backup schedules</span></li>
-              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Highly detailed permissions roles management (Cashier vs Admin)</span></li>
-              <li className="flex gap-2"><Check className="text-emerald-400 w-4 h-4 shrink-0 mt-0.5" /> <span>Priority premium technical telephonic support & setup help desk</span></li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* CORE SECURE FEATURES ACCREDIT */}
+{/* CORE SECURE FEATURES ACCREDIT */}
       <section className="bg-slate-900/60 py-12 border-y border-slate-850 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 rounded-3xl mt-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
           
