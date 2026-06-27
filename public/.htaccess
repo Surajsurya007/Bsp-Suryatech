@@ -31,10 +31,12 @@
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # EXEMPTION RUNS: Prevent Apache from intercepting /api, /uploads, or /downloads
+  # EXEMPTION RUNS: Prevent Apache from intercepting /api, /uploads, /downloads, /sitemap.xml, or /robots.txt
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]
   RewriteCond %{REQUEST_URI} ^/uploads [NC,OR]
-  RewriteCond %{REQUEST_URI} ^/downloads [NC]
+  RewriteCond %{REQUEST_URI} ^/downloads [NC,OR]
+  RewriteCond %{REQUEST_URI} ^/sitemap\.xml [NC,OR]
+  RewriteCond %{REQUEST_URI} ^/robots\.txt [NC]
   RewriteRule ^ - [L]
 
   # SPA ROUTER REDIRECTION: Map all virtual page URLs back to index.html

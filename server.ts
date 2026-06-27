@@ -2929,6 +2929,46 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     });
   });
 
+  // --- GOOGLE SEARCH CONSOLE SITEMAP & ROBOTS EXCLUSIONS ---
+
+  // Serve robots.txt directly with proper text/plain header
+  app.get('/robots.txt', (req, res) => {
+    const paths = [
+      path.join(process.cwd(), 'dist', 'robots.txt'),
+      path.join(process.cwd(), 'public', 'robots.txt'),
+      path.join(process.cwd(), 'dist', 'static', 'robots.txt'),
+      path.join(process.cwd(), 'public', 'static', 'robots.txt')
+    ];
+    
+    for (const p of paths) {
+      if (fs.existsSync(p)) {
+        res.header('Content-Type', 'text/plain');
+        return res.sendFile(p);
+      }
+    }
+    
+    res.header('Content-Type', 'text/plain');
+    res.send("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /uploads/\nDisallow: /downloads/\n\nSitemap: https://bspsuryatech.in/sitemap.xml");
+  });
+
+  // Serve sitemap.xml directly with proper application/xml header
+  app.get('/sitemap.xml', (req, res) => {
+    const paths = [
+      path.join(process.cwd(), 'dist', 'sitemap.xml'),
+      path.join(process.cwd(), 'public', 'sitemap.xml'),
+      path.join(process.cwd(), 'dist', 'static', 'sitemap.xml'),
+      path.join(process.cwd(), 'public', 'static', 'sitemap.xml')
+    ];
+    
+    for (const p of paths) {
+      if (fs.existsSync(p)) {
+        res.header('Content-Type', 'application/xml');
+        return res.sendFile(p);
+      }
+    }
+    
+    res.status(404).send('Sitemap not found');
+  });
 
   // --- VITE AND FE STATIC SERVICES INTEGRATION ---
 
