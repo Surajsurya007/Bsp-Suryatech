@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { logEvent } from '../utils/analytics';
 import { 
   Phone, 
   Mail, 
@@ -130,6 +131,9 @@ export default function Contact({ onAddNotification }: ContactProps) {
 
       // Trigger a structural reload for dashboard widgets
       window.dispatchEvent(new Event('bsp_new_contact_message'));
+
+      // Log successful GA4 conversion event
+      logEvent('contact_form_submitted', 'conversion', formData.subject);
 
       setSubmittedRefId(refId);
       onAddNotification(`Message submitted successfully. Ref ID: ${refId}`, 'success');

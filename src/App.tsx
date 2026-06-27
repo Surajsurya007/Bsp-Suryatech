@@ -42,6 +42,7 @@ import PaymentVerification from './components/PaymentVerification';
 import { TranslationProvider } from './components/TranslationContext';
 import { useAdmin } from './components/AdminContext';
 import { AdminDashboard } from './components/AdminDashboard';
+import { initGA, logPageView, logEvent } from './utils/analytics';
 
 let isInitialAuthCheckDone = false;
 
@@ -142,6 +143,78 @@ export default function App() {
   const [checkoutBank, setCheckoutBank] = useState('SBI');
   const [checkoutWallet, setCheckoutWallet] = useState('paytm');
   const [merchantUpiId, setMerchantUpiId] = useState('surajsurya.koo7@okaxis');
+
+  // Initialize Google Analytics and setup global click tracking delegation
+  useEffect(() => {
+    initGA();
+
+    const handleGlobalClick = (e: MouseEvent) => {
+      let target = e.target as HTMLElement | null;
+      
+      // Traverse up to find an anchor tag or button
+      while (target && target !== document.body) {
+        const href = target.getAttribute('href');
+        const id = target.id;
+        const textContent = target.textContent || '';
+        
+        // 1. YouTube clicks
+        if (href && (href.includes('youtube.com') || href.includes('youtu.be') || href.includes('@bspsuryatech'))) {
+          logEvent('youtube_click', 'social', href);
+          break;
+        }
+
+        // 2. WhatsApp clicks
+        if (
+          (href && (href.includes('wa.me') || href.includes('whatsapp.com') || href.includes('api.whatsapp.com'))) ||
+          (id && id.includes('whatsapp'))
+        ) {
+          logEvent('whatsapp_click', 'social', href || 'WhatsApp Quick Chat');
+          break;
+        }
+
+        // 3. Download button clicks (fallback tracking via text or ID)
+        if (
+          (target.tagName === 'A' || target.tagName === 'BUTTON') &&
+          (textContent.toLowerCase().includes('download') || (id && id.toLowerCase().includes('download')))
+        ) {
+          logEvent('download_click', 'engagement', textContent.trim() || id);
+          break;
+        }
+
+        // 4. Contact button clicks (fallback tracking via text or ID)
+        if (
+          (target.tagName === 'A' || target.tagName === 'BUTTON') &&
+          (textContent.toLowerCase().includes('contact') || (id && id.toLowerCase().includes('contact')))
+        ) {
+          logEvent('contact_button_click', 'engagement', textContent.trim() || id);
+          break;
+        }
+
+        target = target.parentElement;
+      }
+    };
+
+    document.addEventListener('click', handleGlobalClick, { passive: true });
+    return () => {
+      document.removeEventListener('click', handleGlobalClick);
+    };
+  }, []);
+
+  // Automatically track every page view & route change
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    logPageView(currentPath);
+
+    // Track pricing page visits
+    if (currentPage === 'pricing') {
+      logEvent('pricing_visited', 'engagement', 'Pricing Page');
+    }
+
+    // Track software detail page visits
+    if (currentPage === 'software-details' && selectedSoftwareId) {
+      logEvent('software_detail_visited', 'engagement', selectedSoftwareId);
+    }
+  }, [currentPage, selectedSoftwareId]);
 
   // Load active session from local storage / Supabase on mount
   useEffect(() => {
@@ -833,6 +906,9 @@ export default function App() {
       }
 
       console.log("App: Clean direct download URL resolved for setup:", directUrl, "Saving as:", finalDownloadName);
+
+      // Track the download in Google Analytics 4
+      logEvent('download_click', 'conversion', `${prodId} (${isFull ? 'Full' : 'Trial'})`);
 
       // Create a temporary anchor element to trigger high-speed direct stream securely and safely in iframes
       const link = document.createElement('a');
