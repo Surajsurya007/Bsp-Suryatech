@@ -2933,22 +2933,30 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // Serve robots.txt directly with proper text/plain header
   app.get('/robots.txt', (req, res) => {
-    const paths = [
+    res.type('text/plain');
+    
+    // Safely resolve directory path supporting both ES Module (dev via tsx) and CommonJS (production build)
+    const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+    
+    const possiblePaths = [
+      path.join(currentDir, 'robots.txt'),
       path.join(process.cwd(), 'dist', 'robots.txt'),
       path.join(process.cwd(), 'public', 'robots.txt'),
       path.join(process.cwd(), 'dist', 'static', 'robots.txt'),
       path.join(process.cwd(), 'public', 'static', 'robots.txt')
     ];
     
-    for (const p of paths) {
+    for (const p of possiblePaths) {
       if (fs.existsSync(p)) {
-        res.header('Content-Type', 'text/plain');
         return res.sendFile(p);
       }
     }
     
-    res.header('Content-Type', 'text/plain');
-    res.send("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /uploads/\nDisallow: /downloads/\n\nSitemap: https://bspsuryatech.in/sitemap.xml");
+    // Fallback if file is not found
+    res.send(`User-agent: *
+Allow: /
+
+Sitemap: https://bspsuryatech.in/sitemap.xml`);
   });
 
   // Serve sitemap.xml directly with proper application/xml header
