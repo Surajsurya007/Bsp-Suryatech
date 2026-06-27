@@ -268,7 +268,54 @@ export default function App() {
     const path = window.location.pathname;
     if (path === '/payment-verification' || window.location.hash === '#/payment-verification') {
       setCurrentPage('payment-verification');
+    } else if (path === '/features') {
+      setCurrentPage('features');
+    } else if (path === '/pricing') {
+      setCurrentPage('pricing');
+    } else if (path === '/downloads') {
+      setCurrentPage('downloads');
+    } else if (path === '/tutorials') {
+      setCurrentPage('tutorials');
+    } else if (path === '/about') {
+      setCurrentPage('about');
+    } else if (path === '/contact') {
+      setCurrentPage('contact');
+    } else if (path === '/portal') {
+      setCurrentPage('portal');
+    } else if (path.startsWith('/software/')) {
+      const prodId = path.replace('/software/', '');
+      setSelectedSoftwareId(prodId);
+      setCurrentPage('software-details');
     }
+
+    // Handle back/forward buttons using HTML5 history popstate
+    const handlePopState = () => {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/' || currentPath === '') {
+        setCurrentPage('home');
+      } else if (currentPath === '/payment-verification') {
+        setCurrentPage('payment-verification');
+      } else if (currentPath === '/features') {
+        setCurrentPage('features');
+      } else if (currentPath === '/pricing') {
+        setCurrentPage('pricing');
+      } else if (currentPath === '/downloads') {
+        setCurrentPage('downloads');
+      } else if (currentPath === '/tutorials') {
+        setCurrentPage('tutorials');
+      } else if (currentPath === '/about') {
+        setCurrentPage('about');
+      } else if (currentPath === '/contact') {
+        setCurrentPage('contact');
+      } else if (currentPath === '/portal') {
+        setCurrentPage('portal');
+      } else if (currentPath.startsWith('/software/')) {
+        const prodId = currentPath.replace('/software/', '');
+        setSelectedSoftwareId(prodId);
+        setCurrentPage('software-details');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
 
     // Fetch master catalogs
     fetchProducts();
@@ -292,6 +339,7 @@ export default function App() {
     return () => {
       clearInterval(pollInterval);
       window.removeEventListener('products_updated', handleProductsUpdated);
+      window.removeEventListener('popstate', handlePopState);
       if (subscription) {
         subscription.unsubscribe();
       }
@@ -603,18 +651,27 @@ export default function App() {
       const parts = page.split(':');
       setSelectedSoftwareId(parts[1]);
       setCurrentPage('software-details');
+      window.history.pushState({}, '', `/software/${parts[1]}`);
       return;
     }
     if (page === 'portal') {
       setPortalInitialView('dashboard');
     }
-    if (page === 'payment-verification') {
-      window.history.pushState({}, '', '/payment-verification');
-    } else {
-      if (window.location.pathname === '/payment-verification') {
-        window.history.pushState({}, '', '/');
-      }
-    }
+
+    const canonicalPaths: Record<string, string> = {
+      home: '/',
+      features: '/features',
+      pricing: '/pricing',
+      downloads: '/downloads',
+      tutorials: '/tutorials',
+      about: '/about',
+      contact: '/contact',
+      portal: '/portal',
+      'payment-verification': '/payment-verification'
+    };
+
+    const targetPath = canonicalPaths[page] || '/';
+    window.history.pushState({}, '', targetPath);
     setCurrentPage(page);
   };
 

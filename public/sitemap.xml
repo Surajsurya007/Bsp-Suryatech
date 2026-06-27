@@ -50,131 +50,87 @@
     <priority>0.60</priority>
   </url>
 
-  <!-- Hash Routing Alternatives for complete coverage -->
+  <!-- Software Catalog Deep-links (Canonical URLs) -->
   <url>
-    <loc>https://bspsuryatech.in/#/features</loc>
+    <loc>https://bspsuryatech.in/software/retail_billing</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/pricing</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/#/downloads</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/#/tutorials</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/#/about</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.70</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/#/contact</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.70</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/#/portal</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.60</priority>
-  </url>
-
-  <!-- Software Catalog Deep-links -->
-  <url>
-    <loc>https://bspsuryatech.in/#/software/retail_billing</loc>
+    <loc>https://bspsuryatech.in/software/supermarket_pos</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/supermarket_pos</loc>
+    <loc>https://bspsuryatech.in/software/grocery_billing</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/grocery_billing</loc>
+    <loc>https://bspsuryatech.in/software/medical_store</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/medical_store</loc>
+    <loc>https://bspsuryatech.in/software/restaurant_pos</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/restaurant_pos</loc>
+    <loc>https://bspsuryatech.in/software/mobile_shop</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/mobile_shop</loc>
+    <loc>https://bspsuryatech.in/software/electronics_shop</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/electronics_shop</loc>
+    <loc>https://bspsuryatech.in/software/transport_erp</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/transport_erp</loc>
+    <loc>https://bspsuryatech.in/software/hospital_erp</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/hospital_erp</loc>
+    <loc>https://bspsuryatech.in/software/laboratory_erp</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/laboratory_erp</loc>
+    <loc>https://bspsuryatech.in/software/school_erp</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/school_erp</loc>
+    <loc>https://bspsuryatech.in/software/enterprise_erp</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/enterprise_erp</loc>
+    <loc>https://bspsuryatech.in/software/hotel_erp</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://bspsuryatech.in/#/software/hotel_erp</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/#/software/repairing_erp</loc>
+    <loc>https://bspsuryatech.in/software/repairing_erp</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
