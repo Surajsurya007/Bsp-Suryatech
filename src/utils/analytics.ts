@@ -12,7 +12,50 @@ declare global {
 
 // Measurement ID can be configured via environment variables, with a fallback to the user's specific GA4 ID
 const MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || 'G-4VVMRDJ9C6';
+const GTM_CONTAINER_ID = import.meta.env.VITE_GTM_CONTAINER_ID || 'GTM-P7835332';
 const IS_PROD = import.meta.env.PROD;
+
+/**
+ * Initializes Google Tag Manager (GTM).
+ * Runs only in production, as early as possible, to enable robust tracking.
+ */
+export const initGTM = (): void => {
+  if (!IS_PROD) {
+    console.log('[GTM Dev Mode] Skipping initialization');
+    return;
+  }
+
+  if (typeof window === 'undefined') return;
+
+  // Prevent double initialization
+  if ((window as any)._gtm_initialized) return;
+
+  try {
+    // Setup dataLayer
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      'gtm.start': new Date().getTime(),
+      event: 'gtm.js'
+    });
+
+    // Inject GTM script dynamically using an async script tag for highest performance
+    const firstScript = document.getElementsByTagName('script')[0];
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtm.js?id=${GTM_CONTAINER_ID}`;
+
+    if (firstScript && firstScript.parentNode) {
+      firstScript.parentNode.insertBefore(script, firstScript);
+    } else {
+      document.head.appendChild(script);
+    }
+
+    (window as any)._gtm_initialized = true;
+    console.log(`[GTM] Initialized with Container ID: ${GTM_CONTAINER_ID}`);
+  } catch (error) {
+    console.error('[GTM] Failed to initialize Google Tag Manager:', error);
+  }
+};
 
 /**
  * Initializes Google Analytics 4.
@@ -61,12 +104,24 @@ export const initGA = (): void => {
  */
 export const logPageView = (path: string): void => {
   if (!IS_PROD) {
-    console.log(`[GA4 Dev Mode] Page View: ${path}`);
+    console.log(`[Analytics Dev Mode] Page View: ${path}`);
     return;
   }
 
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', 'page_view', {
+  if (typeof window !== 'undefined') {
+    // 1. Log to GA4 via gtag
+    if (window.gtag) {
+      window.gtag('event', 'page_view', {
+        page_path: path,
+        page_title: document.title,
+        page_location: window.location.href,
+      });
+    }
+
+    // 2. Log to GTM by pushing a structured virtual_pageview event object
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'virtual_pageview',
       page_path: path,
       page_title: document.title,
       page_location: window.location.href,
@@ -75,7 +130,7 @@ export const logPageView = (path: string): void => {
 };
 
 /**
- * Logs a custom event in GA4.
+ * Logs a custom event in GA4 and GTM.
  * @param action The event action name (e.g., 'contact_click', 'download_click')
  * @param category The event category (e.g., 'engagement', 'conversion')
  * @param label Optional text label for additional detail (e.g., 'WhatsApp Quote Button')
@@ -88,12 +143,24 @@ export const logEvent = (
   value?: number
 ): void => {
   if (!IS_PROD) {
-    console.log(`[GA4 Dev Mode] Custom Event: [${action}]`, { category, label, value });
+    console.log(`[Analytics Dev Mode] Custom Event: [${action}]`, { category, label, value });
     return;
   }
 
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', action, {
+  if (typeof window !== 'undefined') {
+    // 1. Log to GA4 via gtag
+    if (window.gtag) {
+      window.gtag('event', action, {
+        event_category: category,
+        event_label: label,
+        value: value,
+      });
+    }
+
+    // 2. Log to GTM by pushing a structured custom event object
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: action,
       event_category: category,
       event_label: label,
       value: value,
