@@ -43,6 +43,7 @@ import { TranslationProvider } from './components/TranslationContext';
 import { useAdmin } from './components/AdminContext';
 import { AdminDashboard } from './components/AdminDashboard';
 import { initGA, logPageView, logEvent } from './utils/analytics';
+import SEOSchema from './components/SEOSchema';
 
 let isInitialAuthCheckDone = false;
 
@@ -1430,6 +1431,12 @@ export default function App() {
 
   return (
     <TranslationProvider user={user}>
+      <SEOSchema 
+        currentPage={currentPage} 
+        productId={selectedSoftwareId} 
+        products={products} 
+        solutions={solutions} 
+      />
       <Layout 
         currentPage={currentPage}
         onPageChange={handleNavigatePage} 
