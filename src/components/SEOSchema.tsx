@@ -43,7 +43,7 @@ export default function SEOSchema({
     // 1. Determine canonical path, title, and description for current page
     let path = '';
     let pageName = 'Home';
-    let description = 'BSP Suryatech develops Business Management Software including Retail Billing Software, POS Software, ERP Solutions, Transport Management Software, Hospital ERP, School ERP, Restaurant POS, Medical Store Software, and Custom Software Development.';
+    let description = 'BSP Suryatech provides lifetime license billing software, POS, inventory management, GST billing, ERP and business management solutions for retail stores, supermarkets, medical shops, restaurants, transport, schools and more. One-time payment with no monthly or yearly subscription.';
 
     if (currentPage === 'features') {
       path = 'features';
@@ -96,13 +96,16 @@ export default function SEOSchema({
     }
 
     const canonicalUrl = `https://bspsuryatech.in/${path}`;
+    const pageTitle = currentPage === 'home'
+      ? 'BSP Suryatech | Billing Software, POS, ERP & Business Management Software'
+      : `${pageName} - BSP Suryatech`;
 
     // 2. Build WebPage Node
     const webPageNode: any = {
       '@type': 'WebPage',
       '@id': `${canonicalUrl}#webpage`,
       'url': canonicalUrl,
-      'name': `${pageName} - BSP Suryatech`,
+      'name': pageTitle,
       'description': description,
       'isPartOf': { '@id': 'https://bspsuryatech.in/#website' },
       'publisher': { '@id': 'https://bspsuryatech.in/#organization' },
@@ -359,7 +362,6 @@ export default function SEOSchema({
     scriptTag.textContent = JSON.stringify(payload, null, 2);
 
     // 8. Dynamic Meta Tags Injection (Open Graph and Twitter Cards)
-    const pageTitle = `${pageName} - BSP Suryatech`;
     let metaImage = resolvedLogo;
 
     if (currentPage === 'software-details' && productId) {
@@ -418,6 +420,10 @@ export default function SEOSchema({
       }
       element.setAttribute('content', contentValue);
     };
+
+    // Inject Standard HTML tags
+    document.title = pageTitle;
+    updateOrCreateMetaTag('description', description);
 
     // Inject Open Graph (OG) tags
     updateOrCreateMetaTag('og:title', pageTitle);
