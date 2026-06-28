@@ -185,7 +185,27 @@ export default function AdminContactMessages() {
           ...targetRecord,
           status_history: typeof targetRecord.status_history === 'object' ? JSON.stringify(targetRecord.status_history) : targetRecord.status_history
         };
-        await supabase.from('contact_messages').upsert([payload]);
+        
+        // 1. Backend API Sync
+        try {
+          await fetch(`/api/contact-messages/${msgId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(payload)
+          });
+        } catch (apiErr) {
+          console.warn("Could not sync message update to backend API:", apiErr);
+        }
+
+        // 2. Supabase Sync
+        try {
+          await supabase.from('contact_messages').upsert([payload]);
+        } catch (sbErr) {
+          console.warn("Could not sync message update to Supabase:", sbErr);
+        }
       }
     } catch (dbErr: any) {
       console.warn("DB update skipped or errored:", dbErr);
@@ -218,6 +238,19 @@ export default function AdminContactMessages() {
       setActiveMessage(null);
     }
 
+    // 1. Delete from Backend API
+    try {
+      await fetch(`/api/contact-messages/${msgId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+    } catch (apiErr) {
+      console.warn("Could not delete message from backend API:", apiErr);
+    }
+
+    // 2. Delete from Supabase
     try {
       await supabase.from('contact_messages').delete().eq('id', msgId);
     } catch (e) {
@@ -260,20 +293,36 @@ export default function AdminContactMessages() {
     localStorage.setItem('bsp_contact_messages', JSON.stringify(list));
     setSelectedIds([]);
 
-    // DB Bulk update (individually or in batch)
-    try {
-      for (const msgId of selectedIds) {
-        const item = list.find((m: any) => m.id === msgId);
-        if (item) {
-          const payload = {
-            ...item,
-            status_history: typeof item.status_history === 'object' ? JSON.stringify(item.status_history) : item.status_history
-          };
+    // DB Bulk update
+    for (const msgId of selectedIds) {
+      const item = list.find((m: any) => m.id === msgId);
+      if (item) {
+        const payload = {
+          ...item,
+          status_history: typeof item.status_history === 'object' ? JSON.stringify(item.status_history) : item.status_history
+        };
+        
+        // 1. Backend API Sync
+        try {
+          await fetch(`/api/contact-messages/${msgId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(payload)
+          });
+        } catch (apiErr) {
+          console.warn("Could not sync bulk message update to backend API:", apiErr);
+        }
+
+        // 2. Supabase Sync
+        try {
           await supabase.from('contact_messages').upsert([payload]);
+        } catch (e) {
+          console.warn(e);
         }
       }
-    } catch (e) {
-      console.warn(e);
     }
   };
 
@@ -290,6 +339,21 @@ export default function AdminContactMessages() {
       setActiveMessage(null);
     }
 
+    // 1. Delete from Backend API
+    try {
+      await fetch('/api/contact-messages/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+    } catch (apiErr) {
+      console.warn("Could not bulk delete from backend API:", apiErr);
+    }
+
+    // 2. Delete from Supabase
     try {
       await supabase.from('contact_messages').delete().in('id', selectedIds);
     } catch (e) {

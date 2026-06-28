@@ -135,6 +135,7 @@ interface DatabaseSchema {
     port: number;
     enabled: boolean;
   };
+  contactMessages?: any[];
 }
 
 // In-Memory Database Instance
@@ -161,6 +162,7 @@ export let db: DatabaseSchema = {
   videos: [],
   solutions: [],
   helpline: '+91 95169 16415',
+  contactMessages: [],
   hostingerConfig: {
     host: '',
     user: '',
@@ -1047,6 +1049,7 @@ export function initDB() {
       if (!db.payments) db.payments = [];
       if (!db.invoices) db.invoices = [];
       if (!db.notifications) db.notifications = [];
+      if (!db.contactMessages) db.contactMessages = [];
       if (db.downloadCounter === undefined) db.downloadCounter = 1420;
       if (!db.languageConfigs || db.languageConfigs.length === 0) {
         db.languageConfigs = [...defaultLanguageConfigs];
@@ -1104,7 +1107,60 @@ function seedDB() {
     languageConfigs: [...defaultLanguageConfigs],
     videos: [...defaultVideos],
     helpline: '+91 95169 16415',
-    solutions: defaultSolutions
+    solutions: defaultSolutions,
+    contactMessages: [
+      {
+        id: 'BSP-2026-000001',
+        full_name: 'Amit Singhal',
+        email: 'amit@singhalretail.com',
+        phone: '+91 98100 23456',
+        topic_category: 'Buying Query (Software Licenses)',
+        message_description: 'We are setting up 3 new POS lanes in our grocery store in Sector 18 Raipur. We are interested in purchasing the Retail Billing Pro licenses. Please send us a price quote for a bulk purchase of 3 licenses and advise on what thermal printers are supported.',
+        submission_date: '2026-06-18',
+        submission_time: '11:15:30',
+        created_at: '2026-06-18T11:15:30.000Z',
+        ip_address: '103.241.12.94',
+        status: 'New',
+        status_history: JSON.stringify([
+          { status: 'New', timestamp: '2026-06-18T11:15:30.000Z', note: 'Inquiry dispatched from Sector 62 Form' }
+        ])
+      },
+      {
+        id: 'BSP-2026-000002',
+        full_name: 'Rajinder Sharma',
+        email: 'rajinder@sharmasweets.in',
+        phone: '+91 94120 44556',
+        topic_category: 'Buying Query (Software Licenses)',
+        message_description: 'Do you support integrating barcode weighing scales with your POS billing software? We have fresh sweet outlets and need weighing scales to directly print barcodes that your billing machine can scan.',
+        submission_date: '2026-06-19',
+        submission_time: '14:22:10',
+        created_at: '2026-06-19T14:22:10.000Z',
+        ip_address: '223.187.32.167',
+        status: 'Read',
+        status_history: JSON.stringify([
+          { status: 'New', timestamp: '2026-06-19T14:22:10.000Z', note: 'Inquiry dispatched from Sector 62 Form' },
+          { status: 'Read', timestamp: '2026-06-19T16:00:00.000Z', note: 'Status updated by Admin' }
+        ])
+      },
+      {
+        id: 'BSP-2026-000003',
+        full_name: 'Dr. Meenakshi Iyer',
+        email: 'iyer.meenakshi@gmail.com',
+        phone: '+91 91223 88990',
+        topic_category: 'Buying Query (Software Licenses)',
+        message_description: 'We run a boutique resort and wellness spa in Rishikesh. Do you have a direct PMS or Hotel Management billing suite that handles check-in, check-out, spa billing, and restaurant POS together in one shared offline database?',
+        submission_date: '2026-06-19',
+        submission_time: '18:40:15',
+        created_at: '2026-06-19T18:40:15.000Z',
+        ip_address: '122.160.44.12',
+        status: 'Replied',
+        status_history: JSON.stringify([
+          { status: 'New', timestamp: '2026-06-19T18:40:15.000Z', note: 'Inquiry dispatched from Sector 62 Form' },
+          { status: 'Read', timestamp: '2026-06-20T09:30:00.000Z', note: 'Marked as read' },
+          { status: 'Replied', timestamp: '2026-06-20T10:15:00.000Z', note: 'Replied with proposal email' }
+        ])
+      }
+    ]
   };
 
   // Seed default admin
@@ -1909,6 +1965,41 @@ export const dbActions = {
   bulkDeleteSolutions: (ids: string[]) => {
     if (!db.solutions) db.solutions = [];
     db.solutions = db.solutions.filter(s => !ids.includes(s.id));
+    saveDB();
+    return true;
+  },
+  
+  getContactMessages: () => db.contactMessages || [],
+  createContactMessage: (msg: any) => {
+    if (!db.contactMessages) db.contactMessages = [];
+    // Ensure uniqueness
+    const exists = db.contactMessages.some(m => m.id === msg.id);
+    if (!exists) {
+      db.contactMessages.unshift(msg);
+      saveDB();
+    }
+    return msg;
+  },
+  updateContactMessage: (id: string, updates: any) => {
+    if (!db.contactMessages) db.contactMessages = [];
+    const idx = db.contactMessages.findIndex(m => m.id === id);
+    if (idx !== -1) {
+      db.contactMessages[idx] = { ...db.contactMessages[idx], ...updates };
+      saveDB();
+      return db.contactMessages[idx];
+    }
+    return null;
+  },
+  deleteContactMessage: (id: string) => {
+    if (!db.contactMessages) db.contactMessages = [];
+    db.contactMessages = db.contactMessages.filter(m => m.id !== id);
+    saveDB();
+    return true;
+  },
+  bulkDeleteContactMessages: (ids: string[]) => {
+    if (!db.contactMessages) db.contactMessages = [];
+    const idSet = new Set(ids);
+    db.contactMessages = db.contactMessages.filter(m => !idSet.has(m.id));
     saveDB();
     return true;
   }

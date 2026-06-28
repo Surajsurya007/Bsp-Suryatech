@@ -238,54 +238,75 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: invoices, error: errI } = await supabase.from('invoices').select('*');
       if (!errI && invoices) setAdminInvoices(invoices);
 
-      // Contact Messages sync from supabase
+      // Contact Messages sync from backend API and Supabase
       try {
-        const { data: contacts, error: errContacts } = await supabase.from('contact_messages').select('*');
-        if (!errContacts && contacts && contacts.length > 0) {
-          // Merge local storage messages that aren't in Supabase to avoid losing submissions!
-          let merged = [...contacts];
-          try {
-            const localCached = localStorage.getItem('bsp_contact_messages');
-            if (localCached) {
-              const localList = JSON.parse(localCached);
-              if (Array.isArray(localList)) {
-                const existingIds = new Set(contacts.map((c: any) => c.id));
-                localList.forEach((msg: any) => {
-                  if (msg && msg.id && !existingIds.has(msg.id)) {
-                    merged.push(msg);
-                  }
-                });
-                // Sort descending by created_at or submission date/time
-                merged.sort((a: any, b: any) => {
-                  const dateA = new Date(a.created_at || `${a.submission_date}T${a.submission_time}`).getTime();
-                  const dateB = new Date(b.created_at || `${b.submission_date}T${b.submission_time}`).getTime();
-                  return dateB - dateA;
-                });
-              }
+        let apiContacts: any[] = [];
+        try {
+          const res = await fetch('/api/contact-messages', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
-          } catch (e) {
-            console.warn("Error merging local contact messages with Supabase:", e);
+          });
+          if (res.ok) {
+            apiContacts = await res.json();
           }
-          setAdminContactMessages(merged);
-          try {
-            localStorage.setItem('bsp_contact_messages', JSON.stringify(merged));
-          } catch (e) {
-            console.warn("bsp_contact_messages sync write to localStorage restricted:", e);
+        } catch (apiErr) {
+          console.warn("Could not fetch contact messages from backend API:", apiErr);
+        }
+
+        let supabaseContacts: any[] = [];
+        try {
+          const { data, error } = await supabase.from('contact_messages').select('*');
+          if (!error && data) {
+            supabaseContacts = data;
           }
-        } else {
-          // If there's an error, or if contacts from Supabase is empty,
-          // load/keep whatever is in localStorage!
-          try {
-            const cached = localStorage.getItem('bsp_contact_messages');
-            if (cached) {
-              setAdminContactMessages(JSON.parse(cached));
+        } catch (sbEx) {
+          console.warn("Supabase contact message select error:", sbEx);
+        }
+
+        // Merge all sources: local backend API + Supabase + LocalStorage fallback
+        let mergedMap = new Map<string, any>();
+        
+        // 1. Add Supabase contacts
+        supabaseContacts.forEach((c: any) => {
+          if (c && c.id) mergedMap.set(c.id, c);
+        });
+
+        // 2. Add API contacts
+        apiContacts.forEach((c: any) => {
+          if (c && c.id) mergedMap.set(c.id, c);
+        });
+
+        // 3. Add LocalStorage cached contacts
+        try {
+          const localCached = localStorage.getItem('bsp_contact_messages');
+          if (localCached) {
+            const localList = JSON.parse(localCached);
+            if (Array.isArray(localList)) {
+              localList.forEach((msg: any) => {
+                if (msg && msg.id && !mergedMap.has(msg.id)) {
+                  mergedMap.set(msg.id, msg);
+                }
+              });
             }
-          } catch (e) {
-            console.warn("Error loading contact messages fallback from localStorage:", e);
           }
-          if (errContacts) {
-            console.log("Supabase contact_messages not found or error, using localStorage fallback:", errContacts.message);
-          }
+        } catch (e) {
+          console.warn("Error loading contact messages fallback from localStorage:", e);
+        }
+
+        // Convert Map back to array and sort
+        const mergedList = Array.from(mergedMap.values());
+        mergedList.sort((a: any, b: any) => {
+          const dateA = new Date(a.created_at || `${a.submission_date}T${a.submission_time}`).getTime();
+          const dateB = new Date(b.created_at || `${b.submission_date}T${b.submission_time}`).getTime();
+          return dateB - dateA;
+        });
+
+        setAdminContactMessages(mergedList);
+        try {
+          localStorage.setItem('bsp_contact_messages', JSON.stringify(mergedList));
+        } catch (e) {
+          console.warn("bsp_contact_messages sync write to localStorage restricted:", e);
         }
       } catch (err: any) {
         console.warn("Contact messages sync warning:", err);

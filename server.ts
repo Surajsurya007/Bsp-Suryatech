@@ -2974,6 +2974,63 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   });
 
 
+  // --- CONTACT MESSAGES API ENDPOINTS ---
+  app.get('/api/contact-messages', requireAdmin, (req, res) => {
+    try {
+      res.json(dbActions.getContactMessages());
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/contact-messages', (req, res) => {
+    try {
+      const msg = req.body;
+      if (!msg || !msg.full_name || !msg.email) {
+        return res.status(400).json({ error: 'Incomplete contact message data' });
+      }
+      const savedMsg = dbActions.createContactMessage(msg);
+      res.status(201).json(savedMsg);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put('/api/contact-messages/:id', requireAdmin, (req, res) => {
+    try {
+      const updated = dbActions.updateContactMessage(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete('/api/contact-messages/:id', requireAdmin, (req, res) => {
+    try {
+      dbActions.deleteContactMessage(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/contact-messages/bulk-delete', requireAdmin, (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!ids || !Array.isArray(ids)) {
+        return res.status(400).json({ error: 'Array of ids required' });
+      }
+      dbActions.bulkDeleteContactMessages(ids);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+
   // --- ADMIN PORTAL ENDPOINTS REMOVED ---
 
   // Global Express Error Handler for API endpoints to prevent HTML fallbacks on server-side exceptions

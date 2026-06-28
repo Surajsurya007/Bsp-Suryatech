@@ -117,6 +117,18 @@ export default function Contact({ onAddNotification }: ContactProps) {
 
       // 4. Save to Database (and fallback to local storage)
       try {
+        await fetch('/api/contact-messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newMessageRecord)
+        });
+      } catch (apiErr) {
+        console.warn("Could not save contact message to server API:", apiErr);
+      }
+
+      try {
         const { error: dbErr } = await supabase.from('contact_messages').insert([newMessageRecord]);
         if (dbErr) {
           console.warn("Could not insert directly to Supabase table, storing locally:", dbErr.message);
