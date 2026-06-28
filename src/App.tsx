@@ -42,7 +42,7 @@ import PaymentVerification from './components/PaymentVerification';
 import { TranslationProvider } from './components/TranslationContext';
 import { useAdmin } from './components/AdminContext';
 import { AdminDashboard } from './components/AdminDashboard';
-import { initGA, logPageView, logEvent, logGA4Event } from './utils/analytics';
+import { logPageView, logEvent, logGA4Event } from './utils/analytics';
 import SEOSchema from './components/SEOSchema';
 
 let isInitialAuthCheckDone = false;
@@ -147,7 +147,6 @@ export default function App() {
 
   // Initialize Google Analytics and setup global click tracking delegation
   useEffect(() => {
-    initGA();
 
     const handleGlobalClick = (e: MouseEvent) => {
       let target = e.target as HTMLElement | null;

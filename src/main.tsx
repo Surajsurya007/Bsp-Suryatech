@@ -137,10 +137,11 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AdminProvider } from './components/AdminContext';
 import { PermissionProvider } from './components/PermissionProvider';
-import { initGTM } from './utils/analytics';
+import { initGTM, initGA } from './utils/analytics';
 
-// Initialize Google Tag Manager as early as possible in production
+// Initialize GTM and GA4 as early as possible in production
 initGTM();
+initGA();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
