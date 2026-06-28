@@ -9,10 +9,16 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
-import { dbActions, verifyPassword, signToken, verifyToken, db } from './server/db';
+import { dbActions, verifyPassword, signToken, verifyToken, db, dbHooks } from './server/db';
 import { Coupon } from './src/types';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { softwareDownloads } from './src/softwareDownloads';
+import { 
+  queueIndexNowSubmission, 
+  queueIndexNowSubmissions, 
+  getActiveIndexNowKey, 
+  submitToIndexNow 
+} from './server/indexnow';
 
 async function startServer() {
   const app = express();
@@ -255,6 +261,27 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
   // Hostinger Static Media Asset Static Serving Middlewares
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
   app.use('/downloads', express.static(path.join(process.cwd(), 'downloads')));
+
+  // Serve IndexNow Verification key dynamically
+  app.get('/:key.txt', (req, res, next) => {
+    const activeKey = getActiveIndexNowKey();
+    if (req.params.key === activeKey) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.send(activeKey);
+    }
+    next();
+  });
+
+  // Register Database Hooks for Automated IndexNow submissions on tutorial and download changes
+  dbHooks.onVideoTutorialAddedOrUpdated = () => {
+    console.log('[IndexNow Hook] Tutorial added or updated. Queueing IndexNow submission.');
+    queueIndexNowSubmission('https://bspsuryatech.in/tutorials');
+  };
+
+  dbHooks.onDownloadAddedOrUpdated = () => {
+    console.log('[IndexNow Hook] Download added or updated. Queueing IndexNow submission.');
+    queueIndexNowSubmission('https://bspsuryatech.in/downloads');
+  };
 
   // Diagnostic Endpoint
   app.get('/api/test', (req: any, res: any) => {
@@ -1462,6 +1489,11 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   app.post('/api/products', (req, res) => {
     const prod = dbActions.createProduct(req.body);
+    if (prod && prod.id) {
+      queueIndexNowSubmission(`https://bspsuryatech.in/software/${prod.id}`);
+      queueIndexNowSubmission('https://bspsuryatech.in/downloads');
+      queueIndexNowSubmission('https://bspsuryatech.in/');
+    }
     res.status(201).json(prod);
   });
 
@@ -1469,6 +1501,10 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     const updated = dbActions.updateProduct(req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ error: 'Software Product not found' });
+    }
+    if (updated && updated.id) {
+      queueIndexNowSubmission(`https://bspsuryatech.in/software/${updated.id}`);
+      queueIndexNowSubmission('https://bspsuryatech.in/downloads');
     }
     res.json(updated);
   });
@@ -1512,6 +1548,11 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   app.post('/api/solutions', (req, res) => {
     const sol = dbActions.createSolution(req.body);
+    if (sol && sol.id) {
+      queueIndexNowSubmission(`https://bspsuryatech.in/software/${sol.id}`);
+      queueIndexNowSubmission('https://bspsuryatech.in/downloads');
+      queueIndexNowSubmission('https://bspsuryatech.in/');
+    }
     res.status(201).json(sol);
   });
 
@@ -1519,6 +1560,10 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     const updated = dbActions.updateSolution(req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ error: 'Software Solution not found' });
+    }
+    if (updated && updated.id) {
+      queueIndexNowSubmission(`https://bspsuryatech.in/software/${updated.id}`);
+      queueIndexNowSubmission('https://bspsuryatech.in/downloads');
     }
     res.json(updated);
   });
@@ -1535,6 +1580,25 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     }
     const success = dbActions.bulkDeleteSolutions(ids);
     res.json({ success });
+  });
+
+  // Admin Manual IndexNow Submission Endpoint
+  app.post('/api/admin/indexnow/submit', requireAdmin, async (req: any, res: any) => {
+    const { urls } = req.body;
+    if (!urls || !Array.isArray(urls)) {
+      return res.status(400).json({ error: 'Invalid payload: urls must be a string array.' });
+    }
+
+    try {
+      const success = await submitToIndexNow(urls);
+      return res.json({ 
+        success, 
+        message: `Successfully processed manual IndexNow submission for ${urls.length} URL(s).` 
+      });
+    } catch (err: any) {
+      console.error('[IndexNow Admin API] Manual submission failed:', err);
+      return res.status(500).json({ error: err?.message || String(err) });
+    }
   });
 
   // Videos

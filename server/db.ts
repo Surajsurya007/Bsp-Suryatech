@@ -1285,6 +1285,12 @@ export function saveDB() {
     });
 }
 
+// Callback hooks for IndexNow or other external notifications
+export const dbHooks = {
+  onVideoTutorialAddedOrUpdated: () => {},
+  onDownloadAddedOrUpdated: () => {},
+};
+
 // Data Access Helpers
 export const dbActions = {
   getUsers: () => db.users,
@@ -1474,6 +1480,11 @@ export const dbActions = {
     };
     db.downloads.push(newDl);
     saveDB();
+    try {
+      dbHooks.onDownloadAddedOrUpdated();
+    } catch (e) {
+      console.error('dbHooks onDownloadAddedOrUpdated error:', e);
+    }
     return newDl;
   },
   deleteDownloadInfo: (id: string) => {
@@ -1791,6 +1802,11 @@ export const dbActions = {
     if (!db.videos) db.videos = [];
     db.videos.push(newVid);
     saveDB();
+    try {
+      dbHooks.onVideoTutorialAddedOrUpdated();
+    } catch (e) {
+      console.error('dbHooks onVideoTutorialAddedOrUpdated error:', e);
+    }
     return newVid;
   },
   updateVideoTutorial: (id: string, updates: Partial<VideoTutorial>) => {
@@ -1799,6 +1815,11 @@ export const dbActions = {
     if (idx > -1) {
       db.videos[idx] = { ...db.videos[idx], ...updates };
       saveDB();
+      try {
+        dbHooks.onVideoTutorialAddedOrUpdated();
+      } catch (e) {
+        console.error('dbHooks onVideoTutorialAddedOrUpdated error:', e);
+      }
       return db.videos[idx];
     }
     return null;
