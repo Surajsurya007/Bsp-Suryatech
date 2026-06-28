@@ -242,14 +242,50 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         const { data: contacts, error: errContacts } = await supabase.from('contact_messages').select('*');
         if (!errContacts && contacts && contacts.length > 0) {
-          setAdminContactMessages(contacts);
+          // Merge local storage messages that aren't in Supabase to avoid losing submissions!
+          let merged = [...contacts];
           try {
-            localStorage.setItem('bsp_contact_messages', JSON.stringify(contacts));
+            const localCached = localStorage.getItem('bsp_contact_messages');
+            if (localCached) {
+              const localList = JSON.parse(localCached);
+              if (Array.isArray(localList)) {
+                const existingIds = new Set(contacts.map((c: any) => c.id));
+                localList.forEach((msg: any) => {
+                  if (msg && msg.id && !existingIds.has(msg.id)) {
+                    merged.push(msg);
+                  }
+                });
+                // Sort descending by created_at or submission date/time
+                merged.sort((a: any, b: any) => {
+                  const dateA = new Date(a.created_at || `${a.submission_date}T${a.submission_time}`).getTime();
+                  const dateB = new Date(b.created_at || `${b.submission_date}T${b.submission_time}`).getTime();
+                  return dateB - dateA;
+                });
+              }
+            }
+          } catch (e) {
+            console.warn("Error merging local contact messages with Supabase:", e);
+          }
+          setAdminContactMessages(merged);
+          try {
+            localStorage.setItem('bsp_contact_messages', JSON.stringify(merged));
           } catch (e) {
             console.warn("bsp_contact_messages sync write to localStorage restricted:", e);
           }
-        } else if (errContacts) {
-          console.log("Supabase contact_messages not found or error, using localStorage fallback:", errContacts.message);
+        } else {
+          // If there's an error, or if contacts from Supabase is empty,
+          // load/keep whatever is in localStorage!
+          try {
+            const cached = localStorage.getItem('bsp_contact_messages');
+            if (cached) {
+              setAdminContactMessages(JSON.parse(cached));
+            }
+          } catch (e) {
+            console.warn("Error loading contact messages fallback from localStorage:", e);
+          }
+          if (errContacts) {
+            console.log("Supabase contact_messages not found or error, using localStorage fallback:", errContacts.message);
+          }
         }
       } catch (err: any) {
         console.warn("Contact messages sync warning:", err);
@@ -282,6 +318,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchAdminAllData();
     }
   }, [isAdminMode]);
+
+  useEffect(() => {
+    const handleNewContactMessage = () => {
+      try {
+        const cached = localStorage.getItem('bsp_contact_messages');
+        if (cached) {
+          const list = JSON.parse(cached);
+          setAdminContactMessages(list);
+        }
+      } catch (e) {
+        console.warn("Error reading contact messages from localStorage inside AdminContext:", e);
+      }
+    };
+    window.addEventListener('bsp_new_contact_message', handleNewContactMessage);
+    return () => window.removeEventListener('bsp_new_contact_message', handleNewContactMessage);
+  }, []);
 
   return (
     <AdminContext.Provider value={{
