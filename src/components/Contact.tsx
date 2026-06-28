@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { logEvent } from '../utils/analytics';
+import { logEvent, logGA4Event } from '../utils/analytics';
 import { 
   Phone, 
   Mail, 
@@ -133,7 +133,10 @@ export default function Contact({ onAddNotification }: ContactProps) {
       window.dispatchEvent(new Event('bsp_new_contact_message'));
 
       // Log successful GA4 conversion event
-      logEvent('contact_form_submitted', 'conversion', formData.subject);
+      logGA4Event('contact_form_submit', {
+        subject: formData.subject,
+        button_text: 'Dispatch Message',
+      });
 
       setSubmittedRefId(refId);
       onAddNotification(`Message submitted successfully. Ref ID: ${refId}`, 'success');

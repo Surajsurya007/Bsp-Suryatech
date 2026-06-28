@@ -42,7 +42,7 @@ import PaymentVerification from './components/PaymentVerification';
 import { TranslationProvider } from './components/TranslationContext';
 import { useAdmin } from './components/AdminContext';
 import { AdminDashboard } from './components/AdminDashboard';
-import { initGA, logPageView, logEvent } from './utils/analytics';
+import { initGA, logPageView, logEvent, logGA4Event } from './utils/analytics';
 import SEOSchema from './components/SEOSchema';
 
 let isInitialAuthCheckDone = false;
@@ -152,42 +152,127 @@ export default function App() {
     const handleGlobalClick = (e: MouseEvent) => {
       let target = e.target as HTMLElement | null;
       
-      // Traverse up to find an anchor tag or button
+      // Traverse up to find an anchor tag, button, or clickable div/span
       while (target && target !== document.body) {
-        const href = target.getAttribute('href');
-        const id = target.id;
-        const textContent = target.textContent || '';
+        const href = target.getAttribute('href') || '';
+        const id = target.id || '';
+        const textContent = (target.textContent || '').trim();
+        const textLower = textContent.toLowerCase();
+        const idLower = id.toLowerCase();
+        const hrefLower = href.toLowerCase();
         
-        // 1. YouTube clicks
+        // 1. WhatsApp click
+        if (
+          hrefLower.includes('wa.me') || 
+          hrefLower.includes('whatsapp.com') || 
+          hrefLower.includes('api.whatsapp.com') ||
+          idLower.includes('whatsapp') ||
+          textLower.includes('whatsapp')
+        ) {
+          logGA4Event('whatsapp_click', {
+            button_text: textContent || 'WhatsApp Quick Chat',
+            destination_url: href || 'https://wa.me/919516916415',
+          });
+          
+          // If this WhatsApp click also doubles as a demo/quote request (such as the "WhatsApp Quote" box)
+          if (textLower.includes('quote') || textLower.includes('demo')) {
+            logGA4Event('demo_request', {
+              button_text: textContent || 'WhatsApp Quote Demo Request',
+              destination_url: href || 'https://wa.me/919516916415',
+            });
+          }
+          break;
+        }
+
+        // 2. Call click (tel: links or helpline components)
+        if (
+          hrefLower.startsWith('tel:') || 
+          textLower.includes('95169 16415') || 
+          textLower.includes('9958742200') ||
+          textLower.includes('9516916415') ||
+          idLower.includes('helpline') ||
+          idLower.includes('phone') ||
+          (textLower.includes('call') && (textLower.includes('us') || textLower.includes('now') || textLower.includes('support')))
+        ) {
+          logGA4Event('call_click', {
+            button_text: textContent || 'Call Support Line',
+            destination_url: href || 'tel:+919516916415',
+          });
+          break;
+        }
+
+        // 3. Buy Now clicks (purchasing / checkout initiation)
+        if (
+          textLower.includes('buy now') ||
+          textLower.includes('buy secure') ||
+          textLower.includes('checkout') ||
+          textLower.includes('purchase') ||
+          textLower.includes('proceed to secure') ||
+          textLower.includes('lifetime license key') ||
+          idLower.includes('checkout') ||
+          idLower.includes('buy')
+        ) {
+          logGA4Event('buy_now_click', {
+            button_text: textContent || 'Buy Now / Initiate Checkout',
+            destination_url: href || '',
+          });
+          break;
+        }
+
+        // 4. Demo request clicks (specific button selectors or walkthrough plays)
+        if (
+          textLower.includes('request demo') ||
+          textLower.includes('watch demo') ||
+          textLower.includes('video walkthrough') ||
+          textLower.includes('youtube demo') ||
+          textLower.includes('setup demo') ||
+          idLower.includes('demo')
+        ) {
+          logGA4Event('demo_request', {
+            button_text: textContent || 'Demo Request Walkthrough',
+            destination_url: href || '',
+          });
+          break;
+        }
+
+        // 5. Pricing page or plan selector button clicks
+        if (
+          textLower.includes('pricing') ||
+          textLower.includes('plans') ||
+          textLower.includes('view pricing') ||
+          textLower.includes('select plan') ||
+          textLower.includes('select & configure') ||
+          textLower.includes('choose') ||
+          idLower.includes('pricing') ||
+          idLower.includes('nav-item-pricing')
+        ) {
+          logGA4Event('pricing_button_click', {
+            button_text: textContent || 'Pricing Selection Plan Click',
+            destination_url: href || '',
+          });
+          break;
+        }
+
+        // 6. Direct Software Download
+        if (
+          hrefLower.endsWith('.zip') ||
+          hrefLower.endsWith('.exe') ||
+          idLower.includes('download-link') ||
+          textLower.includes('download setup') ||
+          textLower.includes('download trial')
+        ) {
+          logGA4Event('software_download', {
+            software_name: textContent || id || 'direct-download',
+            download_type: textLower.includes('trial') ? 'Trial' : 'Stable',
+            destination_url: href || '',
+            button_text: textContent || 'Download Setup Link',
+          });
+          break;
+        }
+
+        // 7. Standard Legacy YouTube logs compatibility
         if (href && (href.includes('youtube.com') || href.includes('youtu.be') || href.includes('@bspsuryatech'))) {
           logEvent('youtube_click', 'social', href);
-          break;
-        }
-
-        // 2. WhatsApp clicks
-        if (
-          (href && (href.includes('wa.me') || href.includes('whatsapp.com') || href.includes('api.whatsapp.com'))) ||
-          (id && id.includes('whatsapp'))
-        ) {
-          logEvent('whatsapp_click', 'social', href || 'WhatsApp Quick Chat');
-          break;
-        }
-
-        // 3. Download button clicks (fallback tracking via text or ID)
-        if (
-          (target.tagName === 'A' || target.tagName === 'BUTTON') &&
-          (textContent.toLowerCase().includes('download') || (id && id.toLowerCase().includes('download')))
-        ) {
-          logEvent('download_click', 'engagement', textContent.trim() || id);
-          break;
-        }
-
-        // 4. Contact button clicks (fallback tracking via text or ID)
-        if (
-          (target.tagName === 'A' || target.tagName === 'BUTTON') &&
-          (textContent.toLowerCase().includes('contact') || (id && id.toLowerCase().includes('contact')))
-        ) {
-          logEvent('contact_button_click', 'engagement', textContent.trim() || id);
           break;
         }
 
@@ -909,7 +994,12 @@ export default function App() {
       console.log("App: Clean direct download URL resolved for setup:", directUrl, "Saving as:", finalDownloadName);
 
       // Track the download in Google Analytics 4
-      logEvent('download_click', 'conversion', `${prodId} (${isFull ? 'Full' : 'Trial'})`);
+      logGA4Event('software_download', {
+        software_name: prodId,
+        download_type: isFull ? 'Full' : 'Trial',
+        destination_url: directUrl,
+        button_text: isFull ? 'DOWNLOAD FULL VERSION' : 'DOWNLOAD TRIAL',
+      });
 
       // Create a temporary anchor element to trigger high-speed direct stream securely and safely in iframes
       const link = document.createElement('a');

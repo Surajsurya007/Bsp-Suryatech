@@ -167,3 +167,35 @@ export const logEvent = (
     });
   }
 };
+
+/**
+ * Logs a highly detailed GA4/GTM event with custom key-value parameters.
+ * @param eventName The event name (e.g., 'whatsapp_click', 'software_download')
+ * @param params Object containing key-value pairs (e.g., software_name, button_text, destination_url)
+ */
+export const logGA4Event = (eventName: string, params: Record<string, any>): void => {
+  const enrichedParams = {
+    ...params,
+    page_location: typeof window !== 'undefined' ? window.location.href : '',
+  };
+
+  if (!IS_PROD) {
+    console.log(`[Analytics Dev Mode] GA4/GTM Event: [${eventName}]`, enrichedParams);
+    return;
+  }
+
+  if (typeof window !== 'undefined') {
+    // 1. Log to GA4 via gtag
+    if (window.gtag) {
+      window.gtag('event', eventName, enrichedParams);
+    }
+
+    // 2. Log to GTM by pushing structured custom event
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: eventName,
+      ...enrichedParams
+    });
+  }
+};
+
