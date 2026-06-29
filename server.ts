@@ -260,7 +260,14 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
 
   // Hostinger Static Media Asset Static Serving Middlewares
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-  app.use('/downloads', express.static(path.join(process.cwd(), 'downloads')));
+  
+  // Custom middleware for downloads: bypass static serving for exact /downloads or /downloads/ page routes
+  app.use('/downloads', (req, res, next) => {
+    if (req.path === '/' || req.path === '') {
+      return next();
+    }
+    express.static(path.join(process.cwd(), 'downloads'))(req, res, next);
+  });
 
   // Serve IndexNow Verification key dynamically
   app.get('/:key.txt', (req, res, next) => {

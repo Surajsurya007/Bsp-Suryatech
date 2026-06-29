@@ -26,15 +26,19 @@
   # Prevent Directory Indexing Listings
   Options -Indexes
 
-  # Avoid rewriting files, assets, or directories that actually exist on disc
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  # Avoid rewriting files if they exist on disc
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # Avoid rewriting directories if they exist on disc (except exactly /downloads page)
+  RewriteCond %{REQUEST_URI} !^/downloads/?$ [NC]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # EXEMPTION RUNS: Prevent Apache from intercepting /api, /uploads, /downloads, /sitemap.xml, or /robots.txt
+  # EXEMPTION RUNS: Prevent Apache from intercepting /api, /uploads, /downloads files, /sitemap.xml, or /robots.txt
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]
   RewriteCond %{REQUEST_URI} ^/uploads [NC,OR]
-  RewriteCond %{REQUEST_URI} ^/downloads [NC,OR]
+  RewriteCond %{REQUEST_URI} ^/downloads/.+ [NC,OR]
   RewriteCond %{REQUEST_URI} ^/sitemap\.xml [NC,OR]
   RewriteCond %{REQUEST_URI} ^/robots\.txt [NC]
   RewriteRule ^ - [L]

@@ -423,7 +423,10 @@ export default function App() {
     });
 
     // Check deep links or manual redirection paths
-    const path = window.location.pathname;
+    let path = window.location.pathname;
+    if (path.endsWith('/') && path !== '/') {
+      path = path.slice(0, -1);
+    }
     if (path === '/payment-verification' || window.location.hash === '#/payment-verification') {
       setCurrentPage('payment-verification');
     } else if (path === '/features') {
@@ -448,7 +451,10 @@ export default function App() {
 
     // Handle back/forward buttons using HTML5 history popstate
     const handlePopState = () => {
-      const currentPath = window.location.pathname;
+      let currentPath = window.location.pathname;
+      if (currentPath.endsWith('/') && currentPath !== '/') {
+        currentPath = currentPath.slice(0, -1);
+      }
       if (currentPath === '/' || currentPath === '') {
         setCurrentPage('home');
       } else if (currentPath === '/payment-verification') {
