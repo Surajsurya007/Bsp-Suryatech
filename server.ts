@@ -344,8 +344,7 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
       'https://bspsuryatech.in/downloads',
       'https://bspsuryatech.in/tutorials',
       'https://bspsuryatech.in/about',
-      'https://bspsuryatech.in/contact',
-      'https://bspsuryatech.in/portal'
+      'https://bspsuryatech.in/contact'
     ];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -3141,12 +3140,6 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     <lastmod>2026-06-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.70</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/portal</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.60</priority>
   </url>
 
   <!-- Software Catalog Deep-links (Canonical URLs) -->
