@@ -22,7 +22,8 @@ import {
   ChevronRight,
   Disc,
   PlayCircle,
-  HelpCircle
+  HelpCircle,
+  BookOpen
 } from 'lucide-react';
 
 export const AdminSidebar: React.FC = () => {
@@ -59,7 +60,8 @@ export const AdminSidebar: React.FC = () => {
     { id: 'database-manager', name: 'Database Manager', icon: Database, category: 'Security', desc: 'Raw SQL schema browser console' },
     { id: 'settings', name: 'Settings Hub', icon: Settings, category: 'System', desc: 'Define backup & company address' },
     { id: 'gst-ledger', name: 'GST Ledger Control', icon: Percent, category: 'Finance', desc: 'Configure HSN 998314 registry' },
-    { id: 'coupons', name: 'Coupon Manager', icon: Percent, category: 'Finance', desc: 'Manage promotional discounts & coupon campaigns' }
+    { id: 'coupons', name: 'Coupon Manager', icon: Percent, category: 'Finance', desc: 'Manage promotional discounts & coupon campaigns' },
+    { id: 'blogs', name: 'Blog Manager', icon: BookOpen, category: 'Main', desc: 'Create, edit & publish articles' }
   ];
 
   const filteredModules = modulesList.filter(m => 
@@ -84,7 +86,7 @@ export const AdminSidebar: React.FC = () => {
             <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search 17 Modules..."
+              placeholder="Search Modules..."
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs font-mono text-slate-150 focus:outline-none focus:border-red-600 transition-colors"

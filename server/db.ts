@@ -1706,6 +1706,15 @@ export const dbActions = {
     saveDB();
     return newBlog;
   },
+  updateBlog: (id: string, blogData: Partial<Blog>) => {
+    const idx = db.blogs.findIndex(b => b.id === id);
+    if (idx !== -1) {
+      db.blogs[idx] = { ...db.blogs[idx], ...blogData };
+      saveDB();
+      return db.blogs[idx];
+    }
+    return null;
+  },
   deleteBlog: (id: string) => {
     db.blogs = db.blogs.filter(b => b.id !== id);
     saveDB();

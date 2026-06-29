@@ -129,4 +129,42 @@
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
+
+  <!-- Blog Routes -->
+  <url>
+    <loc>https://bspsuryatech.in/blog</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://bspsuryatech.in/blog/best-offline-billing-software-indian-small-businesses</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://bspsuryatech.in/blog/choose-right-pos-system-supermarkets</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://bspsuryatech.in/blog/gst-e-invoicing-billing-guidelines-retailers-india</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://bspsuryatech.in/blog/setup-thermal-printers-barcode-scanners-billing</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://bspsuryatech.in/blog/boost-checkout-speed-reduce-supermarket-queue-times</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
 </urlset>

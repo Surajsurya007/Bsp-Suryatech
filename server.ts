@@ -365,7 +365,13 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
       { loc: 'https://bspsuryatech.in/software/school_erp', freq: 'weekly', prio: '0.8' },
       { loc: 'https://bspsuryatech.in/software/enterprise_erp', freq: 'weekly', prio: '0.8' },
       { loc: 'https://bspsuryatech.in/software/hotel_erp', freq: 'weekly', prio: '0.8' },
-      { loc: 'https://bspsuryatech.in/software/repairing_erp', freq: 'weekly', prio: '0.8' }
+      { loc: 'https://bspsuryatech.in/software/repairing_erp', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/blog', freq: 'daily', prio: '0.85' },
+      { loc: 'https://bspsuryatech.in/blog/best-offline-billing-software-indian-small-businesses', freq: 'weekly', prio: '0.75' },
+      { loc: 'https://bspsuryatech.in/blog/choose-right-pos-system-supermarkets', freq: 'weekly', prio: '0.75' },
+      { loc: 'https://bspsuryatech.in/blog/gst-e-invoicing-billing-guidelines-retailers-india', freq: 'weekly', prio: '0.75' },
+      { loc: 'https://bspsuryatech.in/blog/setup-thermal-printers-barcode-scanners-billing', freq: 'weekly', prio: '0.75' },
+      { loc: 'https://bspsuryatech.in/blog/boost-checkout-speed-reduce-supermarket-queue-times', freq: 'weekly', prio: '0.75' }
     ];
     const today = new Date().toISOString().split('T')[0];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -2021,6 +2027,37 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.json(dbActions.getBlogs());
   });
 
+  app.post('/api/admin/blogs', authenticateToken, (req: any, res: any) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+      return res.status(403).json({ error: 'Permission denied. Admin required.' });
+    }
+    const blog = req.body;
+    const fresh = dbActions.createBlog(blog);
+    console.log(`[AUDIT LOG] Admin ${req.user?.email || 'system'} created new blog article: ${fresh ? fresh.title : 'Unknown'}`);
+    res.status(201).json(fresh);
+  });
+
+  app.put('/api/admin/blogs/:id', authenticateToken, (req: any, res: any) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+      return res.status(403).json({ error: 'Permission denied. Admin required.' });
+    }
+    const updated = dbActions.updateBlog(req.params.id, req.body);
+    if (!updated) {
+      return res.status(444).json({ error: 'Blog not found.' });
+    }
+    console.log(`[AUDIT LOG] Admin ${req.user?.email || 'system'} updated blog article ID: ${req.params.id}`);
+    res.json(updated);
+  });
+
+  app.delete('/api/admin/blogs/:id', authenticateToken, (req: any, res: any) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+      return res.status(403).json({ error: 'Permission denied. Admin required.' });
+    }
+    dbActions.deleteBlog(req.params.id);
+    console.log(`[AUDIT LOG] Admin ${req.user?.email || 'system'} deleted blog article ID: ${req.params.id}`);
+    res.json({ success: true });
+  });
+
   // Downloads system
   app.get('/api/downloads', (req, res) => {
     res.json({
@@ -3271,6 +3308,21 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         appType: 'spa',
       });
       app.use(vite.middlewares);
+
+      // Serve index.html transformed by Vite for any non-API routes in development
+      app.get('*', async (req, res, next) => {
+        const url = req.originalUrl;
+        try {
+          if (url.startsWith('/api/') || url.startsWith('/uploads/') || url.startsWith('/downloads/')) {
+            return next();
+          }
+          let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+          template = await vite.transformIndexHtml(url, template);
+          res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+        } catch (e) {
+          next(e);
+        }
+      });
     } catch (e) {
       console.warn("Vite development server could not be started, falling back to static production serving:", e);
       const distPath = path.join(process.cwd(), 'dist');

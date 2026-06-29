@@ -78,8 +78,10 @@ export default function Layout({
   const navItems = [
     { id: 'home', label: 'Home' },
     { id: 'features', label: 'Features' },
+    { id: 'pricing', label: 'Pricing' },
     { id: 'downloads', label: 'Download Center' },
     { id: 'tutorials', label: 'Tutorials' },
+    { id: 'blog', label: 'Blogs' },
     { id: 'about', label: 'About Us' },
     { id: 'contact', label: 'Contact Us' },
   ];

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import logoAsset from '../assets/images/bsp_suryatech_logo_1781884205612.jpg';
+import { BLOG_POSTS } from '../data/blogData';
 
 interface SEOSchemaProps {
   currentPage: string;
@@ -51,6 +52,23 @@ export default function SEOSchema({
       pageName = 'Features';
       pageTitle = 'Advanced POS & GST Billing Features | BSP Suryatech';
       description = 'Explore features of BSP Suryatech software including high-speed barcode scanning, automated GST invoices, daily data backups, and thermal printer setups.';
+    } else if (currentPage === 'blog') {
+      path = 'blog';
+      pageName = 'Blog';
+      pageTitle = 'Blogs & Software Guides | BSP Suryatech';
+      description = 'Read BSP Suryatech software guides, retail POS tips, hardware printer setup instructions, and Goods & Services Tax (GST) e-invoicing laws.';
+    } else if (currentPage === 'blog-details' && productId) {
+      path = `blog/${productId}`;
+      const foundPost = BLOG_POSTS.find(p => p.slug === productId);
+      if (foundPost) {
+        pageName = foundPost.title;
+        pageTitle = foundPost.metaTitle;
+        description = foundPost.metaDescription;
+      } else {
+        pageName = 'Blog Article';
+        pageTitle = 'Blog Article | BSP Suryatech';
+        description = 'Read professional retail POS and billing software articles on the BSP Suryatech blog.';
+      }
     } else if (currentPage === 'pricing') {
       path = 'pricing';
       pageName = 'Pricing';
@@ -140,6 +158,19 @@ export default function SEOSchema({
           'position': 2,
           'name': 'Software',
           'item': 'https://bspsuryatech.in/downloads'
+        });
+        breadcrumbList.push({
+          '@type': 'ListItem',
+          'position': 3,
+          'name': pageName,
+          'item': canonicalUrl
+        });
+      } else if (currentPage === 'blog-details') {
+        breadcrumbList.push({
+          '@type': 'ListItem',
+          'position': 2,
+          'name': 'Blog',
+          'item': 'https://bspsuryatech.in/blog'
         });
         breadcrumbList.push({
           '@type': 'ListItem',
@@ -298,6 +329,29 @@ export default function SEOSchema({
       }
     }
 
+    // 5.1 Add Article Node (Only on blog detail pages)
+    if (currentPage === 'blog-details' && productId) {
+      const foundPost = BLOG_POSTS.find(p => p.slug === productId);
+      if (foundPost) {
+        const articleNode: any = {
+          '@type': 'BlogPosting',
+          '@id': `${canonicalUrl}#article`,
+          'isPartOf': { '@id': `${canonicalUrl}#webpage` },
+          'headline': foundPost.title,
+          'image': foundPost.image || resolvedLogo,
+          'datePublished': '2026-06-29',
+          'dateModified': '2026-06-29',
+          'author': {
+            '@type': 'Person',
+            'name': foundPost.author || 'Suryatech Editorial Team'
+          },
+          'publisher': { '@id': 'https://bspsuryatech.in/#organization' },
+          'description': foundPost.excerpt
+        };
+        graph.push(articleNode);
+      }
+    }
+
     // 6. Add FAQPage Node (Only on Home page)
     if (currentPage === 'home') {
       const faqNode = {
@@ -371,6 +425,13 @@ export default function SEOSchema({
 
     // 8. Dynamic Meta Tags Injection (Open Graph and Twitter Cards)
     let metaImage = resolvedLogo;
+
+    if (currentPage === 'blog-details' && productId) {
+      const foundPost = BLOG_POSTS.find(p => p.slug === productId);
+      if (foundPost && foundPost.image) {
+        metaImage = foundPost.image;
+      }
+    }
 
     if (currentPage === 'software-details' && productId) {
       const foundProduct = products.find(p => p.id === productId || p.mappedPlanId === productId);

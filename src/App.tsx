@@ -39,6 +39,8 @@ import SoftwareDetails from './components/SoftwareDetails';
 import PaymentSuccess from './components/PaymentSuccess';
 import PaymentFailure from './components/PaymentFailure';
 import PaymentVerification from './components/PaymentVerification';
+import BlogList from './components/BlogList';
+import BlogDetails from './components/BlogDetails';
 import { TranslationProvider } from './components/TranslationContext';
 import { useAdmin } from './components/AdminContext';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -58,6 +60,7 @@ export default function App() {
   } | null>(null);
   const [failureErrorMessage, setFailureErrorMessage] = useState<string>('');
   const [selectedSoftwareId, setSelectedSoftwareId] = useState<string>('prod-billing-pro');
+  const [selectedBlogSlug, setSelectedBlogSlug] = useState<string>('');
   const [user, setUser] = useState<any>(null);
   const [portalInitialView, setPortalInitialView] = useState<'dashboard' | 'tickets' | 'new-ticket' | 'profile' | 'payments' | 'invoices' | 'notifications'>('dashboard');
   const [products, setProducts] = useState<any[]>([]);
@@ -443,6 +446,12 @@ export default function App() {
       setCurrentPage('contact');
     } else if (path === '/portal') {
       setCurrentPage('portal');
+    } else if (path === '/blog') {
+      setCurrentPage('blog');
+    } else if (path.startsWith('/blog/')) {
+      const slug = path.replace('/blog/', '');
+      setSelectedBlogSlug(slug);
+      setCurrentPage('blog-details');
     } else if (path.startsWith('/software/')) {
       const prodId = path.replace('/software/', '');
       setSelectedSoftwareId(prodId);
@@ -473,6 +482,12 @@ export default function App() {
         setCurrentPage('contact');
       } else if (currentPath === '/portal') {
         setCurrentPage('portal');
+      } else if (currentPath === '/blog') {
+        setCurrentPage('blog');
+      } else if (currentPath.startsWith('/blog/')) {
+        const slug = currentPath.replace('/blog/', '');
+        setSelectedBlogSlug(slug);
+        setCurrentPage('blog-details');
       } else if (currentPath.startsWith('/software/')) {
         const prodId = currentPath.replace('/software/', '');
         setSelectedSoftwareId(prodId);
@@ -818,6 +833,13 @@ export default function App() {
       window.history.pushState({}, '', `/software/${parts[1]}`);
       return;
     }
+    if (page.startsWith('blog-details:')) {
+      const parts = page.split(':');
+      setSelectedBlogSlug(parts[1]);
+      setCurrentPage('blog-details');
+      window.history.pushState({}, '', `/blog/${parts[1]}`);
+      return;
+    }
     if (page === 'portal') {
       setPortalInitialView('dashboard');
     }
@@ -828,6 +850,7 @@ export default function App() {
       pricing: '/pricing',
       downloads: '/downloads',
       tutorials: '/tutorials',
+      blog: '/blog',
       about: '/about',
       contact: '/contact',
       portal: '/portal',
@@ -1528,7 +1551,7 @@ export default function App() {
     <TranslationProvider user={user}>
       <SEOSchema 
         currentPage={currentPage} 
-        productId={selectedSoftwareId} 
+        productId={currentPage === 'blog-details' ? selectedBlogSlug : selectedSoftwareId} 
         products={products} 
         solutions={solutions} 
       />
@@ -1596,6 +1619,17 @@ export default function App() {
 
           {currentPage === 'contact' && (
             <Contact onAddNotification={addNotification} />
+          )}
+
+          {currentPage === 'blog' && (
+            <BlogList onPageChange={handleNavigatePage} />
+          )}
+
+          {currentPage === 'blog-details' && (
+            <BlogDetails 
+              slug={selectedBlogSlug}
+              onPageChange={handleNavigatePage}
+            />
           )}
 
           {currentPage === 'software-details' && (
