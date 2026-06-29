@@ -43,40 +43,49 @@ export default function SEOSchema({
     // 1. Determine canonical path, title, and description for current page
     let path = '';
     let pageName = 'Home';
-    let description = 'BSP Suryatech provides lifetime license billing software, POS, inventory management, GST billing, ERP and business management solutions for retail stores, supermarkets, medical shops, restaurants, transport, schools and more. One-time payment with no monthly or yearly subscription.';
+    let pageTitle = 'BSP Suryatech | Best Offline Billing Software & POS';
+    let description = 'BSP Suryatech offers lifetime license offline billing software, POS, and ERP for Indian retail stores & supermarkets. Secure GST compliance with no monthly fees.';
 
     if (currentPage === 'features') {
       path = 'features';
       pageName = 'Features';
-      description = 'Explore the advanced features of BSP Suryatech billing systems, including barcode scanning, thermal printing, multi-firm configurations, and automatic database back-ups.';
+      pageTitle = 'Advanced POS & GST Billing Features | BSP Suryatech';
+      description = 'Explore features of BSP Suryatech software including high-speed barcode scanning, automated GST invoices, daily data backups, and thermal printer setups.';
     } else if (currentPage === 'pricing') {
       path = 'pricing';
       pageName = 'Pricing';
-      description = 'Explore our flexible pricing plans for premium POS, GST-compliant billing software, and custom ERP systems. Choose a package designed to grow your business.';
+      pageTitle = 'Affordable Lifetime Software Pricing | BSP Suryatech';
+      description = 'Get premium POS, GST-compliant billing software, and custom ERP systems for a one-time flat fee. No monthly subscriptions. Check our plans starting at ₹3,000.';
     } else if (currentPage === 'downloads') {
       path = 'downloads';
       pageName = 'Downloads';
-      description = 'Download raw Windows installer setup packages, stable free trial editions, official training guides, and PDF manuals for BSP Suryatech software.';
+      pageTitle = 'Download Offline Software Installers | BSP Suryatech';
+      description = 'Download Windows installers, free trial packages, training manuals, and driver setup guides for BSP Suryatech retail POS and enterprise ERP software systems.';
     } else if (currentPage === 'tutorials') {
       path = 'tutorials';
       pageName = 'Tutorials';
-      description = 'Watch our official step-by-step video tutorials, hardware driver setups, and user training guides for billing, POS, and ERP platforms.';
+      pageTitle = 'Step-by-Step POS Video Training | BSP Suryatech';
+      description = 'Watch our official step-by-step video training tutorials, hardware printer setup instructions, and database configuration guides for billing and ERP software.';
     } else if (currentPage === 'about') {
       path = 'about';
       pageName = 'About Us';
-      description = 'Learn more about BSP Suryatech, our mission, corporate vision, and dedicated support teams building leading POS billing software in Raipur, India.';
+      pageTitle = 'About BSP Suryatech | Trusted POS & ERP Developers';
+      description = 'Learn about BSP Suryatech, our corporate mission, and our dedicated support team delivering secure, lifetime offline billing systems to Indian business owners.';
     } else if (currentPage === 'contact') {
       path = 'contact';
       pageName = 'Contact Us';
-      description = 'Get in touch with BSP Suryatech sales experts and installation engineers. Request a free live remote demo or custom software quote.';
+      pageTitle = 'Contact BSP Suryatech | Request Free Software Demo';
+      description = 'Get in touch with BSP Suryatech sales experts. Request a live remote software demo, ask for custom pricing, or contact support at +91 95169 16415.';
     } else if (currentPage === 'portal') {
       path = 'portal';
       pageName = 'Customer Portal';
-      description = 'Access your BSP Suryatech account, manage license keys, check purchase history, and contact customer support.';
+      pageTitle = 'Customer Portal License Manager | BSP Suryatech';
+      description = 'Log in to your BSP Suryatech customer dashboard to instantly activate licenses, manage serial registration keys, and view offline billing purchase histories.';
     } else if (currentPage === 'payment-verification') {
       path = 'payment-verification';
       pageName = 'Payment Verification';
-      description = 'Verify your license purchase order transactions and unlock customer licenses securely.';
+      pageTitle = 'Verify Software License Transactions | BSP Suryatech';
+      description = 'Submit your payment receipt, verify UPI/card transaction details, and securely unlock your permanent BSP Suryatech offline billing software registration key.';
     } else if (currentPage === 'software-details' && productId) {
       path = `software/${productId}`;
       
@@ -84,21 +93,20 @@ export default function SEOSchema({
       const foundProduct = products.find(p => p.id === productId || p.mappedPlanId === productId);
       const foundSolution = !foundProduct && solutions && solutions.find(s => s.id === productId || s.mappedPlanId === productId);
       
+      let softwareName = 'Software Details';
       if (foundProduct) {
-        pageName = foundProduct.name;
-        description = foundProduct.description || foundProduct.fullDescription;
+        softwareName = foundProduct.name;
       } else if (foundSolution) {
-        pageName = foundSolution.title || foundSolution.name;
-        description = foundSolution.description;
-      } else {
-        pageName = 'Software Details';
+        softwareName = foundSolution.title || foundSolution.name;
       }
+      
+      pageName = softwareName;
+      // Keep title strictly below 60 chars
+      pageTitle = `${softwareName.slice(0, 30)} | Lifetime POS Billing Software`;
+      description = `Get secure offline ${softwareName} by BSP Suryatech. Features barcode scanning, custom GST tax invoices, and stock tracking for a flat ₹3,000 lifetime fee.`;
     }
 
     const canonicalUrl = `https://bspsuryatech.in/${path}`;
-    const pageTitle = currentPage === 'home'
-      ? 'BSP Suryatech | Billing Software, POS, ERP & Business Management Software'
-      : `${pageName} - BSP Suryatech`;
 
     // 2. Build WebPage Node
     const webPageNode: any = {

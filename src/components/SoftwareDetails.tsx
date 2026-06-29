@@ -19,9 +19,18 @@ import {
   FileText, 
   Play, 
   Images,
-  Maximize2
+  Maximize2,
+  Info,
+  Sparkles,
+  TrendingUp,
+  Users,
+  Wrench,
+  Layers,
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react';
 import { Product } from '../types';
+import { getSeoSoftwareDetails } from '../utils/seoSoftwareData';
 
 import hospitalDashboard from '../assets/images/hospital_dashboard_1782360732649.jpg';
 import hospitalDoctors from '../assets/images/hospital_doctors_1782360746478.jpg';
@@ -113,8 +122,11 @@ export default function SoftwareDetails({
         }
       : products[0];
 
+  const seoData = getSeoSoftwareDetails(product.id || '');
+
   // State managers
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [galleryViewMode, setGalleryViewMode] = useState<'slider' | 'grid'>('slider');
   const [hostingerTryIndex, setHostingerTryIndex] = useState<Record<number, number>>({});
@@ -499,35 +511,234 @@ export default function SoftwareDetails({
             </div>
 
             {/* Product description details card */}
-            <div className="bg-white border border-slate-200/60 rounded-3xl p-8 shadow-sm space-y-6">
-              <div className="space-y-2 text-left">
+            <div className="bg-white border border-slate-200/60 rounded-3xl p-8 shadow-sm space-y-8" id="software-seo-core-content">
+              {/* Introduction Header */}
+              <div className="space-y-3 text-left">
                 <span className="text-xs font-bold text-blue-600 font-mono tracking-wider uppercase bg-blue-50 border border-blue-100 px-3 py-1 rounded-full">
-                  {categoryStr}
+                  {categoryStr} • enterprise level
                 </span>
-                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-2">{product.name} Detailed Overview</h2>
-              </div>
-
-              <div className="prose prose-slate max-w-none text-left">
-                <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">
-                  {fullDescStr}
+                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-2" id="seo-main-h2">
+                  {product.name} — Full Technical Specifications
+                </h2>
+                <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap font-medium">
+                  {seoData.introduction}
                 </p>
               </div>
 
-              {/* Features Lists section */}
-              <div className="border-t border-slate-100 pt-6 space-y-4 text-left">
-                <h4 className="font-extrabold text-slate-900 text-sm tracking-tight font-sans">
-                  Key Module Capabilities & Features
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {product.features.map((feature, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-600">
-                      <div className="mt-0.5 p-0.5 bg-emerald-50 text-emerald-600 rounded">
-                        <Check className="w-3.5 h-3.5" />
+              {/* AI Search Overview Section */}
+              <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-6 space-y-4 text-left" id="seo-ai-overview">
+                <div className="flex items-center gap-2 text-blue-600 border-b pb-2 border-slate-200/50">
+                  <Sparkles className="w-5 h-5" />
+                  <h3 className="font-extrabold text-slate-900 text-sm tracking-tight font-sans">
+                    AI Overview & Quick Facts
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed">
+                  <div className="space-y-1">
+                    <span className="font-mono text-slate-450 uppercase font-bold block">What is {seoData.name}?</span>
+                    <p className="text-slate-600">{seoData.whatIs}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-mono text-slate-450 uppercase font-bold block">Who should use it?</span>
+                    <p className="text-slate-600">{seoData.whoShouldUse}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Benefits (Phase 3 & 5) */}
+              <div className="space-y-4 text-left" id="seo-benefits">
+                <div className="flex items-center gap-2 text-slate-800 border-b pb-2 border-slate-100">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  <h3 className="font-extrabold text-slate-900 text-base">Core Business Benefits</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {seoData.benefits.map((benefit, i) => (
+                    <div key={i} className="bg-emerald-50/40 border border-emerald-100/65 rounded-xl p-4 space-y-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                        {i + 1}
                       </div>
-                      <span>{feature}</span>
+                      <p className="text-slate-600 text-xs leading-relaxed">{benefit}</p>
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Modules (Phase 3) */}
+              <div className="space-y-4 text-left" id="seo-modules">
+                <div className="flex items-center gap-2 text-slate-800 border-b pb-2 border-slate-100">
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  <h3 className="font-extrabold text-slate-900 text-base">Key Capabilities & Included Modules</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {seoData.modules.map((module, i) => (
+                    <div key={i} className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/40 hover:border-slate-300 transition">
+                      <div className="mt-0.5 p-1 bg-blue-50 text-blue-600 rounded-lg">
+                        <CheckCircle className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-mono text-slate-450 block uppercase font-bold">MODULE {i + 1}</span>
+                        <p className="text-slate-700 text-sm font-semibold">{module}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Supported Industries (Phase 3) */}
+              <div className="space-y-4 text-left" id="seo-industries">
+                <div className="flex items-center gap-2 text-slate-800 border-b pb-2 border-slate-100">
+                  <Users className="w-4 h-4 text-purple-600" />
+                  <h3 className="font-extrabold text-slate-900 text-base">Supported Industries & Verticals</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {seoData.industries.map((industry, i) => (
+                    <span key={i} className="px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-semibold rounded-full tracking-wide">
+                      ⚡ {industry}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advantages vs Disadvantages (Phase 5) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left" id="seo-pros-cons">
+                <div className="space-y-3 bg-emerald-50/10 border border-emerald-100 p-5 rounded-2xl">
+                  <h4 className="font-extrabold text-emerald-800 text-sm flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" /> Key Technical Advantages
+                  </h4>
+                  <ul className="space-y-2 text-xs text-slate-600 list-disc list-inside">
+                    {seoData.advantages.map((adv, i) => (
+                      <li key={i} className="leading-relaxed">{adv}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="space-y-3 bg-amber-50/10 border border-amber-100 p-5 rounded-2xl">
+                  <h4 className="font-extrabold text-amber-800 text-sm flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" /> Technical Limitations
+                  </h4>
+                  <ul className="space-y-2 text-xs text-slate-600 list-disc list-inside">
+                    {seoData.disadvantages.map((dis, i) => (
+                      <li key={i} className="leading-relaxed">{dis}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* How It Works (Phase 5) */}
+              <div className="space-y-4 text-left" id="seo-how-it-works">
+                <div className="flex items-center gap-2 text-slate-800 border-b pb-2 border-slate-100">
+                  <Wrench className="w-4 h-4 text-slate-700" />
+                  <h3 className="font-extrabold text-slate-900 text-base">How It Works — Setup & Execution</h3>
+                </div>
+                <div className="p-5 bg-blue-50/10 border border-blue-100/50 rounded-2xl space-y-3">
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                    {seoData.howItWorks}
+                  </p>
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-blue-600 font-bold uppercase tracking-wider">
+                    <span>⚡ Lightweight Setup</span>
+                    <span>•</span>
+                    <span>Offline Database initialization</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Competitor Comparison (Phase 5) */}
+              <div className="space-y-4 text-left" id="seo-comparison">
+                <div className="flex items-center gap-2 text-slate-800 border-b pb-2 border-slate-100">
+                  <Info className="w-4 h-4 text-blue-600" />
+                  <h3 className="font-extrabold text-slate-900 text-base">Comparison — Lifetime License vs Cloud Subscriptions</h3>
+                </div>
+                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed bg-slate-50 border p-5 rounded-2xl">
+                  {seoData.comparison}
+                </p>
+              </div>
+
+              {/* Best Practices (Phase 5) */}
+              <div className="space-y-4 text-left" id="seo-best-practices">
+                <div className="flex items-center gap-2 text-slate-800 border-b pb-2 border-slate-100">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <h3 className="font-extrabold text-slate-900 text-base">Operational Best Practices</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {seoData.bestPractices.map((practice, i) => (
+                    <div key={i} className="flex gap-2.5 items-start p-3 bg-slate-50 border rounded-xl">
+                      <span className="text-xs font-mono font-bold text-slate-400">0{i + 1}</span>
+                      <p className="text-slate-600 text-xs leading-relaxed">{practice}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Internal Navigation Links (Phase 6) */}
+              <div className="border-t border-slate-100 pt-6 space-y-4 text-left" id="seo-internal-links">
+                <h4 className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-widest">HELPFUL INTERNAL LINKS</h4>
+                <div className="flex flex-wrap gap-2.5">
+                  <button 
+                    onClick={() => { window.scrollTo(0, 0); onPageChange('home'); }} 
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+                  >
+                    🏠 Home Dashboard
+                  </button>
+                  <button 
+                    onClick={() => { window.scrollTo(0, 0); onPageChange('pricing'); }} 
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+                  >
+                    💳 Software Pricing Plans
+                  </button>
+                  <button 
+                    onClick={() => { window.scrollTo(0, 0); onPageChange('downloads'); }} 
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+                  >
+                    📥 Trial Downloads Center
+                  </button>
+                  <button 
+                    onClick={() => { window.scrollTo(0, 0); onPageChange('tutorials'); }} 
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+                  >
+                    🎥 Video Walkthrough Tutorials
+                  </button>
+                  <button 
+                    onClick={() => { window.scrollTo(0, 0); onPageChange('contact'); }} 
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+                  >
+                    📞 Request Free Live Demo
+                  </button>
+                </div>
+              </div>
+
+              {/* Collapsible FAQ Section (Phase 3 & 5) */}
+              <div className="border-t border-slate-100 pt-6 space-y-4 text-left" id="seo-faqs">
+                <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-blue-600" /> Frequently Asked Questions
+                </h3>
+                <div className="space-y-2">
+                  {seoData.faq.map((faq, i) => {
+                    const isOpen = openFaqIndex === i;
+                    return (
+                      <div key={i} className="border border-slate-200 rounded-xl overflow-hidden transition-all duration-300">
+                        <button
+                          onClick={() => setOpenFaqIndex(isOpen ? null : i)}
+                          className="w-full p-4 text-left font-bold text-slate-800 hover:text-blue-600 text-xs sm:text-sm flex items-center justify-between transition focus:outline-none bg-slate-50/50"
+                        >
+                          <span>{faq.q}</span>
+                          <span className="text-slate-400 font-mono font-bold">{isOpen ? '−' : '+'}</span>
+                        </button>
+                        {isOpen && (
+                          <div className="p-4 bg-white border-t border-slate-100 text-slate-600 text-xs sm:text-sm leading-relaxed animate-fade-in">
+                            {faq.a}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Conclusion (Phase 3 & 5) */}
+              <div className="border-t border-slate-100 pt-6 text-left" id="seo-conclusion">
+                <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest block mb-2">SUMMARY CONCLUSION</span>
+                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed italic bg-blue-50/30 p-4 rounded-xl border border-blue-50">
+                  {seoData.conclusion}
+                </p>
               </div>
             </div>
 

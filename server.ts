@@ -345,23 +345,38 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
   app.get('/sitemap.xml', (req, res) => {
     res.header('Content-Type', 'application/xml');
     const urls = [
-      'https://bspsuryatech.in/',
-      'https://bspsuryatech.in/features',
-      'https://bspsuryatech.in/pricing',
-      'https://bspsuryatech.in/downloads',
-      'https://bspsuryatech.in/tutorials',
-      'https://bspsuryatech.in/about',
-      'https://bspsuryatech.in/contact'
+      { loc: 'https://bspsuryatech.in/', freq: 'daily', prio: '1.0' },
+      { loc: 'https://bspsuryatech.in/features', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/pricing', freq: 'weekly', prio: '0.9' },
+      { loc: 'https://bspsuryatech.in/downloads', freq: 'daily', prio: '0.85' },
+      { loc: 'https://bspsuryatech.in/tutorials', freq: 'weekly', prio: '0.75' },
+      { loc: 'https://bspsuryatech.in/about', freq: 'monthly', prio: '0.70' },
+      { loc: 'https://bspsuryatech.in/contact', freq: 'monthly', prio: '0.70' },
+      { loc: 'https://bspsuryatech.in/software/retail_billing', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/supermarket_pos', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/grocery_billing', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/medical_store', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/restaurant_pos', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/mobile_shop', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/electronics_shop', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/transport_erp', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/hospital_erp', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/laboratory_erp', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/school_erp', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/enterprise_erp', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/hotel_erp', freq: 'weekly', prio: '0.8' },
+      { loc: 'https://bspsuryatech.in/software/repairing_erp', freq: 'weekly', prio: '0.8' }
     ];
+    const today = new Date().toISOString().split('T')[0];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${urls.map(url => `
+  ${urls.map(item => `
   <url>
-    <loc>${url}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>${url.endsWith('/') ? '1.0' : '0.8'}</priority>
-  </url>`).join('')}
+    <loc>${item.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${item.freq}</changefreq>
+    <priority>${item.prio}</priority>
+  </url>`).join('').trim()}
 </urlset>`;
     res.send(xml.trim());
   });
