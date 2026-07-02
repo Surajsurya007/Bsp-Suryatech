@@ -33,6 +33,7 @@ interface DownloadCenterProps {
   onPageChange?: (page: string) => void;
   onAddToCart?: (planId: string) => void;
   solutions?: SoftwareSolution[];
+  onIncrementDownloads?: (prodId: string) => void;
 }
 
 interface SoftwareSolution {
@@ -104,16 +105,16 @@ const solutions: SoftwareSolution[] = [
   {
     id: 'sol-grocery',
     mappedPlanId: 'prod-billing-pro',
-    title: 'Grocery Billing Software',
+    title: 'Gym Management Software',
     category: 'Billing Software',
-    subtitle: 'FAST GROCERY STORE SPECIAL',
-    description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
+    subtitle: 'FITNESS & GYM SPECIAL',
+    description: 'Designed for modern fitness centers, gym clubs, and personal trainers. Track memberships, member entries, plans, and automatic renewal reminders.',
     price: '₹3,000',
-    features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
-    icon: '🍎',
-    badge: 'Billing',
-    badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip'
+    features: ['Membership Tracking', 'Member Check-In System', 'Diet & Workout Assigning', 'Auto Renewal Alerts', 'Trainer Shifts Scheduling'],
+    icon: '🏋️',
+    badge: 'Management',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Gym-Management-v1.0.0.zip'
   },
   {
     id: 'sol-medical',
@@ -317,7 +318,15 @@ export const getCleanDownloadFileName = (url?: string): string => {
   return filename;
 };
 
-export default function DownloadCenter({ downloads, totalDownloads, onTriggerTrialDownload, onPageChange, onAddToCart, solutions: propSolutions = [] }: DownloadCenterProps) {
+export default function DownloadCenter({ 
+  downloads, 
+  totalDownloads, 
+  onTriggerTrialDownload, 
+  onPageChange, 
+  onAddToCart, 
+  solutions: propSolutions = [],
+  onIncrementDownloads 
+}: DownloadCenterProps) {
   const [downloadFilter, setDownloadFilter] = useState<'all' | 'stable' | 'manuals'>('all');
   const [selectedSolutionCategory, setSelectedSolutionCategory] = useState<string>('All Solutions');
 
@@ -529,6 +538,7 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
                       download={getCleanDownloadFileName(sol.exeUrl)}
                       onClick={() => {
                         console.log(`DownloadCenter: Downloading setup file directly: ${sol.exeUrl}`);
+                        onIncrementDownloads?.(sol.id);
                       }}
                       className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 mt-4 transition-all duration-155 cursor-pointer shadow-md hover:shadow-emerald-500/10 active:scale-97 text-center decoration-none inline-flex"
                       id={`sol-download-link-${sol.id}`}
@@ -604,6 +614,9 @@ export default function DownloadCenter({ downloads, totalDownloads, onTriggerTri
             target="_blank"
             rel="noopener noreferrer"
             download="Complete-PDF-Installation-User-Manual.pdf"
+            onClick={() => {
+              onIncrementDownloads?.('usr-manual-pdf');
+            }}
             className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase rounded-xl tracking-wider flex items-center justify-center gap-2 cursor-pointer shrink-0 transition-all duration-300 shadow-md shadow-red-500/15 hover:shadow-red-500/25"
             style={{ minWidth: '200px' }}
           >

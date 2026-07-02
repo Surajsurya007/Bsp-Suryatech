@@ -12,8 +12,8 @@ export const softwareDownloads = {
     price: 3000
   },
   grocery_billing: {
-    name: "Grocery Billing Software",
-    file: "https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip",
+    name: "Gym Management Software",
+    file: "https://bspsuryatech.in/downloads/BSP-Gym-Management-v1.0.0.zip",
     version: "1.0.0",
     price: 3000
   },

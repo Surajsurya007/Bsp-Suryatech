@@ -682,6 +682,24 @@ export default function App() {
 
   const fetchDownloads = async () => {
     try {
+      const localRes = await fetch('/api/downloads');
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        if (localData && typeof localData.totalDownloads === 'number') {
+          if (localData.downloads && localData.downloads.length > 0) {
+            setDownloads(localData.downloads);
+          } else {
+            setDownloads(defaultDownloads);
+          }
+          setTotalDownloads(localData.totalDownloads);
+          return;
+        }
+      }
+    } catch (e) {
+      console.log("App: Failed to fetch downloads from local API, trying Supabase...", e);
+    }
+
+    try {
       console.log("App: Fetching release downloads info fallback direct from Supabase...");
       const { data, error } = await supabase.from('downloads_info').select('*');
       if (data && !error && data.length > 0) {
@@ -978,7 +996,7 @@ export default function App() {
       else if (cleanId.includes('hotel')) fallbackExeName = 'Hotel-Management-ERP-v3.0.0';
       else if (cleanId.includes('repairing') || cleanId.includes('electrical')) fallbackExeName = 'BSP-SuryaTech-Flow-ERP-v1.0.0';
       else if (cleanId.includes('medical')) fallbackExeName = 'Medical-Store-ERP-v3.0.0';
-      else if (cleanId.includes('grocery')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
+      else if (cleanId.includes('grocery')) fallbackExeName = 'BSP-Gym-Management-v1.0.0';
       else if (cleanId.includes('supermarket')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
       else if (cleanId.includes('billing-pro') || cleanId.includes('retail') || cleanId.includes('pro')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
       else if (cleanId.includes('enterprise') || cleanId.includes('warehouse') || cleanId.includes('inventory') || cleanId.includes('erp')) fallbackExeName = 'Inventory-Management-ERP-v3.0.0';
@@ -1046,6 +1064,18 @@ export default function App() {
       fetchDownloads();
       addNotification('Download started successfully! Launch the setup in folder to run offline.', 'success');
     }, 2000);
+  };
+
+  const handleIncrementDownloads = async (prodId: string) => {
+    // 1. Instantly increment local state for real-time responsiveness in UI
+    setTotalDownloads(prev => prev + 1);
+
+    // 2. Call backend api to record/persist the download increment
+    try {
+      await fetch(`/api/downloads/setup/${prodId}`);
+    } catch (err) {
+      console.warn('Failed to register download click in backend:', err);
+    }
   };
 
   // Direct serverless order validation helper to dispatch licenses, orders, invoices, payments, and notifications
@@ -1606,6 +1636,7 @@ export default function App() {
               onPageChange={handleNavigatePage}
               onAddToCart={handleAddToCartAndChoosePrice}
               solutions={solutions}
+              onIncrementDownloads={handleIncrementDownloads}
             />
           )}
 

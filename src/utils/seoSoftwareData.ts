@@ -165,50 +165,50 @@ const seoSoftwareDataMap: Record<string, SEOSoftwareContent> = {
   },
   'sol-grocery': {
     id: 'sol-grocery',
-    name: 'Grocery Billing Software',
-    introduction: 'Designed specifically for local grocery stores, dry fruit merchants, and organic food outlets. This specialized software seamlessly integrates digital weight scales, HSN category tagging, and loose-item billing templates.',
-    whatIs: 'A dedicated grocery POS application focusing on weighing-scale integration, fast loose items selection, and expiration tracking for packaged products.',
-    whoShouldUse: 'Grocery store owners, fruit & vegetable marts, organic supermarkets, spice shops, and grain wholesalers.',
+    name: 'Gym Management Software',
+    introduction: 'Designed specifically for fitness centers, multi-branch gym networks, yoga studios, and personal training clubs. This specialized software seamlessly tracks memberships, check-in entry logs, dietary sheets, and automatic renewal invoice updates.',
+    whatIs: 'A dedicated gym administrative application focusing on membership subscription timelines, check-in validation gates, and physical training schedules.',
+    whoShouldUse: 'Gym owners, health club operators, yoga and pilates studio coordinators, dance school administrators, and physical trainers.',
     benefits: [
-      'Integrate electronic weighing scales directly to eliminate manual weight typing errors.',
-      'Handle loose item billing with customized fast-selection hotkey grids on-screen.',
-      'Track batches and batch numbers for short-life FMCG products to reduce wastage.'
+      'Integrate digital check-in systems to monitor active member attendance seamlessly.',
+      'Handle flexible membership tiers with custom subscription package schedules.',
+      'Automate membership renewal alerts via SMS and WhatsApp reminders.'
     ],
     advantages: [
-      'Instant barcode printing for loose items, packed grains, and daily food items.',
-      'Multi-payment options: UPI QR code displays, credit cards, credit entries, and cash.',
-      'Lightweight database operates smoothly on very old computer systems.'
+      'Instant membership receipt generation with automated GST slab calculations.',
+      'Trainer shift calendars and personal training slot booking registers.',
+      'Flexible payment structures: full-term packages, monthly installments, or per-session fees.'
     ],
     disadvantages: [
-      'Manual entry is required for non-electronic scales.',
-      'Requires scale driver calibration'
+      'Requires internet connection for automated messaging triggers.',
+      'Biometric fingerprint integration is optional.'
     ],
     modules: [
-      'Direct Scale integration (RS232 / USB scale interfaces)',
-      'Loose item on-screen hotkey selector grids',
-      'Batch-wise FIFO inventory expiration manager',
-      'Dynamic HSN billing with customizable tax rates',
-      'Customer monthly grocery tab/ledger bookkeeper'
+      'Member check-in validation log console',
+      'Personal training booking schedule calendar',
+      'Flexible membership tier package calculator',
+      'Trainer work shift ledger',
+      'Member subscription timeline database'
     ],
     industries: [
-      'Grocery & Kirana Stores',
-      'Dry Fruits & Spices Merchants',
-      'Fruits & Vegetable Plazas',
-      'Flour Mills & Grain Merchants',
-      'Organic Foods Hub'
+      'Gyms & Fitness Centers',
+      'Yoga & Pilates Studios',
+      'CrossFit boxes',
+      'Sports Training Facilities',
+      'Personal Coaching Studios'
     ],
-    howItWorks: 'Place loose items on the linked scale, tap the item on the on-screen grocery grid, weight is automatically pulled and computed, hit cash button to output the slip.',
-    comparison: 'While Marg is complicated, BSP Suryatech Grocery Software is stripped of bloated menus, keeping the focus entirely on weight-scale precision and cashier speed.',
+    howItWorks: 'Enroll members with custom subscription plans, tap check-in card or log entry at the reception terminal, track attendance history, and get automatic notification for upcoming renewals.',
+    comparison: 'BSP Suryatech Gym Management Software offers an incredibly lightweight offline-first local layout, removing expensive monthly cloud subscriptions required by generic platforms.',
     bestPractices: [
-      'Group similar loose commodities into clear color-coded touch panels on the billing screen.',
-      'Enable the monthly credit feature for trusted regular local household customers.'
+      'Group similar training packages into simple visible pricing categories on the front desk screen.',
+      'Setup automated renewal notifications 3 days before membership expiration.'
     ],
-    suitableFor: 'Local grocers seeking precise loose weight calculation and fast customer turnover.',
+    suitableFor: 'Gym founders seeking simple membership controls and straightforward trainer calendars with no recurring subscription fees.',
     faq: [
-      { q: 'Which electronic weighing scales are supported?', a: 'We support all standard scales utilizing standard weight transfer protocols via serial/USB connectors.' },
-      { q: 'Can it print customized product labels?', a: 'Yes, you can design adhesive barcode stickers with product names, packed dates, weights, and price.' }
+      { q: 'Is barcode card check-in supported?', a: 'Yes, members can be issued barcode cards to scan at reception for automatic registration of entry logs.' },
+      { q: 'Does it support biometric fingerprint scanners?', a: 'Yes, our local platform integrates with standard USB biometric modules for secure check-in validation.' }
     ],
-    conclusion: 'Maximize your grocery store profits, avoid loose stock leakages, and serve customers quickly with BSP Suryatech Grocery Software.'
+    conclusion: 'Maximize your fitness studio client retention, eliminate manual member ledger books, and simplify trainer commissions with BSP Suryatech Gym Management Software.'
   },
   'sol-medical': {
     id: 'sol-medical',

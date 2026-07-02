@@ -186,16 +186,16 @@ export const defaultSolutions = [
   {
     id: 'sol-grocery',
     mappedPlanId: 'prod-billing-pro',
-    title: 'Grocery Billing Software',
+    title: 'Gym Management Software',
     category: 'Billing Software',
-    subtitle: 'FAST GROCERY STORE SPECIAL',
-    description: 'Designed for local grocery stores, supporting weight scales integration and fast barcode lookups.',
+    subtitle: 'FITNESS & GYM SPECIAL',
+    description: 'Designed for modern fitness centers, gym clubs, and personal trainers. Track memberships, member entries, plans, and automatic renewal reminders.',
     price: '₹3,000',
-    features: ['Digital Weight Scale Link', 'Barcoding & Item Lookup', 'Short Expiry Tracking', 'Multiple Payment Options', 'Dynamic POS Checkout'],
-    icon: '🍎',
-    badge: 'Billing',
-    badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Mart-POS-v1.0.0.zip'
+    features: ['Membership Tracking', 'Member Check-In System', 'Diet & Workout Assigning', 'Auto Renewal Alerts', 'Trainer Shifts Scheduling'],
+    icon: '🏋️',
+    badge: 'Management',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-Gym-Management-v1.0.0.zip'
   },
   {
     id: 'sol-medical',
