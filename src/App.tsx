@@ -533,6 +533,61 @@ export default function App() {
     }
   }, [currentPage]);
 
+  // Establish real-time SSE listener for the download counter and download list updates
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let retryTimeout: any = null;
+
+    const connectSSE = () => {
+      try {
+        console.log("Connecting to real-time download updates...");
+        eventSource = new EventSource('/api/downloads/live');
+
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data && typeof data.totalDownloads === 'number') {
+              setTotalDownloads(data.totalDownloads);
+              if (data.downloads && data.downloads.length > 0) {
+                const formatted = data.downloads.map((item: any) => ({
+                  ...item,
+                  releaseNotes: typeof item.releaseNotes === 'string' 
+                    ? JSON.parse(item.releaseNotes) 
+                    : (item.release_notes || item.releaseNotes || [])
+                }));
+                setDownloads(formatted);
+              }
+            }
+          } catch (err) {
+            console.error("Error parsing real-time download update:", err);
+          }
+        };
+
+        eventSource.onerror = (err) => {
+          console.warn("Real-time download updates connection lost. Reconnecting in 5 seconds...", err);
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          retryTimeout = setTimeout(connectSSE, 5000);
+        };
+      } catch (e) {
+        console.warn("EventSource is not supported or failed to initialize:", e);
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+    };
+  }, []);
+
   // Handle SEO-friendly hash routing with deep link fallback
   useEffect(() => {
     const handleHashChange = () => {

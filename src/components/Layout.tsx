@@ -56,6 +56,7 @@ export default function Layout({
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [helpline, setHelpline] = useState<string>('+91 95169 16415');
   const [policyOpen, setPolicyOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   useEffect(() => {
     const loadHelpline = async () => {
@@ -434,7 +435,7 @@ export default function Layout({
                 <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('downloads')}>Download Center</li>
                 <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('tutorials')}>Tutorial Videos</li>
                 <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('tutorials')}>Installation Guides</li>
-                <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('contact')}>Support Ticket Portal</li>
+                <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setPrivacyOpen(true)}>Privacy Policy</li>
                 <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setPolicyOpen(true)}>DISCLAIMER & REFUND POLICY</li>
               </ul>
             </div>
@@ -566,6 +567,88 @@ export default function Layout({
                   className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-97 text-white font-extrabold rounded-lg text-xs tracking-wider uppercase transition-all duration-150 cursor-pointer shadow-md shadow-blue-500/20"
                 >
                   I Understand & Agree
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {privacyOpen && (
+        <div className="fixed inset-0 z-[100] bg-[#0F172A]/98 backdrop-blur-md flex flex-col overflow-y-auto animate-fade-in" id="privacy-fullscreen-modal">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-[#1E293B] border-b border-slate-800 px-6 py-4 flex items-center justify-between shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-[#2563EB] rounded-lg text-white">
+                <ShieldCheck className="w-5 h-5 text-blue-400" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">Privacy Policy</h2>
+                <p className="text-[10px] font-mono text-slate-400 font-bold uppercase mt-0.5">// BSP Suryatech Trust & Safety</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setPrivacyOpen(false)}
+              className="p-2 bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white rounded-lg transition-all duration-150 cursor-pointer border border-slate-700/50"
+              aria-label="Close privacy policy modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-12 text-slate-300 font-sans leading-relaxed text-left">
+            <div className="space-y-8 bg-[#1E293B]/40 border border-slate-800/85 p-6 sm:p-12 rounded-2xl shadow-xl">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase border-b border-slate-800 pb-4 mb-6">// Data Privacy Commitment</h1>
+                
+                <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-semibold mb-6">
+                  At BSP Suryatech, we are fully committed to protecting your privacy and business data. Since our core desktop billing applications operate entirely offline, we never collect, store, or access your transaction, customer, or inventory data.
+                </p>
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-tight mb-2">1. Offline-First Desktop Software Data</h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      All transaction details, stock entries, customer databases, tax records, and configuration logs are stored exclusively on your local computer or chosen storage drive. We have no backend access to this data, nor do we run background telemetry services that upload your business logs.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-tight mb-2">2. Web Platform & Account Information</h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      When you create an account, register your license, purchase a subscription, or submit a support ticket on our website, we collect minimal personal details (such as business name, email address, phone number, and billing region) to process transactions and provide remote installation assistance.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-tight mb-2">3. Remote Setup & Technical Support</h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      During remote-access setup sessions (via AnyDesk, TeamViewer, or other secure remote tools), our engineers only perform necessary actions to install the software, setup printer drivers, and activate the license. We do not copy, extract, or browse any files unrelated to our billing applications.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-tight mb-2">4. Security of Information</h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      We implement robust industry-standard electronic security measures to safeguard web registration records against unauthorized access, loss, or alteration. Financial transactions are processed via secure encrypted payment gateway partners and we never store your payment card or banking passwords.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-800/80">
+                <p className="text-xs text-slate-400 italic text-center leading-relaxed font-medium">
+                  By accessing bspsuryatech.in or using our software applications, you agree to this Privacy Policy.
+                </p>
+              </div>
+
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={() => setPrivacyOpen(false)}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-97 text-white font-extrabold rounded-lg text-xs tracking-wider uppercase transition-all duration-150 cursor-pointer shadow-md shadow-blue-500/20"
+                >
+                  Close & Acknowledge
                 </button>
               </div>
             </div>

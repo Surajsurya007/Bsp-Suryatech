@@ -77,6 +77,69 @@ async function startServer() {
     return supabaseInstance;
   }
 
+  let sseClients: any[] = [];
+
+  function broadcastDownloadsUpdate() {
+    const updatePayload = {
+      downloads: dbActions.getDownloads(),
+      totalDownloads: dbActions.getDownloadCounter()
+    };
+    const dataString = JSON.stringify(updatePayload);
+    sseClients.forEach(client => {
+      try {
+        client.write(`data: ${dataString}\n\n`);
+      } catch (err) {
+        // Suppress errors for disconnected clients
+      }
+    });
+  }
+
+  // Load total download count from Supabase on startup to avoid reverting on restart/scale-to-zero
+  try {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      supabase.from('downloads_info').select('*')
+        .then(({ data, error }) => {
+          if (data && !error) {
+            console.log(`[Supabase Startup] Loaded ${data.length} download item records.`);
+            
+            // Sum the download counts of all items in the downloads_info table
+            let counts = data.reduce((sum: number, item: any) => sum + (item.download_count || 0), 0);
+            
+            // Look for 'global-counter' record as well
+            const globalRecord = data.find((item: any) => item.id === 'global-counter');
+            if (globalRecord) {
+              counts = globalRecord.download_count || counts;
+            }
+            
+            // Ensure we don't drop below the base 1420 downloads
+            if (counts < 1420) {
+              counts = 1420 + (globalRecord?.download_count || 0);
+            }
+            
+            if (counts > 0) {
+              db.downloadCounter = counts;
+              // Sync specific item counts back to our local db.downloads array to keep them aligned
+              data.forEach((item: any) => {
+                const localDl = db.downloads.find((d: any) => d.id === item.id || d.filename.toLowerCase().includes(item.id.toLowerCase()));
+                if (localDl) {
+                  localDl.downloadCount = item.download_count || 0;
+                }
+              });
+              console.log(`[Supabase Startup] Integrated download counts. Total Downloads synced to: ${db.downloadCounter}`);
+            }
+          } else if (error) {
+            console.warn('[Supabase Startup] Error querying downloads_info:', error.message);
+          }
+        })
+        .catch(err => {
+          console.warn('[Supabase Startup] Non-blocking exception initializing downloads from Supabase:', err);
+        });
+    }
+  } catch (err) {
+    console.warn('[Supabase Startup] Non-blocking exception initializing downloads from Supabase:', err);
+  }
+
   const translationCache: Record<string, Record<string, string>> = {};
   let geminiQuotaCooldownUntil = 0;
 
@@ -2066,10 +2129,77 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     });
   });
 
+  // Real-time server-sent events connection for downloads
+  app.get('/api/downloads/live', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    // Send initial state
+    const initialPayload = {
+      downloads: dbActions.getDownloads(),
+      totalDownloads: dbActions.getDownloadCounter()
+    };
+    res.write(`data: ${JSON.stringify(initialPayload)}\n\n`);
+
+    sseClients.push(res);
+
+    req.on('close', () => {
+      sseClients = sseClients.filter(client => client !== res);
+    });
+  });
+
   // Real Window Setup Exe Mock downloader stream
-  app.get('/api/downloads/setup/:id', (req, res) => {
+  app.get('/api/downloads/setup/:id', async (req, res) => {
     const prodId = req.params.id;
     dbActions.incrementDownloadCounter(prodId);
+
+    // Broadcast update in real-time to all other visitors
+    broadcastDownloadsUpdate();
+
+    // Persist/increment download count in Supabase asynchronously
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        let supabaseId = 'global-counter';
+        if (prodId === 'prod-billing-pro' || prodId === 'dl-1') {
+          supabaseId = 'dl-1';
+        } else if (prodId === 'prod-billing-enterprise' || prodId === 'dl-2') {
+          supabaseId = 'dl-2';
+        }
+
+        const { data: fetchRes, error: fetchErr } = await supabase
+          .from('downloads_info')
+          .select('download_count')
+          .eq('id', supabaseId)
+          .maybeSingle();
+
+        if (!fetchErr) {
+          const currentCount = fetchRes?.download_count || (supabaseId === 'dl-1' ? 840 : supabaseId === 'dl-2' ? 580 : 0);
+          const nextCount = currentCount + 1;
+
+          if (fetchRes) {
+            await supabase
+              .from('downloads_info')
+              .update({ download_count: nextCount })
+              .eq('id', supabaseId);
+          } else {
+            const insertPayload: any = {
+              id: supabaseId,
+              version: supabaseId === 'dl-1' ? '4.2.1' : supabaseId === 'dl-2' ? '5.0.3' : '1.0.0',
+              filename: supabaseId === 'dl-1' ? 'BSPSuryatech_BillingReader_v4.2.1_Setup.exe' : supabaseId === 'dl-2' ? 'BSPSuryatech_GST_Enterprise_v5.0.3_Setup.exe' : 'BSPSuryatech_Solutions_Setup.exe',
+              file_size: supabaseId === 'dl-1' ? '14.8 MB' : supabaseId === 'dl-2' ? '22.4 MB' : '10.0 MB',
+              download_url: `/api/downloads/setup/${supabaseId}`,
+              download_count: nextCount
+            };
+            await supabase.from('downloads_info').insert([insertPayload]);
+          }
+        }
+      }
+    } catch (supabaseErr) {
+      console.warn('[Supabase Setup Download Async] Error:', supabaseErr);
+    }
 
     // Support serving real PDF if requested
     if (prodId === 'usr-manual-pdf') {
