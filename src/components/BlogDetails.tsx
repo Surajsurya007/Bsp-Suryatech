@@ -16,7 +16,9 @@ import {
   Download, 
   PhoneCall, 
   Home as HomeIcon, 
-  Briefcase 
+  Briefcase,
+  AlertTriangle,
+  BookOpen
 } from 'lucide-react';
 import { BLOG_POSTS, BlogPost } from '../data/blogData';
 
@@ -235,15 +237,32 @@ export default function BlogDetails({ slug, onPageChange }: BlogDetailsProps) {
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-[#0F172A] text-white py-24 px-4 text-center space-y-6">
-        <h1 className="text-2xl font-bold font-mono">Article Not Found</h1>
-        <p className="text-slate-400">The requested blog post could not be resolved.</p>
-        <button
-          onClick={handleBackToBlog}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 font-extrabold uppercase rounded text-xs transition-all"
-        >
-          Back to Blog List
-        </button>
+      <div className="min-h-[80vh] bg-[#0F172A] text-white flex items-center justify-center px-4 sm:px-6 lg:px-8 font-sans">
+        <div className="max-w-md w-full space-y-8 bg-[#1E293B]/40 border border-slate-800 p-8 sm:p-10 rounded-2xl shadow-2xl text-center backdrop-blur-sm">
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 bg-red-950/40 border border-red-500/20 rounded-full flex items-center justify-center mb-6 shadow-inner">
+              <AlertTriangle className="w-8 h-8 text-red-500" />
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/10 border border-red-500/25 rounded-full text-[10px] font-black uppercase tracking-wider text-red-400 mb-4">
+              // 404 ERROR
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white mb-2">
+              Page Not Found
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed max-w-sm mb-8 font-medium">
+              We couldn't locate the blog article you're searching for. The post may have been renamed, archived, or the link might be broken.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+              <button
+                onClick={handleBackToBlog}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-97 text-white font-extrabold rounded-lg text-xs tracking-wider uppercase transition-all duration-150 cursor-pointer shadow-md shadow-blue-500/20 w-full"
+              >
+                <BookOpen className="w-4 h-4" />
+                Back to Blogs
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

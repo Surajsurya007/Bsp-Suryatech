@@ -193,7 +193,7 @@ export default function Tutorials({ videos }: { videos?: VideoTutorial[] }) {
                   return (
                     <a
                       key={vI}
-                      href="https://www.youtube.com/@bspsuryatech"
+                      href="https://www.youtube.com/@bspsuryatech/playlists"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-4 border rounded-2xl cursor-pointer transition-all flex gap-4 text-left items-start border-slate-200 bg-white hover:border-slate-350 hover:bg-slate-50/30 group"

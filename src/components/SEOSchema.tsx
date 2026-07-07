@@ -213,7 +213,7 @@ export default function SEOSchema({
         'telephone': '+91-9516916415',
         'description': 'BSP Suryatech develops Business Management Software including Retail Billing Software, POS Software, ERP Solutions, Transport Management Software, Hospital ERP, School ERP, Restaurant POS, Medical Store Software, and Custom Software Development.',
         'sameAs': [
-          'https://www.youtube.com/@bspsuryatech'
+          'https://www.youtube.com/@bspsuryatech/playlists'
         ],
         'address': {
           '@type': 'PostalAddress',

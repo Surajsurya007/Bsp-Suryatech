@@ -23,6 +23,132 @@ export interface BlogPost {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'medical-store-billing-software-batch-expiry-management',
+    title: 'How to Choose the Right Medical Store Billing Software (Handling Expiry & Batch Codes)',
+    excerpt: 'Running a pharmacy is vastly different from a standard retail store. Learn how offline pharmacy billing software solves the unique challenges of medicine batch numbers, expiry dates, loose tablet calculations, and Schedule H drug logs.',
+    category: 'Billing Software',
+    author: 'Suraj Surya, Founder BSP Suryatech',
+    date: 'July 07, 2026',
+    updatedDate: 'July 07, 2026',
+    readTime: '5 min read',
+    image: 'https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&w=800&q=80',
+    metaTitle: 'Pharmacy & Medical Store Billing Software with Expiry Tracking',
+    metaDescription: 'Discover the essential features of a medical store billing software: batch tracking, medicine expiry notifications, loose tablet strip billing, and Schedule drug compliance.',
+    tags: ['Medical Store', 'Pharmacy Billing', 'Expiry Tracking', 'Batch Management', 'Suryatech'],
+    relatedSlugs: ['your-first-post', 'best-offline-billing-software-indian-small-businesses'],
+    relatedProductSlug: 'sol-medical',
+    content: `
+### Running a Pharmacy is Not Standard Retail
+
+Running a chemist shop or a wholesale pharmaceutical agency is a high-stakes, highly regulated business. Unlike a grocery store where a packet of biscuits is simple to stock and sell, pharmacies handle thousands of life-saving medicines, syrups, and tablets.
+
+Each medicine comes with its own set of rules: varying packaging types, multiple batches from different distributors, strict expiration timelines, and mandatory prescription logs.
+
+If your pharmacy is still using basic retail software—or worse, paper ledgers—you are likely losing money on expired stock and exposing your business to audit risks. Here is an honest, practical look at how dedicated offline medical store billing software can streamline your pharmacy operations.
+
+---
+
+### 1. The Nightmare of Drug Batches and Expiry Tracking
+
+A single medical store might stock the exact same brand of medicine (for example, *Crocin 650mg*) purchased in different weeks. Each purchase represents a different **Batch Number** and a different **Expiry Date**.
+
+When a customer comes to your billing counter, you must sell them tablets from the batch that expires first (First-Expired, First-Out, or **FEFO**). 
+
+Our BSP Suryatech medical billing module solves this with three practical, automated safeguards:
+- **Batch-Level Inventory:** Track inventory down to the exact batch. When you scan or type a medicine name, the system displays all available batches, their quantities, and expiry dates side-by-side.
+- **Proactive Expiry Alerts:** Receive color-coded dashboard alerts of stock expiring in the next 30, 60, or 90 days. This gives you ample time to contact your distributors for returns or credit notes.
+- **Auto-Block Expired Sales:** The system automatically blocks you from billing any expired medicine. This eliminates human error at the checkout counter and protects your customers.
+
+---
+
+### 2. The Art of Loose Tablet and Strip Billing
+
+One of the biggest headaches for pharmacists is calculating prices for "loose" tablets. A customer walks in with a prescription asking for **3 tablets** of an antibiotic that comes in a **strip of 10**.
+
+How do you bill that? 
+1. You have to divide the strip price by 10 to find the per-tablet cost.
+2. You have to apply the appropriate GST (e.g., 12%) to only those 3 tablets.
+3. You have to update your inventory so that the system shows you have exactly "0.7 strips" left.
+
+Doing this math manually during rush hour leads to pricing mistakes and slow lines. A robust pharmacy billing application handles this natively. You simply type \`Crocin\` and enter \`3T\` (3 tablets) or \`1S\` (1 strip). The system automatically computes the fractions, applies correct taxes, and updates stock metrics instantaneously.
+
+---
+
+### 3. Schedule H, H1, and Narcotic Drug Compliances
+
+Under the Indian Drugs and Cosmetics Act, selling certain categories of medicines (such as Schedule H, Schedule H1, and Narcotic drugs) requires keeping strict record books. You must record:
+- The prescribing doctor's name and registration number.
+- The patient's name, phone number, and address.
+- The exact batch sold, date, and time.
+
+BSP Suryatech includes an elegant, non-intrusive popup when you add a Schedule H or H1 drug to a bill. It prompts you to fill in the physician and patient details. This data is indexed in your offline database, allowing you to export complete **Schedule Drug Registers** in Excel format in seconds whenever a drug inspector visits your store.
+
+---
+
+### 4. Fast Offline Lookup (Generic vs. Branded)
+
+When a customer asks for a medicine that is currently out of stock, a pharmacist's immediate response is to search for a generic alternative with the same molecular composition (e.g., searching for *Paracetamol* substitutes when a specific brand is unavailable).
+
+With an offline database holding over 70,000 common pharmaceutical names, molecules, and manufacturers, BSP Suryatech allows lightning-fast searches without requiring any internet connection. Type a chemical name, and the software immediately lists all in-stock brands containing that exact compound.
+
+---
+
+### Choose Speed. Choose Peace of Mind.
+
+A medical billing system shouldn't require complex cloud setups or constant internet connections to operate. When a patient is waiting for their prescription, every second of loading time matters. 
+
+With BSP Suryatech’s offline-first architecture, your billing counters run at peak efficiency with **sub-2 millisecond lookup times**, keeping customer trust high and checkout lines moving.
+
+If you are ready to modernize your pharmacy's inventory, expiry tracking, and bill generation, download our medical store billing system installer today and see the difference for yourself!
+`
+  },
+  {
+    slug: 'your-first-post',
+    title: 'Welcome to BSP Suryatech: Your Partner in Offline Business Billing',
+    excerpt: 'Welcome to our official business and technology blog! Discover how BSP Suryatech is helping retailers, wholesalers, and small businesses simplify invoicing, GST filing, and store checkout management with speed and security.',
+    category: 'Billing Software',
+    author: 'Suraj Surya, Founder BSP Suryatech',
+    date: 'July 01, 2026',
+    updatedDate: 'July 01, 2026',
+    readTime: '3 min read',
+    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
+    metaTitle: 'Welcome to BSP Suryatech Official Blog | Offline Invoicing',
+    metaDescription: 'Discover how BSP Suryatech desktop billing systems can revolutionize your business billing, improve checkout speeds, and handle GST taxation completely offline.',
+    tags: ['Suryatech', 'Offline Billing', 'Retail Store', 'Startup'],
+    relatedSlugs: ['best-offline-billing-software-indian-small-businesses', 'boost-checkout-speed-reduce-supermarket-queue-times'],
+    relatedProductSlug: 'retail_billing',
+    content: `
+### Simplifying Business Billing for Indian Retailers
+
+Welcome to the official **BSP Suryatech** technology and retail operations blog! 
+
+At BSP Suryatech, our core mission is simple: **To empower Indian small and medium enterprises (SMEs) with ultra-fast, offline-first billing software that keeps checkout queues moving with zero internet lag.**
+
+Whether you operate a high-volume supermarket, a quick-service grocery store, a garment shop, a pharmacy, or a hardware enterprise, our tools are custom-designed to handle your billing counters perfectly.
+
+---
+
+### Why Choose BSP Suryatech?
+
+Operating a physical retail store in India comes with a unique set of constraints—unstable internet, busy markets with heavy footfalls, and complex GST compliance updates. BSP Suryatech desktop apps solve these issues at their root:
+
+1. **Permanent Offline Execution:** Our desktop applications store your products, customer records, and daily transaction logs entirely on your local hard disk. No loading animations, no Wi-Fi outages, and no cloud server downtimes.
+2. **Lightning-Fast Checkout Speed:** Query local database indices in under **2 milliseconds**. Scan barcodes, register weights, print thermal receipts, and auto-open cash drawers in one seamless cycle.
+3. **One-Time Lifetime License:** Pay once and use forever. Say goodbye to heavy monthly SaaS subscription models that lock your data away if you miss a recurring payment.
+
+---
+
+### What to Expect From This Blog
+
+Moving forward, this blog will serve as a rich source of guides, business strategies, and tech tips including:
+- **POS Hardware Tutorials:** Detailed configurations for TVS, Sewoo, Xprinter, Rongta, Epson thermal printer setups, and virtual COM scanner interfaces.
+- **GST Compliance Guides:** Actionable tips for CGST/SGST splitting, e-invoicing laws, and seamless GSTR-1 Excel reports for your Chartered Accountant.
+- **Retail Growth Tips:** Techniques to optimize item displays, design high-converting supermarkets, manage dead stocks, and establish customer credit books (Khata).
+
+We are incredibly excited to accompany you on your retail business journey. Download our official trial installer today and experience how easy professional invoicing can be!
+`
+  },
+  {
     slug: 'best-offline-billing-software-indian-small-businesses',
     title: 'Best Offline Billing Software for Indian Small Businesses in 2026',
     excerpt: 'Discover why offline billing systems are superior to cloud-based alternatives for Indian retailers. Compare features, data privacy, and flat one-time licensing advantages.',
