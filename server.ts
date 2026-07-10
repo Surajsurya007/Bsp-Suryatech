@@ -20,6 +20,25 @@ import {
   submitToIndexNow 
 } from './server/indexnow';
 
+// Robust, bulletproof project root determination supporting both development and production environments
+const getProjectRoot = () => {
+  const cwd = process.cwd();
+  if (fs.existsSync(path.join(cwd, 'package.json'))) {
+    return cwd;
+  }
+  const currentDir = typeof __dirname !== 'undefined' ? __dirname : cwd;
+  if (fs.existsSync(path.join(currentDir, 'package.json'))) {
+    return currentDir;
+  }
+  const parentOfCurrent = path.dirname(currentDir);
+  if (fs.existsSync(path.join(parentOfCurrent, 'package.json'))) {
+    return parentOfCurrent;
+  }
+  return cwd;
+};
+
+const PROJECT_ROOT = getProjectRoot();
+
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
@@ -303,17 +322,17 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Ensure uploads folder exists
-  const uploadsDir = path.join(process.cwd(), 'data', 'uploads');
+  const uploadsDir = path.join(PROJECT_ROOT, 'data', 'uploads');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
   // Ensure Hostinger Production File Storage directories exist in current working directory
   const hostingerDirs = [
-    path.join(process.cwd(), 'uploads', 'images'),
-    path.join(process.cwd(), 'uploads', 'pdfs'),
-    path.join(process.cwd(), 'uploads', 'videos'),
-    path.join(process.cwd(), 'downloads', 'software')
+    path.join(PROJECT_ROOT, 'uploads', 'images'),
+    path.join(PROJECT_ROOT, 'uploads', 'pdfs'),
+    path.join(PROJECT_ROOT, 'uploads', 'videos'),
+    path.join(PROJECT_ROOT, 'downloads', 'software')
   ];
   hostingerDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
@@ -322,14 +341,14 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
   });
 
   // Hostinger Static Media Asset Static Serving Middlewares
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  app.use('/uploads', express.static(path.join(PROJECT_ROOT, 'uploads')));
   
   // Custom middleware for downloads: bypass static serving for exact /downloads or /downloads/ page routes
   app.use('/downloads', (req, res, next) => {
     if (req.path === '/' || req.path === '') {
       return next();
     }
-    express.static(path.join(process.cwd(), 'downloads'))(req, res, next);
+    express.static(path.join(PROJECT_ROOT, 'downloads'))(req, res, next);
   });
 
   // Serve IndexNow Verification key dynamically
@@ -1743,6 +1762,50 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         active: true,
         expiresBy: '2029-12-31'
       };
+    } else if (code.toUpperCase() === 'FB50') {
+      coupon = {
+        id: 'cp-fb50',
+        coupon_code: 'FB50',
+        coupon_name: 'FB50 (50% Off)',
+        description: 'Special 50% discount coupon code for Facebook promotion.',
+        discount_type: 'percentage',
+        discount_value: 50,
+        max_discount: null,
+        min_order_value: 0,
+        valid_from: '2026-01-01',
+        valid_to: '2029-12-31',
+        usage_limit: 9999,
+        used_count: 0,
+        per_user_limit: 999,
+        status: 'active',
+        created_at: '2026-06-20T12:00:00Z',
+        code: 'FB50',
+        discountPercent: 50,
+        active: true,
+        expiresBy: '2029-12-31'
+      };
+    } else if (code.toUpperCase() === 'YT30') {
+      coupon = {
+        id: 'cp-yt30',
+        coupon_code: 'YT30',
+        coupon_name: 'YT30 (30% Off)',
+        description: 'Special 30% discount coupon code for YouTube promotion.',
+        discount_type: 'percentage',
+        discount_value: 30,
+        max_discount: null,
+        min_order_value: 0,
+        valid_from: '2026-01-01',
+        valid_to: '2029-12-31',
+        usage_limit: 9999,
+        used_count: 0,
+        per_user_limit: 999,
+        status: 'active',
+        created_at: '2026-06-20T12:00:00Z',
+        code: 'YT30',
+        discountPercent: 30,
+        active: true,
+        expiresBy: '2029-12-31'
+      };
     }
 
     if (!coupon) {
@@ -2203,7 +2266,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
     // Support serving real PDF if requested
     if (prodId === 'usr-manual-pdf') {
-      const filePath = path.join(process.cwd(), 'data', 'uploads', 'usr-manual.pdf');
+      const filePath = path.join(PROJECT_ROOT, 'data', 'uploads', 'usr-manual.pdf');
       if (fs.existsSync(filePath)) {
         res.header('Content-Type', 'application/pdf');
         res.header('Content-Disposition', 'attachment; filename="BSPSuryatech_POS_Setup_Guide.pdf"');
@@ -2223,7 +2286,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     const targetFilename = matchedDl ? matchedDl.filename : (prodId.endsWith('.exe') ? prodId : null);
 
     if (targetFilename) {
-      const filePath = path.join(process.cwd(), 'data', 'uploads', targetFilename);
+      const filePath = path.join(PROJECT_ROOT, 'data', 'uploads', targetFilename);
       if (fs.existsSync(filePath)) {
         res.header('Content-Type', 'application/octet-stream');
         res.header('Content-Disposition', `attachment; filename="${targetFilename}"`);
@@ -3245,14 +3308,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     res.type('text/plain');
     
     // Safely resolve directory path supporting both ES Module (dev via tsx) and CommonJS (production build)
-    const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+    const currentDir = typeof __dirname !== 'undefined' ? __dirname : PROJECT_ROOT;
     
     const possiblePaths = [
       path.join(currentDir, 'robots.txt'),
-      path.join(process.cwd(), 'dist', 'robots.txt'),
-      path.join(process.cwd(), 'public', 'robots.txt'),
-      path.join(process.cwd(), 'dist', 'static', 'robots.txt'),
-      path.join(process.cwd(), 'public', 'static', 'robots.txt')
+      path.join(PROJECT_ROOT, 'dist', 'robots.txt'),
+      path.join(PROJECT_ROOT, 'public', 'robots.txt'),
+      path.join(PROJECT_ROOT, 'dist', 'static', 'robots.txt'),
+      path.join(PROJECT_ROOT, 'public', 'static', 'robots.txt')
     ];
     
     for (const p of possiblePaths) {
@@ -3270,11 +3333,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // Serve sitemap.xml directly with proper application/xml header
   app.get('/sitemap.xml', (req, res) => {
+    const currentDir = typeof __dirname !== 'undefined' ? __dirname : PROJECT_ROOT;
     const paths = [
-      path.join(process.cwd(), 'dist', 'sitemap.xml'),
-      path.join(process.cwd(), 'public', 'sitemap.xml'),
-      path.join(process.cwd(), 'dist', 'static', 'sitemap.xml'),
-      path.join(process.cwd(), 'public', 'static', 'sitemap.xml')
+      path.join(PROJECT_ROOT, 'dist', 'sitemap.xml'),
+      path.join(PROJECT_ROOT, 'public', 'sitemap.xml'),
+      path.join(currentDir, 'sitemap.xml'),
+      path.join(path.dirname(currentDir), 'sitemap.xml'),
+      path.join(PROJECT_ROOT, 'dist', 'static', 'sitemap.xml'),
+      path.join(PROJECT_ROOT, 'public', 'static', 'sitemap.xml')
     ];
     
     for (const p of paths) {
@@ -3446,7 +3512,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           if (url.startsWith('/api/') || url.startsWith('/uploads/') || url.startsWith('/downloads/')) {
             return next();
           }
-          let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+          let template = fs.readFileSync(path.resolve(PROJECT_ROOT, 'index.html'), 'utf-8');
           template = await vite.transformIndexHtml(url, template);
           res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
         } catch (e) {
@@ -3455,14 +3521,32 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       });
     } catch (e) {
       console.warn("Vite development server could not be started, falling back to static production serving:", e);
-      const distPath = path.join(process.cwd(), 'dist');
+      // Robust, bulletproof static file path resolution
+      let distPath = path.join(PROJECT_ROOT, 'dist');
+      const currentDir = typeof __dirname !== 'undefined' ? __dirname : PROJECT_ROOT;
+      if (!fs.existsSync(path.join(distPath, 'index.html'))) {
+        if (fs.existsSync(path.join(currentDir, 'index.html'))) {
+          distPath = currentDir;
+        } else if (fs.existsSync(path.join(path.dirname(currentDir), 'dist', 'index.html'))) {
+          distPath = path.join(path.dirname(currentDir), 'dist');
+        }
+      }
       app.use(express.static(distPath));
       app.get('*', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
       });
     }
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    // Robust, bulletproof static file path resolution
+    let distPath = path.join(PROJECT_ROOT, 'dist');
+    const currentDir = typeof __dirname !== 'undefined' ? __dirname : PROJECT_ROOT;
+    if (!fs.existsSync(path.join(distPath, 'index.html'))) {
+      if (fs.existsSync(path.join(currentDir, 'index.html'))) {
+        distPath = currentDir;
+      } else if (fs.existsSync(path.join(path.dirname(currentDir), 'dist', 'index.html'))) {
+        distPath = path.join(path.dirname(currentDir), 'dist');
+      }
+    }
     app.use(express.static(distPath));
     // Serve index.html for React SPA Router fallbacks
     app.get('*', (req, res) => {

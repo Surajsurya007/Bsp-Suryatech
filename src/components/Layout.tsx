@@ -435,8 +435,8 @@ export default function Layout({
                 <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('downloads')}>Download Center</li>
                 <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('tutorials')}>Tutorial Videos</li>
                 <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('tutorials')}>Installation Guides</li>
-                <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setPrivacyOpen(true)}>Privacy Policy</li>
-                <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setPolicyOpen(true)}>DISCLAIMER & REFUND POLICY</li>
+                <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('privacy-policy')}>Privacy Policy</li>
+                <li className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleNavClick('refund-policy')}>DISCLAIMER & REFUND POLICY</li>
               </ul>
             </div>
 

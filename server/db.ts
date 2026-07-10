@@ -8,7 +8,24 @@ import path from 'path';
 import crypto from 'crypto';
 import { User, Product, Order, License, DownloadInfo, SupportTicket, Coupon, CouponRedemption, Testimonial, Blog, Review, TicketReply, SystemStats, CustomerProfile, PaymentRecord, Invoice, Notification, LanguageConfig, VideoTutorial, SoftwareSolution, SoftwareCategory } from '../src/types';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+// Robust, bulletproof project root and data directory determination
+const getRobustDataDir = () => {
+  const cwdDir = path.join(process.cwd(), 'data');
+  if (fs.existsSync(cwdDir)) {
+    return cwdDir;
+  }
+  const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+  if (fs.existsSync(path.join(currentDir, 'data'))) {
+    return path.join(currentDir, 'data');
+  }
+  const parentDir = path.dirname(currentDir);
+  if (fs.existsSync(path.join(parentDir, 'data'))) {
+    return path.join(parentDir, 'data');
+  }
+  return cwdDir;
+};
+
+const DATA_DIR = getRobustDataDir();
 const DB_FILE = path.join(DATA_DIR, 'database.json');
 
 // JWT Secret
@@ -534,6 +551,48 @@ const defaultProducts: Product[] = [
 
 const defaultCoupons: Coupon[] = [
   {
+    id: 'cp-fb50',
+    coupon_code: 'FB50',
+    coupon_name: 'FB50 (50% Off)',
+    description: 'Special 50% discount coupon code for Facebook promotion.',
+    discount_type: 'percentage',
+    discount_value: 50,
+    max_discount: undefined,
+    min_order_value: 0,
+    valid_from: '2026-01-01',
+    valid_to: '2029-12-31',
+    usage_limit: 9999,
+    used_count: 0,
+    per_user_limit: 999,
+    status: 'active',
+    created_at: '2026-06-20T12:00:00Z',
+    code: 'FB50',
+    discountPercent: 50,
+    active: true,
+    expiresBy: '2029-12-31'
+  },
+  {
+    id: 'cp-yt30',
+    coupon_code: 'YT30',
+    coupon_name: 'YT30 (30% Off)',
+    description: 'Special 30% discount coupon code for YouTube promotion.',
+    discount_type: 'percentage',
+    discount_value: 30,
+    max_discount: undefined,
+    min_order_value: 0,
+    valid_from: '2026-01-01',
+    valid_to: '2029-12-31',
+    usage_limit: 9999,
+    used_count: 0,
+    per_user_limit: 999,
+    status: 'active',
+    created_at: '2026-06-20T12:00:00Z',
+    code: 'YT30',
+    discountPercent: 30,
+    active: true,
+    expiresBy: '2029-12-31'
+  },
+  {
     id: 'cp-surya001',
     coupon_code: 'SURYA001',
     coupon_name: 'Special ₹1.00 Override Promo',
@@ -1023,6 +1082,59 @@ export function initDB() {
         }
         return c;
       });
+
+      // Ensure specific mandatory system coupons exist in loaded db (FB50, YT30)
+      const mandatoryCoupons = [
+        {
+          id: 'cp-fb50',
+          coupon_code: 'FB50',
+          coupon_name: 'FB50 (50% Off)',
+          description: 'Special 50% discount coupon code for Facebook promotion.',
+          discount_type: 'percentage' as const,
+          discount_value: 50,
+          max_discount: undefined,
+          min_order_value: 0,
+          valid_from: '2026-01-01',
+          valid_to: '2029-12-31',
+          usage_limit: 9999,
+          used_count: 0,
+          per_user_limit: 999,
+          status: 'active' as const,
+          created_at: '2026-06-20T12:00:00Z',
+          code: 'FB50',
+          discountPercent: 50,
+          active: true,
+          expiresBy: '2029-12-31'
+        },
+        {
+          id: 'cp-yt30',
+          coupon_code: 'YT30',
+          coupon_name: 'YT30 (30% Off)',
+          description: 'Special 30% discount coupon code for YouTube promotion.',
+          discount_type: 'percentage' as const,
+          discount_value: 30,
+          max_discount: undefined,
+          min_order_value: 0,
+          valid_from: '2026-01-01',
+          valid_to: '2029-12-31',
+          usage_limit: 9999,
+          used_count: 0,
+          per_user_limit: 999,
+          status: 'active' as const,
+          created_at: '2026-06-20T12:00:00Z',
+          code: 'YT30',
+          discountPercent: 30,
+          active: true,
+          expiresBy: '2029-12-31'
+        }
+      ];
+
+      for (const mand of mandatoryCoupons) {
+        const hasMand = db.coupons.some(c => (c.coupon_code || '').toUpperCase() === mand.coupon_code || (c.code || '').toUpperCase() === mand.coupon_code);
+        if (!hasMand) {
+          db.coupons.push(mand);
+        }
+      }
       if (!db.testimonials || db.testimonials.length === 0) db.testimonials = defaultTestimonials;
       if (!db.blogs || db.blogs.length === 0) db.blogs = defaultBlogs;
       if (!db.downloads || db.downloads.length === 0) db.downloads = defaultDownloads;

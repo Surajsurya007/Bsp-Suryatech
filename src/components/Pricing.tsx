@@ -238,16 +238,16 @@ export default function Pricing({
       <section className="max-w-4xl mx-auto px-4">
         {!cartItem ? (
           /* CART IS EMPTY STATE - PROMPTS ADD SOFTWARE */
-          <div className="bg-[#1E293B] border border-slate-850 rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-2xl relative overflow-hidden" id="empty-cart-view">
+          <div className="bg-[#1E293B] border border-slate-800 rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-2xl relative overflow-hidden" id="empty-cart-view">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#2563EB]/5 rounded-full blur-3xl -z-10 pointer-events-none" />
             
-            <div className="mx-auto w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center border border-slate-750 text-slate-400">
+            <div className="mx-auto w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center border border-slate-700 text-slate-400">
               <ShoppingCart className="w-8 h-8 text-[#2563EB]" />
             </div>
 
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-white">Your Shopping Cart is Empty</h2>
-              <p className="text-slate-450 text-xs sm:text-sm max-w-lg mx-auto">
+              <p className="text-slate-400 text-xs sm:text-sm max-w-lg mx-auto">
                 Please add the BSP Suryatech software solution to your cart to customize your price plan, unlock discounts, and download the registered offline desktop platform.
               </p>
             </div>
@@ -280,7 +280,7 @@ export default function Pricing({
 
               <button
                 onClick={handleRemoveFromCart}
-                className="flex items-center gap-1.5 text-xs text-slate-450 hover:text-red-400 font-extrabold cursor-pointer self-start sm:self-center transition-colors px-2.5 py-1 bg-slate-900/60 rounded border border-slate-800 hover:bg-red-950/20 hover:border-red-900/40"
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-400 font-extrabold cursor-pointer self-start sm:self-center transition-colors px-2.5 py-1 bg-slate-900/60 rounded border border-slate-800 hover:bg-red-950/20 hover:border-red-900/40"
                 id="clear-cart-btn"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -317,7 +317,7 @@ export default function Pricing({
 
                 <div className="space-y-3">
                   {resolvedDescription && (
-                    <p className="text-xs text-slate-350 leading-relaxed max-w-2xl">
+                    <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
                       {resolvedDescription}
                     </p>
                   )}
@@ -327,7 +327,7 @@ export default function Pricing({
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">INCLUDED FEATURES & CAPABILITIES:</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {resolvedFeatures.map((feat: string, idx: number) => (
-                          <div key={idx} className="flex items-center gap-2 text-xs text-slate-350">
+                          <div key={idx} className="flex items-center gap-2 text-xs text-slate-300">
                             <span className="w-4 h-4 bg-emerald-950/40 text-emerald-400 font-bold font-mono rounded-full flex items-center justify-center text-[10px] border border-emerald-900/30">✓</span>
                             <span className="truncate">{feat}</span>
                           </div>
@@ -477,7 +477,7 @@ export default function Pricing({
                     </div>
                   )}
 
-                  <div className="flex justify-between text-slate-450 border-t border-slate-800/80 pt-2.5">
+                  <div className="flex justify-between text-slate-400 border-t border-slate-800/80 pt-2.5">
                     <span>Tax Exclusive Net Value:</span>
                     <span>₹{basePriceExclusive}</span>
                   </div>
@@ -487,7 +487,7 @@ export default function Pricing({
                     <span>₹{gstInclusiveAmount}</span>
                   </div>
 
-                  <div className="flex justify-between text-white text-base font-black border-t-2 border-dashed border-slate-850 pt-3 font-sans">
+                  <div className="flex justify-between text-white text-base font-black border-t-2 border-dashed border-slate-800 pt-3 font-sans">
                     <span className="text-slate-300">Total Price (Payable):</span>
                     <div className="text-right">
                       <span className="text-2xl text-blue-400">₹{netAmount}</span>
@@ -509,7 +509,7 @@ export default function Pricing({
                 </button>
                 
                 {!user && (
-                  <span className="text-[10px] text-center text-yellow-450 block font-medium">
+                  <span className="text-[10px] text-center text-yellow-400 block font-medium">
                     ⚠️ Note: You will be redirected to complete Client Portal Registration/Login first. Your Cart details will persist automatically!
                   </span>
                 )}
@@ -522,11 +522,11 @@ export default function Pricing({
       </section>
 
 {/* CORE SECURE FEATURES ACCREDIT */}
-      <section className="bg-slate-900/60 py-12 border-y border-slate-850 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 rounded-3xl mt-16">
+      <section className="bg-slate-900/60 py-12 border-y border-slate-800 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 rounded-3xl mt-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
           
           <div className="space-y-2.5 p-4" id="assurance-billing-safety">
-            <div className="w-10 h-10 bg-slate-850 rounded-lg flex items-center justify-center border border-slate-800 shadow-sm mx-auto md:mx-0 text-emerald-450">
+            <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-850 shadow-sm mx-auto md:mx-0 text-emerald-400">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <h4 className="font-extrabold text-[#F8FAFC] text-base leading-snug">Instant Automated Verification</h4>
@@ -534,7 +534,7 @@ export default function Pricing({
           </div>
 
           <div className="space-y-2.5 p-4" id="assurance-payment-modes">
-            <div className="w-10 h-10 bg-slate-850 rounded-lg flex items-center justify-center border border-slate-800 shadow-sm mx-auto md:mx-0 text-blue-450">
+            <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-850 shadow-sm mx-auto md:mx-0 text-blue-400">
               <CreditCard className="w-5 h-5" />
             </div>
             <h4 className="font-extrabold text-[#F8FAFC] text-base leading-snug">All Indian Payment Methods</h4>
@@ -542,7 +542,7 @@ export default function Pricing({
           </div>
 
           <div className="space-y-2.5 p-4" id="assurance-unlimited-terms">
-            <div className="w-10 h-10 bg-slate-850 rounded-lg flex items-center justify-center border border-slate-800 shadow-sm mx-auto md:mx-0 text-[#10B981]">
+            <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-850 shadow-sm mx-auto md:mx-0 text-[#10B981]">
               <Cpu className="w-5 h-5" />
             </div>
             <h4 className="font-extrabold text-[#F8FAFC] text-base leading-snug">30-Day Money-Back Guarantee</h4>

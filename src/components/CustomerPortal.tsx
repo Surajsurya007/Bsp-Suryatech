@@ -44,7 +44,9 @@ import {
   Search,
   Trash,
   Trash2,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Zap,
+  ShoppingCart
 } from 'lucide-react';
 import { useAdmin } from './AdminContext';
 import { softwareDownloads } from '../softwareDownloads';

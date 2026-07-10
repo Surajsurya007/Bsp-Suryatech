@@ -41,6 +41,8 @@ import PaymentFailure from './components/PaymentFailure';
 import PaymentVerification from './components/PaymentVerification';
 import BlogList from './components/BlogList';
 import BlogDetails from './components/BlogDetails';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import RefundPolicy from './components/RefundPolicy';
 import { TranslationProvider } from './components/TranslationContext';
 import { useAdmin } from './components/AdminContext';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -77,7 +79,7 @@ export default function App() {
     selectedPlanId: string;
   } | null>(null);
 
-  const handleAddToCartAndChoosePrice = (planId: string) => {
+  const handleAddToCartAndChoosePrice = (planId: string, navigate: boolean = true) => {
     const pId = planId || 'prod-billing-pro';
     
     // Check if it is a specific solution details from Download Center (e.g., matching sol-*)
@@ -121,8 +123,10 @@ export default function App() {
     } as any);
     
     addNotification(`Added ${productName} to Cart! Select details in the Cart layout below.`, 'success');
-    setCurrentPage('pricing');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (navigate) {
+      setCurrentPage('pricing');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // Checkout modal states (Simulated Secure Checkout Gateway)
@@ -425,11 +429,37 @@ export default function App() {
       }
     });
 
+    // Smart, robust path normalizer to handle URL encoding and subdirectory deployments perfectly
+    const normalizeRoutingPath = (rawPath: string) => {
+      let p = decodeURIComponent(rawPath);
+      if (p.endsWith('/') && p !== '/') {
+        p = p.slice(0, -1);
+      }
+      const routePrefixes = [
+        '/blog/', '/blog', 
+        '/software/', '/software', 
+        '/payment-verification', 
+        '/features', 
+        '/pricing', 
+        '/downloads', 
+        '/tutorials', 
+        '/about', 
+        '/contact', 
+        '/portal',
+        '/privacy-policy',
+        '/refund-policy'
+      ];
+      for (const prefix of routePrefixes) {
+        const idx = p.indexOf(prefix);
+        if (idx !== -1) {
+          return p.substring(idx);
+        }
+      }
+      return p;
+    };
+
     // Check deep links or manual redirection paths
-    let path = window.location.pathname;
-    if (path.endsWith('/') && path !== '/') {
-      path = path.slice(0, -1);
-    }
+    const path = normalizeRoutingPath(window.location.pathname);
     if (path === '/payment-verification' || window.location.hash === '#/payment-verification') {
       setCurrentPage('payment-verification');
     } else if (path === '/features') {
@@ -448,6 +478,10 @@ export default function App() {
       setCurrentPage('portal');
     } else if (path === '/blog') {
       setCurrentPage('blog');
+    } else if (path === '/privacy-policy') {
+      setCurrentPage('privacy-policy');
+    } else if (path === '/refund-policy') {
+      setCurrentPage('refund-policy');
     } else if (path.startsWith('/blog/')) {
       const slug = path.replace('/blog/', '');
       setSelectedBlogSlug(slug);
@@ -460,10 +494,7 @@ export default function App() {
 
     // Handle back/forward buttons using HTML5 history popstate
     const handlePopState = () => {
-      let currentPath = window.location.pathname;
-      if (currentPath.endsWith('/') && currentPath !== '/') {
-        currentPath = currentPath.slice(0, -1);
-      }
+      const currentPath = normalizeRoutingPath(window.location.pathname);
       if (currentPath === '/' || currentPath === '') {
         setCurrentPage('home');
       } else if (currentPath === '/payment-verification') {
@@ -484,6 +515,10 @@ export default function App() {
         setCurrentPage('portal');
       } else if (currentPath === '/blog') {
         setCurrentPage('blog');
+      } else if (currentPath === '/privacy-policy') {
+        setCurrentPage('privacy-policy');
+      } else if (currentPath === '/refund-policy') {
+        setCurrentPage('refund-policy');
       } else if (currentPath.startsWith('/blog/')) {
         const slug = currentPath.replace('/blog/', '');
         setSelectedBlogSlug(slug);
@@ -927,7 +962,9 @@ export default function App() {
       about: '/about',
       contact: '/contact',
       portal: '/portal',
-      'payment-verification': '/payment-verification'
+      'payment-verification': '/payment-verification',
+      'privacy-policy': '/privacy-policy',
+      'refund-policy': '/refund-policy'
     };
 
     const targetPath = canonicalPaths[page] || '/';
@@ -1692,6 +1729,8 @@ export default function App() {
               onAddToCart={handleAddToCartAndChoosePrice}
               solutions={solutions}
               onIncrementDownloads={handleIncrementDownloads}
+              user={user}
+              userLicenses={userLicenses}
             />
           )}
 
@@ -1727,6 +1766,7 @@ export default function App() {
               onTriggerTrialDownload={handleTriggerTrialDownload}
               onInitiateSimulatedCheckout={handleAddToCartAndChoosePrice}
               user={user}
+              userLicenses={userLicenses}
             />
           )}
 
@@ -1772,6 +1812,18 @@ export default function App() {
               user={user}
               onPageChange={handleNavigatePage}
               onAddNotification={addNotification}
+            />
+          )}
+
+          {currentPage === 'privacy-policy' && (
+            <PrivacyPolicy 
+              onPageChange={handleNavigatePage}
+            />
+          )}
+
+          {currentPage === 'refund-policy' && (
+            <RefundPolicy 
+              onPageChange={handleNavigatePage}
             />
           )}
         </motion.div>

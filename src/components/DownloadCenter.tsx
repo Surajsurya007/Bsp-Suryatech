@@ -31,9 +31,11 @@ interface DownloadCenterProps {
   totalDownloads: number;
   onTriggerTrialDownload: (prodId: string, isFull?: boolean) => void;
   onPageChange?: (page: string) => void;
-  onAddToCart?: (planId: string) => void;
+  onAddToCart?: (planId: string, navigate?: boolean) => void;
   solutions?: SoftwareSolution[];
   onIncrementDownloads?: (prodId: string) => void;
+  user?: any;
+  userLicenses?: any[];
 }
 
 interface SoftwareSolution {
@@ -325,7 +327,9 @@ export default function DownloadCenter({
   onPageChange, 
   onAddToCart, 
   solutions: propSolutions = [],
-  onIncrementDownloads 
+  onIncrementDownloads,
+  user,
+  userLicenses = []
 }: DownloadCenterProps) {
   const [downloadFilter, setDownloadFilter] = useState<'all' | 'stable' | 'manuals'>('all');
   const [selectedSolutionCategory, setSelectedSolutionCategory] = useState<string>('All Solutions');
@@ -409,7 +413,14 @@ export default function DownloadCenter({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 select-none" id="solutions-interactive-grid">
           {sortedSolutions
             .filter((sol) => selectedSolutionCategory === 'All Solutions' || sol.category === selectedSolutionCategory)
-            .map((sol) => (
+            .map((sol) => {
+              const matchedLicense = userLicenses && userLicenses.find((lic: any) => 
+                lic.productId === sol.id || 
+                lic.productId === sol.mappedPlanId || 
+                (lic.productName && lic.productName.toLowerCase().includes(sol.title.toLowerCase()))
+              );
+              const isOwned = !!matchedLicense;
+              return (
               <div 
                 key={sol.id} 
                 className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden border border-slate-100 hover:border-slate-250 group/card transform hover:-translate-y-1"
@@ -530,49 +541,94 @@ export default function DownloadCenter({
                       </div>
                     </div>
 
-                    {/* Direct download button requested by customer */}
-                    <a
-                      href={sol.exeUrl || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download={getCleanDownloadFileName(sol.exeUrl)}
-                      onClick={() => {
-                        console.log(`DownloadCenter: Downloading setup file directly: ${sol.exeUrl}`);
-                        onIncrementDownloads?.(sol.id);
-                      }}
-                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 mt-4 transition-all duration-155 cursor-pointer shadow-md hover:shadow-emerald-500/10 active:scale-97 text-center decoration-none inline-flex"
-                      id={`sol-download-link-${sol.id}`}
-                    >
-                      <Download className="w-3.5 h-3.5 text-white shrink-0" />
-                      <span>Download Setup</span>
-                    </a>
+                    {/* Premium action/owned buttons matching requested layout */}
+                    {isOwned ? (
+                      <div className="space-y-3 mt-4">
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
+                          <span className="text-[11px] font-bold text-emerald-700 font-mono tracking-wide uppercase flex items-center justify-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            ✓ LIFETIME LICENSE ACTIVE
+                          </span>
+                          <span className="text-[10px] text-slate-650 block mt-1.5 font-mono bg-white border border-slate-100 py-1 px-1.5 rounded-lg break-all select-all">
+                            {matchedLicense.licenseKey}
+                          </span>
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                      <button
-                        onClick={() => {
-                          console.log(`DownloadCenter: Adding ${sol.title} Solution (${sol.id}) to cart...`);
-                          onAddToCart?.(sol.id);
-                        }}
-                        className="py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-1 transition-all duration-150 cursor-pointer text-center shadow-sm"
-                      >
-                        <Zap className="w-3 h-3 fill-current text-white shrink-0" />
-                        <span>Buy Now</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          onPageChange?.(`software-details:${sol.id}`);
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className="py-3 bg-white border border-slate-250 hover:bg-slate-50 text-slate-800 hover:text-slate-950 font-extrabold rounded-xl text-xs flex items-center justify-center transition-all duration-150 cursor-pointer text-center shadow-sm"
-                      >
-                        Learn More
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => {
+                            console.log(`DownloadCenter: Downloading full installer setup for ${sol.title}...`);
+                            onTriggerTrialDownload?.(sol.id, true);
+                          }}
+                          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 transition-all duration-150 cursor-pointer shadow-md hover:shadow-emerald-500/10 active:scale-97 text-center border border-emerald-600"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download Full Setup</span>
+                        </button>
+
+                        <div className="grid grid-cols-2 gap-3 mt-2.5">
+                          <button
+                            onClick={() => {
+                              onPageChange?.('portal');
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="py-3 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 hover:text-slate-900 font-extrabold rounded-xl text-xs flex items-center justify-center transition-all duration-150 cursor-pointer text-center shadow-xs"
+                          >
+                            Go to Portal
+                          </button>
+                          <button
+                            onClick={() => {
+                              onPageChange?.(`software-details:${sol.id}`);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="py-3 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 hover:text-slate-900 font-extrabold rounded-xl text-xs flex items-center justify-center transition-all duration-150 cursor-pointer text-center shadow-xs"
+                          >
+                            Learn More
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            console.log(`DownloadCenter: Instantly buying ${sol.title} (${sol.id})...`);
+                            onAddToCart?.(sol.id, true);
+                          }}
+                          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 mt-4 transition-all duration-150 cursor-pointer shadow-md hover:shadow-blue-500/10 active:scale-97 text-center border border-blue-600"
+                          id={`sol-buynow-btn-${sol.id}`}
+                        >
+                          <Zap className="w-3.5 h-3.5 fill-current text-white shrink-0" />
+                          <span>Buy Now</span>
+                        </button>
+
+                        <div className="grid grid-cols-2 gap-3 mt-2.5">
+                          <button
+                            onClick={() => {
+                              console.log(`DownloadCenter: Adding ${sol.title} Solution (${sol.id}) to cart...`);
+                              onAddToCart?.(sol.id, false);
+                            }}
+                            className="py-3 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 hover:text-slate-900 font-extrabold rounded-xl text-xs flex items-center justify-center transition-all duration-150 cursor-pointer text-center shadow-xs"
+                            id={`sol-addtocart-btn-${sol.id}`}
+                          >
+                            Add to Cart
+                          </button>
+                          <button
+                            onClick={() => {
+                              onPageChange?.(`software-details:${sol.id}`);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="py-3 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 hover:text-slate-900 font-extrabold rounded-xl text-xs flex items-center justify-center transition-all duration-150 cursor-pointer text-center shadow-xs"
+                            id={`sol-learnmore-btn-${sol.id}`}
+                          >
+                            Learn More
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
               </div>
-          ))}
+            )})}
         </div>
       </section>
 
