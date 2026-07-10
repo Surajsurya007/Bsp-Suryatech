@@ -899,11 +899,20 @@ export default function CustomerPortal({
       });
 
       if (error) {
-        console.warn("Supabase Login Error:", error.message);
-        let errorMsg = error.message;
-        if (error.message === 'Invalid login credentials' || error.message?.toLowerCase().includes('confirm')) {
-          errorMsg = "Invalid login credentials. NOTE: If you registered via Email + Password, ensure 'Confirm Email' is turned OFF in your Supabase Auth Providers settings (Dashboard -> Authentication -> Providers -> Email), or verify your email using the verification link if one was dispatched.";
+        console.error("Original Supabase Login Error:", error);
+        const msgLower = error.message?.toLowerCase() || '';
+        let errorMsg = "Invalid email or password.";
+
+        if (
+          msgLower.includes('email not confirmed') || 
+          msgLower.includes('confirm email') || 
+          msgLower.includes('email address not verified') ||
+          msgLower.includes('email_not_confirmed') ||
+          (msgLower.includes('email') && (msgLower.includes('confirm') || msgLower.includes('verify') || msgLower.includes('verification')))
+        ) {
+          errorMsg = "Your email address is not verified. Please check your inbox and verify your email before signing in.";
         }
+
         setSupabaseErrorMsg(errorMsg);
         onAddNotification(errorMsg, 'error');
         setAuthLoading(false);
