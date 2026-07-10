@@ -324,36 +324,62 @@ export default function App() {
             addNotification('Google Authentication failed: ' + error.message, 'error');
           } else {
             console.log('App: Google SSO session completed successfully!', data);
-            // Clean browser address strings
-            window.history.replaceState({}, document.title, '/');
-            addNotification('Successfully logged in with Google SSO!', 'success');
             
-            // Check if there are profiles to load
+            // Clean browser address strings and redirect smoothly to portal
+            window.history.replaceState({}, document.title, '/portal');
+            
             if (data.user) {
-              supabase.from('customer_profiles').select('*').eq('user_id', data.user.id).single()
-                .then(({ data: profile }) => {
-                  const u = {
-                    id: data.user!.id,
-                    email: data.user!.email,
-                    name: profile?.client_name || data.user!.user_metadata?.full_name || data.user!.user_metadata?.name || data.user!.email?.split('@')[0],
-                    role: 'customer',
-                    profile: profile || null
-                  };
-                  setUser(u);
-                  handleNavigatePage('portal');
-                })
-                .catch((profileErr: any) => {
-                  console.warn("App: Non-blocking customer profiles look up error on Google login redirect:", profileErr);
-                  const u = {
-                    id: data.user!.id,
-                    email: data.user!.email,
-                    name: data.user!.user_metadata?.full_name || data.user!.user_metadata?.name || data.user!.email?.split('@')[0],
-                    role: 'customer',
-                    profile: null
-                  };
-                  setUser(u);
-                  handleNavigatePage('portal');
-                });
+              const email = data.user.email;
+              const name = data.user.user_metadata?.full_name || data.user.user_metadata?.name || email?.split('@')[0];
+              
+              // 1.5) Secure synchronization of Supabase SSO profiles with Hostinger local relational tables
+              fetch('/api/auth/supabase-sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, name })
+              })
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error('Local server SSO synchronization failed.');
+                }
+                return res.json();
+              })
+              .then(({ token, user: localUser }) => {
+                console.log('App: Local server SSO sync completed successfully!');
+                localStorage.setItem('bsp_token', token);
+                
+                // Fetch the customer profile details from Supabase if they exist
+                supabase.from('customer_profiles').select('*').eq('user_id', data.user!.id).single()
+                  .then(({ data: profile }) => {
+                    const u = {
+                      id: localUser.id,
+                      email: localUser.email,
+                      name: localUser.name,
+                      role: localUser.role || 'customer',
+                      profile: profile || null
+                    };
+                    setUser(u);
+                    addNotification('Successfully logged in with Google SSO!', 'success');
+                    handleNavigatePage('portal');
+                  })
+                  .catch((profileErr) => {
+                    console.warn("App: Non-blocking profile lookup error on sync:", profileErr);
+                    const u = {
+                      id: localUser.id,
+                      email: localUser.email,
+                      name: localUser.name,
+                      role: localUser.role || 'customer',
+                      profile: null
+                    };
+                    setUser(u);
+                    addNotification('Successfully logged in with Google SSO!', 'success');
+                    handleNavigatePage('portal');
+                  });
+              })
+              .catch(syncErr => {
+                console.error('App: Error during local server SSO sync:', syncErr);
+                addNotification('SSO Synchronization failed: ' + syncErr.message, 'error');
+              });
             }
           }
         })
@@ -447,7 +473,8 @@ export default function App() {
         '/contact', 
         '/portal',
         '/privacy-policy',
-        '/refund-policy'
+        '/refund-policy',
+        '/auth/callback'
       ];
       for (const prefix of routePrefixes) {
         const idx = p.indexOf(prefix);
@@ -474,7 +501,7 @@ export default function App() {
       setCurrentPage('about');
     } else if (path === '/contact') {
       setCurrentPage('contact');
-    } else if (path === '/portal') {
+    } else if (path === '/portal' || path.startsWith('/auth/callback')) {
       setCurrentPage('portal');
     } else if (path === '/blog') {
       setCurrentPage('blog');
@@ -511,7 +538,7 @@ export default function App() {
         setCurrentPage('about');
       } else if (currentPath === '/contact') {
         setCurrentPage('contact');
-      } else if (currentPath === '/portal') {
+      } else if (currentPath === '/portal' || currentPath.startsWith('/auth/callback')) {
         setCurrentPage('portal');
       } else if (currentPath === '/blog') {
         setCurrentPage('blog');

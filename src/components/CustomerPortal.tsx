@@ -709,7 +709,7 @@ export default function CustomerPortal({
     console.log("CustomerPortal: Triggering Supabase password reset resetPasswordForEmail for:", forgotEmail);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/auth/callback?provider=supabase`
+        redirectTo: `${window.location.origin}/portal`
       });
 
       if (!error) {
@@ -888,7 +888,7 @@ export default function CustomerPortal({
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?provider=supabase`,
+          redirectTo: `${window.location.origin}/portal`,
           skipBrowserRedirect: false // Change to false to directly redirect the parent window safely without popup blocker issues
         }
       });
