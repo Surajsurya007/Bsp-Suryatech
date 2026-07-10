@@ -792,14 +792,18 @@ export default function CustomerPortal({
     try {
       // 1) Authenticate user via Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
+        email: loginEmail.trim(),
         password: loginPassword
       });
 
       if (error) {
         console.warn("Supabase Login Error:", error.message);
-        setSupabaseErrorMsg(error.message);
-        onAddNotification(error.message, 'error');
+        let errorMsg = error.message;
+        if (error.message === 'Invalid login credentials' || error.message?.toLowerCase().includes('confirm')) {
+          errorMsg = "Invalid login credentials. NOTE: If you registered via Email + Password, ensure 'Confirm Email' is turned OFF in your Supabase Auth Providers settings (Dashboard -> Authentication -> Providers -> Email), or verify your email using the verification link if one was dispatched.";
+        }
+        setSupabaseErrorMsg(errorMsg);
+        onAddNotification(errorMsg, 'error');
         setAuthLoading(false);
         return;
       }
@@ -928,10 +932,10 @@ export default function CustomerPortal({
     setAuthLoading(true);
     setSupabaseErrorMsg('');
     try {
-      console.log("CustomerPortal: Initiating Supabase Auth sign-up for:", regEmail);
+      console.log("CustomerPortal: Initiating Supabase Auth sign-up for:", regEmail.trim());
       // 1) Initialize user register onboarding logic on Supabase Auth with full metadata
       const { data, error } = await supabase.auth.signUp({
-        email: regEmail,
+        email: regEmail.trim(),
         password: regPassword,
         options: {
           data: {
@@ -969,7 +973,7 @@ export default function CustomerPortal({
                 client_name: regClientName,
                 business_name: regBusinessName,
                 contact_number: regContactNumber,
-                email_address: regEmail,
+                email_address: regEmail.trim(),
                 business_address: regBusinessAddress,
                 city: regCity,
                 state: regState,
@@ -991,7 +995,7 @@ export default function CustomerPortal({
         }
 
         // Keep user on the login screen, do not auto login
-        setLoginEmail(regEmail);
+        setLoginEmail(regEmail.trim());
         setLoginPassword('');
         
         // Clear registration fields

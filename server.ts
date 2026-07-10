@@ -629,12 +629,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       return res.status(400).json({ error: 'Please fill all fields' });
     }
     
+    const cleanEmail = email.trim();
+    
     // If Supabase is active, signup to Supabase Auth first, but do not block local database registration if it fails (e.g. inactive or misconfigured project)
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
         const { data: sbData, error: sbError } = await supabase.auth.signUp({
-          email,
+          email: cleanEmail,
           password,
           options: {
             data: {
@@ -650,14 +652,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       }
     }
 
-    const existing = dbActions.getUserByEmail(email);
+    const existing = dbActions.getUserByEmail(cleanEmail);
     if (existing) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     const newUser = dbActions.createUser({
       name,
-      email,
+      email: cleanEmail,
       role: 'customer'
     }, password);
 
@@ -667,7 +669,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       clientName: name,
       businessName: '',
       contactNumber: '',
-      emailAddress: email,
+      emailAddress: cleanEmail,
       businessAddress: '',
       city: '',
       state: '',
@@ -685,6 +687,8 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       return res.status(400).json({ error: 'Email and password required' });
     }
 
+    const cleanEmail = email.trim();
+
     // Try Supabase authentication
     const supabase = getSupabaseClient();
     let sbSuccess = false;
@@ -692,7 +696,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     if (supabase) {
       try {
         const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
-          email,
+          email: cleanEmail,
           password
         });
         if (sbError) {
@@ -705,14 +709,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       }
     }
 
-    let user = dbActions.getUserByEmail(email);
+    let user = dbActions.getUserByEmail(cleanEmail);
     
     if (sbSuccess) {
       if (!user) {
         // Auto-sync Supabase user to local DB
         user = dbActions.createUser({
-          name: email.split('@')[0],
-          email: email,
+          name: cleanEmail.split('@')[0],
+          email: cleanEmail,
           role: 'customer'
         }, password);
         dbActions.saveCustomerProfile({
@@ -720,7 +724,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           clientName: user.name,
           businessName: '',
           contactNumber: '',
-          emailAddress: email,
+          emailAddress: cleanEmail,
           businessAddress: '',
           city: '',
           state: '',
