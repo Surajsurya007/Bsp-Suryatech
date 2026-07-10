@@ -396,11 +396,36 @@ export default function App() {
           console.log("App: Restored functional Supabase single sign-on user ID:", session.user.id);
           
           // Query customer Profile
-          const { data: profile } = await supabase
+          let { data: profile } = await supabase
             .from('customer_profiles')
             .select('*')
             .eq('user_id', session.user.id)
             .single();
+
+          if (!profile) {
+            console.log("App: Profile not found for restored session, auto-creating/migrating...");
+            const meta = session.user.user_metadata || {};
+            const emailStr = session.user.email || '';
+            const newProfile = {
+              user_id: session.user.id,
+              client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
+              business_name: meta.business_name || 'Business Profile Inc.',
+              contact_number: meta.contact_number || '9999999999',
+              email_address: emailStr,
+              business_address: meta.business_address || 'Not Provided',
+              city: meta.city || 'Not Provided',
+              state: meta.state || 'Not Provided',
+              pincode: meta.pincode || '000000',
+              gst_number: meta.gst_number || '',
+              created_at: new Date().toISOString()
+            };
+            const { error: insErr } = await supabase
+              .from('customer_profiles')
+              .upsert(newProfile);
+            if (!insErr) {
+              profile = newProfile as any;
+            }
+          }
 
           const u = {
             id: session.user.id,
@@ -431,11 +456,36 @@ export default function App() {
       console.log(`App: Supabase Auth state changed event [${event}]`);
       if (session && session.user) {
         try {
-          const { data: profile } = await supabase
+          let { data: profile } = await supabase
             .from('customer_profiles')
             .select('*')
             .eq('user_id', session.user.id)
             .single();
+
+          if (!profile) {
+            console.log("App: Profile not found on auth state change, auto-creating/migrating...");
+            const meta = session.user.user_metadata || {};
+            const emailStr = session.user.email || '';
+            const newProfile = {
+              user_id: session.user.id,
+              client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
+              business_name: meta.business_name || 'Business Profile Inc.',
+              contact_number: meta.contact_number || '9999999999',
+              email_address: emailStr,
+              business_address: meta.business_address || 'Not Provided',
+              city: meta.city || 'Not Provided',
+              state: meta.state || 'Not Provided',
+              pincode: meta.pincode || '000000',
+              gst_number: meta.gst_number || '',
+              created_at: new Date().toISOString()
+            };
+            const { error: insErr } = await supabase
+              .from('customer_profiles')
+              .upsert(newProfile);
+            if (!insErr) {
+              profile = newProfile as any;
+            }
+          }
 
           const u = {
             id: session.user.id,

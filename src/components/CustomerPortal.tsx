@@ -561,15 +561,38 @@ export default function CustomerPortal({
 
   // Fetch target customer profile data
   const fetchCustomerProfile = async () => {
-    if (!user) return;
-    console.log("CustomerPortal: Fetching customer profile details directly from Supabase...");
+    // 7. Add temporary console logs to show:
+    //    - authenticated user id
+    //    - database response
+    //    - profile state after loading
+    console.log("CustomerPortal: [PROFILE AUDIT] fetchCustomerProfile() initiated.");
+    let resolvedUserId = user?.id;
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id) {
+        resolvedUserId = authData.user.id;
+      }
+    } catch (authErr) {
+      console.warn("CustomerPortal: [PROFILE AUDIT] Error getting auth user:", authErr);
+    }
+    
+    console.log("CustomerPortal: [PROFILE AUDIT] Authenticated user id resolved to:", resolvedUserId);
+    if (!resolvedUserId) {
+      console.warn("CustomerPortal: [PROFILE AUDIT] No authenticated user ID found! Returning early...");
+      return;
+    }
+
+    console.log("CustomerPortal: Fetching customer profile details directly from Supabase for user:", resolvedUserId);
     try {
       let profileData = null;
       const { data, error } = await supabase
         .from('customer_profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', resolvedUserId)
         .single();
+      
+      console.log("CustomerPortal: [PROFILE AUDIT] Database select response:", { data, error });
+
       if (data && !error) {
         profileData = {
           userId: data.user_id,
@@ -583,21 +606,100 @@ export default function CustomerPortal({
           pincode: data.pincode,
           gstNumber: data.gst_number
         };
+      } else {
+        // Profile row does not exist, check if we can automatically create/migrate it
+        console.log("CustomerPortal: Profile not found in database, checking auth user metadata for migration...");
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const meta = authUser.user_metadata || {};
+          const emailStr = authUser.email || user?.email || '';
+          const newProfile = {
+            user_id: authUser.id,
+            client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
+            business_name: meta.business_name || 'Business Name',
+            contact_number: meta.contact_number || '9999999999',
+            email_address: emailStr,
+            business_address: meta.business_address || 'Address Not Provided',
+            city: meta.city || 'City Not Provided',
+            state: meta.state || 'State Not Provided',
+            pincode: meta.pincode || '000000',
+            gst_number: meta.gst_number || '',
+            created_at: new Date().toISOString()
+          };
+
+          console.log("CustomerPortal: Auto-creating missing profile row during fetch:", newProfile);
+          const { error: insErr } = await supabase
+            .from('customer_profiles')
+            .upsert(newProfile);
+
+          if (!insErr) {
+            console.log("CustomerPortal: Successfully migrated/created profile row!");
+            profileData = {
+              userId: newProfile.user_id,
+              clientName: newProfile.client_name,
+              businessName: newProfile.business_name,
+              contactNumber: newProfile.contact_number,
+              emailAddress: newProfile.email_address,
+              businessAddress: newProfile.business_address,
+              city: newProfile.city,
+              state: newProfile.state,
+              pincode: newProfile.pincode,
+              gstNumber: newProfile.gst_number
+            };
+          } else {
+            console.warn("CustomerPortal: Error auto-creating profile in database:", insErr.message);
+          }
+        }
       }
 
       if (profileData) {
         setProfileClientName(profileData.clientName || '');
         setProfileBusinessName(profileData.businessName || '');
         setProfileContactNumber(profileData.contactNumber || '');
-        setProfileEmailAddress(profileData.emailAddress || user.email || '');
+        setProfileEmailAddress(profileData.emailAddress || user?.email || '');
         setProfileBusinessAddress(profileData.businessAddress || '');
         setProfileCity(profileData.city || '');
         setProfileStateValue(profileData.state || '');
         setProfilePincode(profileData.pincode || '');
         setProfileGstNumber(profileData.gstNumber || '');
+        
+        console.log("CustomerPortal: [PROFILE AUDIT] Profile state loaded successfully:", {
+          profileClientName: profileData.clientName,
+          profileBusinessName: profileData.businessName,
+          profileContactNumber: profileData.contactNumber,
+          profileEmailAddress: profileData.emailAddress,
+          profileBusinessAddress: profileData.businessAddress,
+          profileCity: profileData.city,
+          profileStateValue: profileData.state,
+          profilePincode: profileData.pincode,
+          profileGstNumber: profileData.gstNumber
+        });
+      } else {
+        // Fallback state defaults if profile cannot be fetched/created
+        setProfileClientName(user?.name || '');
+        setProfileBusinessName('Business Name');
+        setProfileContactNumber('9999999999');
+        setProfileEmailAddress(user?.email || '');
+        setProfileBusinessAddress('Address Not Provided');
+        setProfileCity('City Not Provided');
+        setProfileStateValue('State Not Provided');
+        setProfilePincode('000000');
+        setProfileGstNumber('');
+        console.log("CustomerPortal: [PROFILE AUDIT] No profileData found. Used fallback defaults.");
       }
     } catch (err: any) {
       console.warn("Exception loading profile:", err);
+      // Fallback state on exception
+      setProfileClientName(user?.name || '');
+      setProfileBusinessName('Business Name');
+      setProfileContactNumber('9999999999');
+      setProfileEmailAddress(user?.email || '');
+      setProfileBusinessAddress('Address Not Provided');
+      setProfileCity('City Not Provided');
+      setProfileStateValue('State Not Provided');
+      setProfilePincode('000000');
+      setProfileGstNumber('');
+      console.log("CustomerPortal: [PROFILE AUDIT] Exception loading profile. Used fallback defaults.");
     }
   };
 
@@ -689,7 +791,7 @@ export default function CustomerPortal({
       fetchCustomerData();
       fetchCustomerProfile();
     }
-  }, [user?.id]);
+  }, [user?.id, activePortalView]);
 
   useEffect(() => {
     if (user && (activePortalView === 'admin' || devAdminMode)) {
@@ -823,36 +925,35 @@ export default function CustomerPortal({
         }
 
         // Auto-create profile from metadata if not present in DB
-        if (!loadedProfile && data.user.user_metadata) {
-          const meta = data.user.user_metadata;
-          if (meta.full_name || meta.business_name || meta.contact_number) {
-            console.log("CustomerPortal: Auto-creating customer profile from user metadata after authenticated login...");
-            try {
-              const newProfile = {
-                user_id: data.user.id,
-                client_name: meta.full_name || meta.client_name || data.user.email?.split('@')[0],
-                business_name: meta.business_name || 'Business Profile Inc.',
-                contact_number: meta.contact_number || '9999999999',
-                email_address: data.user.email,
-                business_address: meta.business_address || 'Not Provided',
-                city: meta.city || 'Not Provided',
-                state: meta.state || 'Not Provided',
-                pincode: meta.pincode || '000000',
-                gst_number: meta.gst_number || '',
-                created_at: new Date().toISOString()
-              };
-              const { error: insErr } = await supabase
-                .from('customer_profiles')
-                .upsert(newProfile);
-              if (!insErr) {
-                console.log("CustomerPortal: Success creating profile after login authentication.");
-                loadedProfile = newProfile;
-              } else {
-                console.warn("CustomerPortal: Failed creating profile after login:", insErr.message);
-              }
-            } catch (err: any) {
-              console.warn("CustomerPortal: Exception auto-creating profile post-auth:", err.message);
+        if (!loadedProfile) {
+          const meta = data.user.user_metadata || {};
+          const emailStr = data.user.email || '';
+          console.log("CustomerPortal: Auto-creating customer profile after authenticated login...");
+          try {
+            const newProfile = {
+              user_id: data.user.id,
+              client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
+              business_name: meta.business_name || 'Business Profile Inc.',
+              contact_number: meta.contact_number || '9999999999',
+              email_address: emailStr,
+              business_address: meta.business_address || 'Not Provided',
+              city: meta.city || 'Not Provided',
+              state: meta.state || 'Not Provided',
+              pincode: meta.pincode || '000000',
+              gst_number: meta.gst_number || '',
+              created_at: new Date().toISOString()
+            };
+            const { error: insErr } = await supabase
+              .from('customer_profiles')
+              .upsert(newProfile);
+            if (!insErr) {
+              console.log("CustomerPortal: Success creating profile after login authentication.");
+              loadedProfile = newProfile;
+            } else {
+              console.warn("CustomerPortal: Failed creating profile after login:", insErr.message);
             }
+          } catch (err: any) {
+            console.warn("CustomerPortal: Exception auto-creating profile post-auth:", err.message);
           }
         }
 
