@@ -409,14 +409,14 @@ export default function App() {
             const newProfile = {
               user_id: session.user.id,
               client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
-              business_name: meta.business_name || 'Business Profile Inc.',
-              contact_number: meta.contact_number || '9999999999',
+              business_name: meta.business_name || null,
+              contact_number: meta.contact_number || null,
               email_address: emailStr,
-              business_address: meta.business_address || 'Not Provided',
-              city: meta.city || 'Not Provided',
-              state: meta.state || 'Not Provided',
-              pincode: meta.pincode || '000000',
-              gst_number: meta.gst_number || '',
+              business_address: meta.business_address || null,
+              city: meta.city || null,
+              state: meta.state || null,
+              pincode: meta.pincode || null,
+              gst_number: meta.gst_number || null,
               created_at: new Date().toISOString()
             };
             const { error: insErr } = await supabase
@@ -469,14 +469,14 @@ export default function App() {
             const newProfile = {
               user_id: session.user.id,
               client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
-              business_name: meta.business_name || 'Business Profile Inc.',
-              contact_number: meta.contact_number || '9999999999',
+              business_name: meta.business_name || null,
+              contact_number: meta.contact_number || null,
               email_address: emailStr,
-              business_address: meta.business_address || 'Not Provided',
-              city: meta.city || 'Not Provided',
-              state: meta.state || 'Not Provided',
-              pincode: meta.pincode || '000000',
-              gst_number: meta.gst_number || '',
+              business_address: meta.business_address || null,
+              city: meta.city || null,
+              state: meta.state || null,
+              pincode: meta.pincode || null,
+              gst_number: meta.gst_number || null,
               created_at: new Date().toISOString()
             };
             const { error: insErr } = await supabase

@@ -228,6 +228,69 @@ const parseNotificationDetails = (notif: any, tickets: any[]) => {
   };
 };
 
+const PLACEHOLDERS = [
+  'Business Profile Inc.',
+  '9999999999',
+  'Not Provided',
+  'Address Not Provided',
+  'City Not Provided',
+  'State Not Provided',
+  '000000',
+  'Default Business',
+  'Demo Company',
+  'Demo User',
+  'Business Name',
+  'City Name'
+];
+
+const cleanProfileValue = (val: any) => {
+  if (!val) return '';
+  const str = String(val).trim();
+  if (PLACEHOLDERS.some(p => str.toLowerCase() === p.toLowerCase())) {
+    return '';
+  }
+  return str;
+};
+
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry"
+];
+
 export default function CustomerPortal({ 
   user, 
   onLoginSuccess, 
@@ -332,8 +395,8 @@ export default function CustomerPortal({
   }, [initialView]);
 
   // Login form states
-  const [loginEmail, setLoginEmail] = useState('test@gmail.com');
-  const [loginPassword, setLoginPassword] = useState('surya123');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [supabaseErrorMsg, setSupabaseErrorMsg] = useState('');
 
@@ -597,14 +660,14 @@ export default function CustomerPortal({
         profileData = {
           userId: data.user_id,
           clientName: data.client_name,
-          businessName: data.business_name,
-          contactNumber: data.contact_number,
+          businessName: cleanProfileValue(data.business_name),
+          contactNumber: cleanProfileValue(data.contact_number),
           emailAddress: data.email_address,
-          businessAddress: data.business_address,
-          city: data.city,
-          state: data.state,
-          pincode: data.pincode,
-          gstNumber: data.gst_number
+          businessAddress: cleanProfileValue(data.business_address),
+          city: cleanProfileValue(data.city),
+          state: cleanProfileValue(data.state),
+          pincode: cleanProfileValue(data.pincode),
+          gstNumber: cleanProfileValue(data.gst_number)
         };
       } else {
         // Profile row does not exist, check if we can automatically create/migrate it
@@ -616,14 +679,14 @@ export default function CustomerPortal({
           const newProfile = {
             user_id: authUser.id,
             client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
-            business_name: meta.business_name || 'Business Name',
-            contact_number: meta.contact_number || '9999999999',
+            business_name: meta.business_name || null,
+            contact_number: meta.contact_number || null,
             email_address: emailStr,
-            business_address: meta.business_address || 'Address Not Provided',
-            city: meta.city || 'City Not Provided',
-            state: meta.state || 'State Not Provided',
-            pincode: meta.pincode || '000000',
-            gst_number: meta.gst_number || '',
+            business_address: meta.business_address || null,
+            city: meta.city || null,
+            state: meta.state || null,
+            pincode: meta.pincode || null,
+            gst_number: meta.gst_number || null,
             created_at: new Date().toISOString()
           };
 
@@ -637,14 +700,14 @@ export default function CustomerPortal({
             profileData = {
               userId: newProfile.user_id,
               clientName: newProfile.client_name,
-              businessName: newProfile.business_name,
-              contactNumber: newProfile.contact_number,
+              businessName: cleanProfileValue(newProfile.business_name),
+              contactNumber: cleanProfileValue(newProfile.contact_number),
               emailAddress: newProfile.email_address,
-              businessAddress: newProfile.business_address,
-              city: newProfile.city,
-              state: newProfile.state,
-              pincode: newProfile.pincode,
-              gstNumber: newProfile.gst_number
+              businessAddress: cleanProfileValue(newProfile.business_address),
+              city: cleanProfileValue(newProfile.city),
+              state: cleanProfileValue(newProfile.state),
+              pincode: cleanProfileValue(newProfile.pincode),
+              gstNumber: cleanProfileValue(newProfile.gst_number)
             };
           } else {
             console.warn("CustomerPortal: Error auto-creating profile in database:", insErr.message);
@@ -677,13 +740,13 @@ export default function CustomerPortal({
       } else {
         // Fallback state defaults if profile cannot be fetched/created
         setProfileClientName(user?.name || '');
-        setProfileBusinessName('Business Name');
-        setProfileContactNumber('9999999999');
+        setProfileBusinessName('');
+        setProfileContactNumber('');
         setProfileEmailAddress(user?.email || '');
-        setProfileBusinessAddress('Address Not Provided');
-        setProfileCity('City Not Provided');
-        setProfileStateValue('State Not Provided');
-        setProfilePincode('000000');
+        setProfileBusinessAddress('');
+        setProfileCity('');
+        setProfileStateValue('');
+        setProfilePincode('');
         setProfileGstNumber('');
         console.log("CustomerPortal: [PROFILE AUDIT] No profileData found. Used fallback defaults.");
       }
@@ -691,13 +754,13 @@ export default function CustomerPortal({
       console.warn("Exception loading profile:", err);
       // Fallback state on exception
       setProfileClientName(user?.name || '');
-      setProfileBusinessName('Business Name');
-      setProfileContactNumber('9999999999');
+      setProfileBusinessName('');
+      setProfileContactNumber('');
       setProfileEmailAddress(user?.email || '');
-      setProfileBusinessAddress('Address Not Provided');
-      setProfileCity('City Not Provided');
-      setProfileStateValue('State Not Provided');
-      setProfilePincode('000000');
+      setProfileBusinessAddress('');
+      setProfileCity('');
+      setProfileStateValue('');
+      setProfilePincode('');
       setProfileGstNumber('');
       console.log("CustomerPortal: [PROFILE AUDIT] Exception loading profile. Used fallback defaults.");
     }
@@ -942,14 +1005,14 @@ export default function CustomerPortal({
             const newProfile = {
               user_id: data.user.id,
               client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
-              business_name: meta.business_name || 'Business Profile Inc.',
-              contact_number: meta.contact_number || '9999999999',
+              business_name: meta.business_name || null,
+              contact_number: meta.contact_number || null,
               email_address: emailStr,
-              business_address: meta.business_address || 'Not Provided',
-              city: meta.city || 'Not Provided',
-              state: meta.state || 'Not Provided',
-              pincode: meta.pincode || '000000',
-              gst_number: meta.gst_number || '',
+              business_address: meta.business_address || null,
+              city: meta.city || null,
+              state: meta.state || null,
+              pincode: meta.pincode || null,
+              gst_number: meta.gst_number || null,
               created_at: new Date().toISOString()
             };
             const { error: insErr } = await supabase
@@ -1175,6 +1238,24 @@ export default function CustomerPortal({
       return;
     }
 
+    const cleanPhone = profileContactNumber.trim();
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      onAddNotification('Contact Number must be a valid 10-digit number.', 'error');
+      return;
+    }
+
+    const cleanPin = profilePincode.trim();
+    if (!/^\d{6}$/.test(cleanPin)) {
+      onAddNotification('Pincode must be a valid 6-digit number.', 'error');
+      return;
+    }
+
+    const cleanGst = profileGstNumber.trim();
+    if (cleanGst && cleanGst.length !== 15) {
+      onAddNotification('GST Number must be exactly 15 characters if specified.', 'error');
+      return;
+    }
+
     setProfileSaving(true);
     console.log("CustomerPortal: Writing updated profile details directly to Supabase...");
     try {
@@ -1185,13 +1266,13 @@ export default function CustomerPortal({
           user_id: user.id,
           client_name: profileClientName,
           business_name: profileBusinessName,
-          contact_number: profileContactNumber,
+          contact_number: cleanPhone,
           email_address: profileEmailAddress,
           business_address: profileBusinessAddress,
           city: profileCity,
           state: profileStateValue,
-          pincode: profilePincode,
-          gst_number: profileGstNumber,
+          pincode: cleanPin,
+          gst_number: cleanGst || null,
           created_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
 
@@ -1205,6 +1286,82 @@ export default function CustomerPortal({
     } catch (err: any) {
       console.error(err);
       onAddNotification('Failure updating profile details: ' + err.message, 'error');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  // Complete profile onboarding submission
+  const handleCompleteProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileBusinessName.trim()) {
+      onAddNotification('Business Name is required.', 'error');
+      return;
+    }
+    const cleanPhone = profileContactNumber.trim();
+    if (!cleanPhone) {
+      onAddNotification('Contact Number is required.', 'error');
+      return;
+    }
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      onAddNotification('Contact Number must be a valid 10-digit number.', 'error');
+      return;
+    }
+    if (!profileBusinessAddress.trim()) {
+      onAddNotification('Business Address is required.', 'error');
+      return;
+    }
+    if (!profileCity.trim()) {
+      onAddNotification('City is required.', 'error');
+      return;
+    }
+    if (!profileStateValue.trim()) {
+      onAddNotification('State selection is required.', 'error');
+      return;
+    }
+    const cleanPin = profilePincode.trim();
+    if (!cleanPin) {
+      onAddNotification('Pincode is required.', 'error');
+      return;
+    }
+    if (!/^\d{6}$/.test(cleanPin)) {
+      onAddNotification('Pincode must be a valid 6-digit number.', 'error');
+      return;
+    }
+    const cleanGst = profileGstNumber.trim();
+    if (cleanGst && cleanGst.length !== 15) {
+      onAddNotification('GST Number must be exactly 15 characters if specified.', 'error');
+      return;
+    }
+
+    setProfileSaving(true);
+    try {
+      const { error: sbWriteErr } = await supabase
+        .from('customer_profiles')
+        .upsert({
+          user_id: user.id,
+          client_name: profileClientName || user.name || '',
+          business_name: profileBusinessName.trim(),
+          contact_number: cleanPhone,
+          email_address: profileEmailAddress || user.email || '',
+          business_address: profileBusinessAddress.trim(),
+          city: profileCity.trim(),
+          state: profileStateValue.trim(),
+          pincode: cleanPin,
+          gst_number: cleanGst || null,
+          created_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+      if (sbWriteErr) {
+        throw new Error(sbWriteErr.message);
+      }
+
+      onAddNotification('Your Business Profile has been successfully completed!', 'success');
+      await fetchCustomerProfile();
+      await fetchCustomerData();
+    } catch (err: any) {
+      console.error(err);
+      onAddNotification('Failed to save profile: ' + err.message, 'error');
     } finally {
       setProfileSaving(false);
     }
@@ -1593,6 +1750,7 @@ export default function CustomerPortal({
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                         id="login-input-email"
+                        autoComplete="email"
                       />
                     </div>
                   </div>
@@ -1622,6 +1780,7 @@ export default function CustomerPortal({
                         onChange={(e) => setLoginPassword(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
                         id="login-input-pass"
+                        autoComplete="current-password"
                       />
                     </div>
                   </div>
@@ -1934,6 +2093,241 @@ export default function CustomerPortal({
   }
 
   // --- RENDERING SECURE CUSTOMER DASHBOARD VIEWS ---
+  const isProfileIncomplete = 
+    !profileBusinessName.trim() ||
+    !profileContactNumber.trim() ||
+    !profileBusinessAddress.trim() ||
+    !profileCity.trim() ||
+    !profileStateValue.trim() ||
+    !profilePincode.trim();
+
+  if (isProfileIncomplete && activePortalView !== 'admin' && !devAdminMode) {
+    const fieldsToTrack = [
+      profileBusinessName,
+      profileContactNumber,
+      profileBusinessAddress,
+      profileCity,
+      profileStateValue,
+      profilePincode
+    ];
+    const completedFieldsCount = fieldsToTrack.filter(f => f && f.trim() !== '').length;
+    const completionPercent = Math.round((completedFieldsCount / 6) * 100);
+    const barBlocks = Math.round((completedFieldsCount / 6) * 12);
+    const visualProgressBar = '■'.repeat(barBlocks) + '□'.repeat(12 - barBlocks);
+
+    return (
+      <div className="py-12 max-w-2xl mx-auto px-4 md:px-6 customer-portal-container animate-fade-in" id="portal-onboarding-wrapper">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-lg space-y-8" id="portal-onboarding-card">
+          
+          {/* Header */}
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center justify-center p-4 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100">
+              <User className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
+              Complete Your Business Profile
+            </h2>
+            <div className="space-y-1">
+              <p className="text-base font-bold text-slate-700">Welcome!</p>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                Please complete your business information before continuing.
+              </p>
+            </div>
+          </div>
+
+          {/* Progress Indicator Card */}
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2.5">
+            <div className="flex justify-between items-center text-xs font-bold text-slate-600 uppercase font-mono tracking-wider">
+              <span>Profile Completion</span>
+              <span className="text-blue-600 font-extrabold">{completionPercent}%</span>
+            </div>
+            {/* Visual Bar */}
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-blue-600 h-full transition-all duration-500 ease-out" 
+                style={{ width: `${completionPercent}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+              <span className="tracking-widest">{visualProgressBar}</span>
+              <span>{completedFieldsCount} of 6 required fields filled</span>
+            </div>
+            <p className="text-[11px] text-slate-500 italic">
+              * Complete your business details to activate all portal features.
+            </p>
+          </div>
+
+          {/* Onboarding Form */}
+          <form onSubmit={handleCompleteProfileSubmit} className="space-y-6">
+            
+            {/* Read-only fields group */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 p-4 rounded-2xl border border-dashed border-slate-200">
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block">Customer Name</label>
+                <input
+                  type="text"
+                  disabled
+                  value={profileClientName || user.name || ''}
+                  className="w-full bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl text-xs text-slate-500 cursor-not-allowed font-medium"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block">Email Address</label>
+                <input
+                  type="email"
+                  disabled
+                  value={profileEmailAddress || user.email || ''}
+                  className="w-full bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl text-xs text-slate-500 cursor-not-allowed font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Editable Fields */}
+            <div className="space-y-4 text-left">
+              
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Business Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter registered business/firm name"
+                  value={profileBusinessName}
+                  onChange={(e) => setProfileBusinessName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none"
+                  id="onboarding-input-business"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Contact Number *</label>
+                <input
+                  type="tel"
+                  required
+                  maxLength={10}
+                  placeholder="10-digit mobile number"
+                  value={profileContactNumber}
+                  onChange={(e) => setProfileContactNumber(e.target.value.replace(/\D/g, ''))}
+                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-mono"
+                  id="onboarding-input-phone"
+                />
+                <span className="text-[10px] text-slate-400 block font-medium">Must be exactly 10 digits for license activation verification.</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Business Address *</label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="Complete office or shop address"
+                  value={profileBusinessAddress}
+                  onChange={(e) => setProfileBusinessAddress(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+                  id="onboarding-input-address"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">City *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Raipur"
+                    value={profileCity}
+                    onChange={(e) => setProfileCity(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none"
+                    id="onboarding-input-city"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">State *</label>
+                  <select
+                    required
+                    value={profileStateValue}
+                    onChange={(e) => setProfileStateValue(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
+                    id="onboarding-input-state"
+                  >
+                    <option value="">-- Select State --</option>
+                    {INDIAN_STATES.map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Pincode *</label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="6-digit postal code"
+                    value={profilePincode}
+                    onChange={(e) => setProfilePincode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-mono"
+                    id="onboarding-input-pincode"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">GST Number (Optional)</label>
+                  <input
+                    type="text"
+                    maxLength={15}
+                    placeholder="15-character GSTIN"
+                    value={profileGstNumber}
+                    onChange={(e) => setProfileGstNumber(e.target.value.toUpperCase())}
+                    className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-mono"
+                    id="onboarding-input-gst"
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Submit */}
+            <div className="pt-4 border-t flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  window.location.reload();
+                }}
+                className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                id="onboarding-signout-btn"
+              >
+                Sign Out
+              </button>
+              <button
+                type="submit"
+                disabled={profileSaving}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow cursor-pointer flex items-center gap-2"
+                id="onboarding-submit-btn"
+              >
+                {profileSaving ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving Details...
+                  </>
+                ) : (
+                  'Complete & Activate Portal'
+                )}
+              </button>
+            </div>
+
+          </form>
+
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col lg:flex-row gap-8 items-start customer-portal-container">
       
@@ -3918,11 +4312,12 @@ export default function CustomerPortal({
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-600 block">Contact Number *</label>
                       <input
-                        type="text"
+                        type="tel"
                         required
+                        maxLength={10}
                         value={profileContactNumber}
-                        onChange={(e) => setProfileContactNumber(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        onChange={(e) => setProfileContactNumber(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white font-mono"
                       />
                     </div>
 
@@ -3960,13 +4355,17 @@ export default function CustomerPortal({
 
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-600 block">State *</label>
-                      <input
-                        type="text"
+                      <select
                         required
                         value={profileStateValue}
                         onChange={(e) => setProfileStateValue(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
-                      />
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white cursor-pointer"
+                      >
+                        <option value="">-- Select State --</option>
+                        {INDIAN_STATES.map((st) => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="space-y-1">
@@ -3974,9 +4373,10 @@ export default function CustomerPortal({
                       <input
                         type="text"
                         required
+                        maxLength={6}
                         value={profilePincode}
-                        onChange={(e) => setProfilePincode(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white"
+                        onChange={(e) => setProfilePincode(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white font-mono"
                       />
                     </div>
 
@@ -3984,8 +4384,9 @@ export default function CustomerPortal({
                       <label className="text-xs font-bold text-slate-600 block">GST IN Number (Optional)</label>
                       <input
                         type="text"
+                        maxLength={15}
                         value={profileGstNumber}
-                        onChange={(e) => setProfileGstNumber(e.target.value)}
+                        onChange={(e) => setProfileGstNumber(e.target.value.toUpperCase())}
                         className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white font-mono"
                         placeholder="GST identification code"
                       />
