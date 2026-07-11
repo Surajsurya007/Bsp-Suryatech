@@ -309,9 +309,9 @@ export default function BlogDetails({ slug, onPageChange }: BlogDetailsProps) {
 
               {/* Author and Date Meta Info */}
               <div className="flex flex-wrap items-center gap-y-2 gap-x-6 pt-2 border-b border-slate-800 pb-6 text-xs text-slate-400 font-mono font-bold uppercase">
-                <span className="flex items-center gap-1.5">
-                  <User className="w-4 h-4 text-blue-500" />
-                  <span>By {post.author}</span>
+                <span className="flex items-start gap-1.5 whitespace-pre normal-case">
+                  <User className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                  <span className="font-mono font-bold tracking-wider text-slate-400 normal-case">By {post.author}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-blue-500" />

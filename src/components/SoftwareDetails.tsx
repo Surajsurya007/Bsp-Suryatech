@@ -48,6 +48,30 @@ import warehouseErp from '../assets/images/warehouse_erp_screenshot_178237056971
 import bspMartDashboard from '../assets/images/bsp_mart_dashboard_1782373570083.jpg';
 import bspMartTerminal from '../assets/images/bsp_mart_terminal_1782373583600.jpg';
 import bspMartLogin from '../assets/images/bsp_mart_login_1782373595684.jpg';
+import solRetailScreenshot1 from '../assets/images/sol-retail_screenshot1.png';
+import solRetailScreenshot2 from '../assets/images/sol-retail_screenshot2.png';
+import solRetailScreenshot3 from '../assets/images/sol-retail_screenshot3.png';
+import solMobileScreenshot1 from '../assets/images/sol-mobile_screenshot1.png';
+import solMobileScreenshot2 from '../assets/images/sol-mobile_screenshot2.png';
+import solMobileScreenshot3 from '../assets/images/sol-mobile_screenshot3.png';
+import solRestaurantScreenshot1 from '../assets/images/sol-restaurant_screenshot1.png';
+import solRestaurantScreenshot2 from '../assets/images/sol-restaurant_screenshot2.png';
+import solRestaurantScreenshot3 from '../assets/images/sol-restaurant_screenshot3.png';
+import solGymScreenshot1 from '../assets/images/sol-gym_screenshot1.png';
+import solGymScreenshot2 from '../assets/images/sol-gym_screenshot2.png';
+import solGymScreenshot3 from '../assets/images/sol-gym_screenshot3.png';
+import solHotelScreenshot1 from '../assets/images/sol-hotel_screenshot1.png';
+import solHotelScreenshot2 from '../assets/images/sol-hotel_screenshot2.png';
+import solHotelScreenshot3 from '../assets/images/sol-hotel_screenshot3.png';
+import solMedicalScreenshot1 from '../assets/images/sol-medical_screenshot1.jpg';
+import solMedicalScreenshot2 from '../assets/images/sol-medical_screenshot2.jpg';
+import solMedicalScreenshot3 from '../assets/images/sol-medical_screenshot3.jpg';
+import solRepairingScreenshot1 from '../assets/images/sol-repairing_screenshot1.jpg';
+import solRepairingScreenshot2 from '../assets/images/sol-repairing_screenshot2.jpg';
+import solRepairingScreenshot3 from '../assets/images/sol-repairing_screenshot3.jpg';
+import solSupermarketScreenshot1 from '../assets/images/sol-supermarket_screenshot1.png';
+import solSupermarketScreenshot2 from '../assets/images/sol-supermarket_screenshot2.png';
+import solSupermarketScreenshot3 from '../assets/images/sol-supermarket_screenshot3.png';
 
 function getYouTubeEmbedUrl(url: string): string {
   if (!url) return 'https://www.youtube.com/embed/zy7emgkNgzA';
@@ -196,7 +220,7 @@ export default function SoftwareDetails({
     } else if (id === 'sol-supermarket' || id === 'prod-billing-enterprise') {
       return 'sol-supermarket';
     } else if (id === 'sol-grocery') {
-      return 'sol-grocery';
+      return 'sol-gym';
     } else if (id === 'sol-medical') {
       return 'sol-medical';
     } else if (id === 'sol-restaurant' || id === 'prod-restaurant-pos') {
@@ -223,6 +247,8 @@ export default function SoftwareDetails({
       return 'sol-resort';
     } else if (id === 'sol-jewelry') {
       return 'sol-jewelry';
+    } else if (id === 'sol-gym') {
+      return 'sol-gym';
     }
 
     const titleLower = (product?.name || '').toLowerCase();
@@ -242,6 +268,7 @@ export default function SoftwareDetails({
     if (titleLower.includes('repairing') || titleLower.includes('electrical')) return 'sol-repairing';
     if (titleLower.includes('resort') || titleLower.includes('spa')) return 'sol-resort';
     if (titleLower.includes('jewelry') || titleLower.includes('jewellery')) return 'sol-jewelry';
+    if (titleLower.includes('gym') || titleLower.includes('fitness')) return 'sol-gym';
 
     return 'sol-retail';
   };
@@ -249,7 +276,17 @@ export default function SoftwareDetails({
   const getCategoryFallbackImages = (prefix: string) => {
     switch (prefix) {
       case 'sol-retail':
+        return [
+          solRetailScreenshot1,
+          solRetailScreenshot2,
+          solRetailScreenshot3
+        ];
       case 'sol-supermarket':
+        return [
+          solSupermarketScreenshot1,
+          solSupermarketScreenshot2,
+          solSupermarketScreenshot3
+        ];
       case 'sol-grocery':
         return [
           bspMartDashboard,
@@ -258,23 +295,39 @@ export default function SoftwareDetails({
         ];
       case 'sol-medical':
         return [
-          bspMartTerminal,
-          hospitalDoctors,
-          hospitalBeds
+          solMedicalScreenshot1,
+          solMedicalScreenshot2,
+          solMedicalScreenshot3
         ];
       case 'sol-restaurant':
         return [
-          restaurantPos,
-          hotelReservations,
-          bspMartTerminal
+          solRestaurantScreenshot1,
+          solRestaurantScreenshot2,
+          solRestaurantScreenshot3
         ];
       case 'sol-mobile':
+        return [
+          solMobileScreenshot1,
+          solMobileScreenshot2,
+          solMobileScreenshot3
+        ];
+      case 'sol-gym':
+        return [
+          solGymScreenshot1,
+          solGymScreenshot2,
+          solGymScreenshot3
+        ];
       case 'sol-electronics':
-      case 'sol-repairing':
         return [
           bspMartTerminal,
           warehouseErp,
           hotelReservations
+        ];
+      case 'sol-repairing':
+        return [
+          solRepairingScreenshot1,
+          solRepairingScreenshot2,
+          solRepairingScreenshot3
         ];
       case 'sol-transport':
         return [
@@ -309,9 +362,9 @@ export default function SoftwareDetails({
       case 'sol-hotel':
       case 'sol-resort':
         return [
-          hotelDashboard,
-          hotelRooms,
-          hotelReservations
+          solHotelScreenshot1,
+          solHotelScreenshot2,
+          solHotelScreenshot3
         ];
       case 'sol-jewelry':
         return [
@@ -346,6 +399,10 @@ export default function SoftwareDetails({
 
   const getImageUrl = (idx: number) => {
     const prefix = getSpecificPrefix(product.id || '');
+    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket') {
+      const categoryFallbacks = getCategoryFallbackImages(prefix);
+      return categoryFallbacks[idx] || categoryFallbacks[0];
+    }
     const candidates = getHostingerCandidates(idx);
     const tryIdx = hostingerTryIndex[idx] || 0;
     
@@ -358,6 +415,9 @@ export default function SoftwareDetails({
   };
 
   const handleImageError = (idx: number) => {
+    const prefix = getSpecificPrefix(product.id || '');
+    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket') return; // Bypasses candidates cycling for uploaded screenshots
+    
     const candidates = getHostingerCandidates(idx);
     const currentTry = hostingerTryIndex[idx] || 0;
     

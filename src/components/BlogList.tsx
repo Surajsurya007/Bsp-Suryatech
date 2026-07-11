@@ -203,7 +203,7 @@ export default function BlogList({ onPageChange }: BlogListProps) {
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-800/80">
                   <span className="text-xs font-mono font-extrabold text-slate-500">
-                    By {featuredPost.author}
+                    By {featuredPost.author.split('\n')[0]}
                   </span>
                   
                   <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-blue-400 group-hover:translate-x-1 transition-transform">
@@ -287,7 +287,7 @@ export default function BlogList({ onPageChange }: BlogListProps) {
                   {/* Card Footer */}
                   <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
                     <span className="text-[10px] font-mono font-extrabold text-slate-500 truncate">
-                      By {post.author.split(',')[0]}
+                      By {post.author.split('\n')[0].split(',')[0]}
                     </span>
                     
                     <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-blue-400 group-hover:text-blue-300">
