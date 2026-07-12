@@ -19,6 +19,12 @@ import {
   getActiveIndexNowKey, 
   submitToIndexNow 
 } from './server/indexnow';
+import {
+  isPublicPageRoute,
+  generateSeoPage,
+  injectSeoIntoTemplate,
+  generateDynamicSitemap
+} from './server/seoEngine';
 
 // Robust, bulletproof project root determination supporting both development and production environments
 const getProjectRoot = () => {
@@ -3337,159 +3343,15 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // Serve sitemap.xml directly with proper application/xml header
   app.get('/sitemap.xml', (req, res) => {
-    const currentDir = typeof __dirname !== 'undefined' ? __dirname : PROJECT_ROOT;
-    const paths = [
-      path.join(PROJECT_ROOT, 'dist', 'sitemap.xml'),
-      path.join(PROJECT_ROOT, 'public', 'sitemap.xml'),
-      path.join(currentDir, 'sitemap.xml'),
-      path.join(path.dirname(currentDir), 'sitemap.xml'),
-      path.join(PROJECT_ROOT, 'dist', 'static', 'sitemap.xml'),
-      path.join(PROJECT_ROOT, 'public', 'static', 'sitemap.xml')
-    ];
-    
-    for (const p of paths) {
-      if (fs.existsSync(p)) {
-        res.header('Content-Type', 'application/xml');
-        return res.sendFile(p);
-      }
+    try {
+      const sitemapXml = generateDynamicSitemap(PROJECT_ROOT);
+      res.header('Content-Type', 'application/xml');
+      res.status(200).send(sitemapXml);
+    } catch (err) {
+      console.error("Error generating dynamic sitemap:", err);
+      res.header('Content-Type', 'application/xml');
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
     }
-    
-    // Bulletproof hardcoded XML fallback if file is missing/stale on disk
-    const fallbackSitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Core SPA Page Routes -->
-  <url>
-    <loc>https://bspsuryatech.in/</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.00</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/features</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/pricing</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/downloads</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/tutorials</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/about</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.70</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/contact</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.70</priority>
-  </url>
-
-  <!-- Software Catalog Deep-links (Canonical URLs) -->
-  <url>
-    <loc>https://bspsuryatech.in/software/retail_billing</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/supermarket_pos</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/grocery_billing</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/medical_store</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/restaurant_pos</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/mobile_shop</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/electronics_shop</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/transport_erp</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/hospital_erp</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/laboratory_erp</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/school_erp</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/enterprise_erp</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/hotel_erp</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-  <url>
-    <loc>https://bspsuryatech.in/software/repairing_erp</loc>
-    <lastmod>2026-06-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-</urlset>`;
-
-    res.header('Content-Type', 'application/xml');
-    res.send(fallbackSitemap);
   });
 
   // --- VITE AND FE STATIC SERVICES INTEGRATION ---
@@ -3512,12 +3374,17 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       // Serve index.html transformed by Vite for any non-API routes in development
       app.get('*', async (req, res, next) => {
         const url = req.originalUrl;
+        const urlPath = req.path;
         try {
           if (url.startsWith('/api/') || url.startsWith('/uploads/') || url.startsWith('/downloads/')) {
             return next();
           }
           let template = fs.readFileSync(path.resolve(PROJECT_ROOT, 'index.html'), 'utf-8');
           template = await vite.transformIndexHtml(url, template);
+          if (isPublicPageRoute(urlPath)) {
+            const seo = generateSeoPage(urlPath, PROJECT_ROOT);
+            template = injectSeoIntoTemplate(template, seo);
+          }
           res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
         } catch (e) {
           next(e);
@@ -3537,7 +3404,22 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       }
       app.use(express.static(distPath));
       app.get('*', (req, res) => {
-        res.sendFile(path.join(distPath, 'index.html'));
+        const urlPath = req.path;
+        try {
+          const indexPath = path.join(distPath, 'index.html');
+          if (fs.existsSync(indexPath)) {
+            let template = fs.readFileSync(indexPath, 'utf-8');
+            if (isPublicPageRoute(urlPath)) {
+              const seo = generateSeoPage(urlPath, PROJECT_ROOT);
+              template = injectSeoIntoTemplate(template, seo);
+            }
+            res.status(200).set({ 'Content-Type': 'text/html' }).send(template);
+          } else {
+            res.status(404).send('Not Found');
+          }
+        } catch (err) {
+          res.sendFile(path.join(distPath, 'index.html'));
+        }
       });
     }
   } else {
@@ -3554,7 +3436,22 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     app.use(express.static(distPath));
     // Serve index.html for React SPA Router fallbacks
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const urlPath = req.path;
+      try {
+        const indexPath = path.join(distPath, 'index.html');
+        if (fs.existsSync(indexPath)) {
+          let template = fs.readFileSync(indexPath, 'utf-8');
+          if (isPublicPageRoute(urlPath)) {
+            const seo = generateSeoPage(urlPath, PROJECT_ROOT);
+            template = injectSeoIntoTemplate(template, seo);
+          }
+          res.status(200).set({ 'Content-Type': 'text/html' }).send(template);
+        } else {
+          res.status(404).send('Not Found');
+        }
+      } catch (err) {
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
     });
   }
 
