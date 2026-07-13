@@ -3367,7 +3367,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
         server: { middlewareMode: true },
-        appType: 'spa',
+        appType: 'custom',
       });
       app.use(vite.middlewares);
 
@@ -3402,7 +3402,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           distPath = path.join(path.dirname(currentDir), 'dist');
         }
       }
-      app.use(express.static(distPath));
+      app.use(express.static(distPath, { index: false }));
       app.get('*', (req, res) => {
         const urlPath = req.path;
         try {
@@ -3433,7 +3433,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         distPath = path.join(path.dirname(currentDir), 'dist');
       }
     }
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { index: false }));
     // Serve index.html for React SPA Router fallbacks
     app.get('*', (req, res) => {
       const urlPath = req.path;

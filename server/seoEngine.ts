@@ -56,6 +56,49 @@ export function mapSlugToSeoId(slug: string): string {
   return mapping[slug] || slug;
 }
 
+function stripInterfacesForSEO(code: string): string {
+  let result = code;
+  while (true) {
+    const match = result.match(/(?:export\s+)?interface\s+\w+\s*\{/);
+    if (!match || match.index === undefined) break;
+    
+    const startIdx = match.index;
+    let braceCount = 1;
+    let i = startIdx + match[0].length;
+    while (i < result.length && braceCount > 0) {
+      if (result[i] === '{') braceCount++;
+      else if (result[i] === '}') braceCount--;
+      i++;
+    }
+    result = result.substring(0, startIdx) + result.substring(i);
+  }
+  return result;
+}
+
+function cleanTsToJsForSEO(code: string): string {
+  let js = stripInterfacesForSEO(code);
+  
+  // Replace imports of assets with simple string assignments
+  js = js.replace(/import\s+(\w+)\s+from\s+['"]([^'"]+)['"];?/g, 'const $1 = "$2";');
+  
+  // Target precise type annotations in declaration lines
+  js = js.replace(/:\s*SEOSoftwareContent\s*=/g, ' =');
+  js = js.replace(/:\s*Record<[^>]+>\s*=/g, ' =');
+  js = js.replace(/:\s*BlogPost\s*\[\s*\]\s*=/g, ' =');
+  js = js.replace(/:\s*BlogPost\s*=/g, ' =');
+  
+  // Strip the specific function by name using indexOf
+  const funcIdx = js.indexOf('function getSeoSoftwareDetails');
+  if (funcIdx !== -1) {
+    js = js.substring(0, funcIdx);
+  }
+  
+  // Strip export keywords
+  js = js.replace(/export\s+/g, '');
+  
+  return js;
+}
+
 // Dynamically load blog posts from src/data/blogData.ts safely without image import errors
 export function loadBlogPosts(projectRoot: string): BlogPost[] {
   try {
@@ -63,26 +106,12 @@ export function loadBlogPosts(projectRoot: string): BlogPost[] {
     if (!fs.existsSync(filePath)) {
       return [];
     }
-    let code = fs.readFileSync(filePath, 'utf-8');
+    const code = fs.readFileSync(filePath, 'utf-8');
+    const js = cleanTsToJsForSEO(code);
     
-    // Strip all image imports
-    code = code.replace(/import\s+\w+\s+from\s+['"][^'"]+['"];?/g, '');
-    
-    // Convert image variables to string literals
-    code = code.replace(/image:\s*([a-zA-Z0-9_]+)/g, "image: '$1'");
-    
-    // Strip TypeScript interfaces and annotations
-    code = code.replace(/export\s+interface\s+\w+\s*\{[\s\S]*?\}/g, '');
-    code = code.replace(/:\s*BlogPost\s*\[\s*\]/g, '');
-    code = code.replace(/:\s*BlogPost/g, '');
-    
-    const wrapped = `
-      let BLOG_POSTS = [];
-      ${code}
-      return BLOG_POSTS;
-    `;
+    const wrapped = `${js}; return BLOG_POSTS;`;
     const getPosts = new Function(wrapped);
-    return getPosts();
+    return getPosts() || [];
   } catch (err) {
     console.error("Error dynamically loading blog posts for SEO:", err);
     return [];
@@ -96,18 +125,12 @@ export function loadSoftwareData(projectRoot: string): Record<string, SEOSoftwar
     if (!fs.existsSync(filePath)) {
       return {};
     }
-    let code = fs.readFileSync(filePath, 'utf-8');
+    const code = fs.readFileSync(filePath, 'utf-8');
+    const js = cleanTsToJsForSEO(code);
     
-    // Strip TypeScript interfaces
-    code = code.replace(/export\s+interface\s+\w+\s*\{[\s\S]*?\}/g, '');
-    
-    const wrapped = `
-      const defaultContent = {};
-      ${code}
-      return seoSoftwareDataMap;
-    `;
+    const wrapped = `${js}; return seoSoftwareDataMap;`;
     const getMap = new Function(wrapped);
-    return getMap();
+    return getMap() || {};
   } catch (err) {
     console.error("Error dynamically loading software data for SEO:", err);
     return {};
