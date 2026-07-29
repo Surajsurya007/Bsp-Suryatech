@@ -3326,14 +3326,9 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         }
 
         if (sbErr) {
-          console.error('[SUPABASE CONTACT MESSAGE INSERT WARNING]', sbErr);
-          if (sbErr.code === 'PGRST200' || (sbErr.message && sbErr.message.includes('schema cache'))) {
-            console.error('[SUPABASE TABLE MISSING] Table public.contact_messages does not exist on the remote Supabase database. Run supabase_schema.sql in Supabase SQL editor.');
-          } else {
-            return res.status(500).json({ 
-              error: `Failed to insert contact message into Supabase database: ${sbErr.message || JSON.stringify(sbErr)}`,
-              details: sbErr
-            });
+          console.error('[SUPABASE CONTACT MESSAGE SYNC ERROR]', sbErr);
+          if (sbErr.code === 'PGRST200' || (sbErr.message && (sbErr.message.includes('schema cache') || sbErr.message.includes('relation "public.contact_messages" does not exist')))) {
+            console.error('[SUPABASE TABLE MISSING] Table public.contact_messages does not exist on remote Supabase database. Execute supabase_schema.sql in Supabase SQL editor.');
           }
         } else {
           console.log('[SUPABASE CONTACT MESSAGE SYNCED SUCCESSFULLY]', savedMsg.id);
