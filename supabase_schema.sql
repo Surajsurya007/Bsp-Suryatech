@@ -234,11 +234,14 @@ CREATE TABLE IF NOT EXISTS public.solutions (
 -- 18. Contact Messages Table
 CREATE TABLE IF NOT EXISTS public.contact_messages (
     id VARCHAR(255) PRIMARY KEY,
-    full_name VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NULL,
+    full_name VARCHAR(255) NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(255) NULL,
+    subject VARCHAR(255) NULL,
     topic_category VARCHAR(255) NULL,
-    message_description TEXT NOT NULL,
+    message TEXT NULL,
+    message_description TEXT NULL,
     submission_date VARCHAR(50) NULL,
     submission_time VARCHAR(50) NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

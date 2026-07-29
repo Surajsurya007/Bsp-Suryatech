@@ -3289,29 +3289,55 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       const supabase = getSupabaseClient();
       if (supabase) {
         console.log('[SUPABASE CONTACT MESSAGE SYNCING] Inserting message record into public.contact_messages table...', savedMsg.id);
-        const { data: sbData, error: sbErr } = await supabase.from('contact_messages').upsert({
+        
+        const fullPayload = {
           id: savedMsg.id,
-          full_name: savedMsg.full_name,
+          name: savedMsg.name || savedMsg.full_name,
+          full_name: savedMsg.full_name || savedMsg.name,
           email: savedMsg.email,
-          phone: savedMsg.phone,
-          topic_category: savedMsg.topic_category,
-          message_description: savedMsg.message_description,
+          phone: savedMsg.phone || null,
+          subject: savedMsg.subject || savedMsg.topic_category || 'General Inquiry',
+          topic_category: savedMsg.topic_category || savedMsg.subject || 'General Inquiry',
+          message: savedMsg.message || savedMsg.message_description,
+          message_description: savedMsg.message_description || savedMsg.message,
           submission_date: savedMsg.submission_date,
           submission_time: savedMsg.submission_time,
           created_at: savedMsg.created_at,
-          ip_address: savedMsg.ip_address,
-          status: savedMsg.status,
-          status_history: typeof savedMsg.status_history === 'string' ? JSON.parse(savedMsg.status_history) : savedMsg.status_history
-        });
+          ip_address: savedMsg.ip_address || '',
+          status: savedMsg.status || 'New',
+          status_history: typeof savedMsg.status_history === 'string' ? JSON.parse(savedMsg.status_history) : (savedMsg.status_history || [])
+        };
+
+        let { data: sbData, error: sbErr } = await supabase.from('contact_messages').upsert(fullPayload);
+
+        if (sbErr && sbErr.message && sbErr.message.includes('Could not find column')) {
+          console.warn('[SUPABASE CONTACT MESSAGE] Column mismatch on full payload, trying standard payload...', sbErr.message);
+          const standardPayload = {
+            id: savedMsg.id,
+            name: savedMsg.name || savedMsg.full_name,
+            email: savedMsg.email,
+            phone: savedMsg.phone || null,
+            subject: savedMsg.subject || savedMsg.topic_category || 'General Inquiry',
+            message: savedMsg.message || savedMsg.message_description,
+            created_at: savedMsg.created_at
+          };
+          const resStandard = await supabase.from('contact_messages').upsert(standardPayload);
+          sbErr = resStandard.error;
+        }
 
         if (sbErr) {
-          console.error('[SUPABASE CONTACT MESSAGE INSERT FAILED]', sbErr);
-          return res.status(500).json({ 
-            error: `Failed to insert contact message into Supabase database: ${sbErr.message || JSON.stringify(sbErr)}`,
-            details: sbErr
-          });
+          console.error('[SUPABASE CONTACT MESSAGE INSERT WARNING]', sbErr);
+          if (sbErr.code === 'PGRST200' || (sbErr.message && sbErr.message.includes('schema cache'))) {
+            console.error('[SUPABASE TABLE MISSING] Table public.contact_messages does not exist on the remote Supabase database. Run supabase_schema.sql in Supabase SQL editor.');
+          } else {
+            return res.status(500).json({ 
+              error: `Failed to insert contact message into Supabase database: ${sbErr.message || JSON.stringify(sbErr)}`,
+              details: sbErr
+            });
+          }
+        } else {
+          console.log('[SUPABASE CONTACT MESSAGE SYNCED SUCCESSFULLY]', savedMsg.id);
         }
-        console.log('[SUPABASE CONTACT MESSAGE SYNCED SUCCESSFULLY]', savedMsg.id);
       }
 
       res.status(201).json({ success: true, message: savedMsg });
