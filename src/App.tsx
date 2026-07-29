@@ -440,7 +440,27 @@ export default function App() {
           // Backward compatible token fallback
           const localToken = localStorage.getItem('bsp_token');
           if (localToken && !isInitialAuthCheckDone) {
-            console.log("App: Local storage authentication fallback active, but no active Supabase session found.");
+            console.log("App: Local storage authentication token found, restoring session...");
+            try {
+              const res = await fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${localToken}` }
+              });
+              if (res.ok) {
+                const meUser = await res.json();
+                if (meUser && meUser.id) {
+                  setUser({
+                    id: meUser.id,
+                    email: meUser.email,
+                    name: meUser.name,
+                    role: meUser.role || 'customer',
+                    profile: meUser.profile || null
+                  });
+                  console.log("App: Successfully restored user session from local token:", meUser.email);
+                }
+              }
+            } catch (err) {
+              console.warn("App: Exception verifying local token on mount:", err);
+            }
           }
         }
         isInitialAuthCheckDone = true;
