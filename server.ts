@@ -46,6 +46,11 @@ const getProjectRoot = () => {
 const PROJECT_ROOT = getProjectRoot();
 
 async function startServer() {
+  try {
+    const bootLogPath = path.join(PROJECT_ROOT, 'server_boot.log');
+    fs.appendFileSync(bootLogPath, `[${new Date().toISOString()}] [EXPRESS-BOOT] startServer() executed successfully.\n`);
+  } catch (e) {}
+
   const app = express();
   const PORT = process.env.PORT || 3000;
 
@@ -3236,57 +3241,166 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
 
   // --- CONTACT MESSAGES API ENDPOINTS ---
-  app.get('/api/contact-messages', requireAdmin, (req, res) => {
+  // Contact Messages Endpoints
+  app.get('/api/contact-messages', requireAdmin, async (req: any, res: any) => {
     try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
+          if (error) {
+            console.error('[SUPABASE GET CONTACT MESSAGES ERROR]', error);
+          } else if (data && Array.isArray(data)) {
+            console.log(`[SUPABASE CONTACT MESSAGES] Pulled ${data.length} records from Supabase contact_messages table.`);
+            for (const sbMsg of data) {
+              dbActions.upsertContactMessageFromSupabase(sbMsg);
+            }
+          }
+        } catch (sbEx) {
+          console.error('[SUPABASE GET CONTACT MESSAGES EXCEPTION]', sbEx);
+        }
+      }
       res.json(dbActions.getContactMessages());
     } catch (err: any) {
+      console.error('[API GET CONTACT MESSAGES ERROR]', err);
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.post('/api/contact-messages', (req, res) => {
+  app.post('/api/contact-messages', async (req: any, res: any) => {
     try {
-      const msg = req.body;
-      if (!msg || !msg.full_name || !msg.email) {
-        return res.status(400).json({ error: 'Incomplete contact message data' });
+      const msg = req.body || {};
+      const nameVal = (msg.full_name || msg.name || '').trim();
+      const emailVal = (msg.email || '').trim();
+      const messageVal = (msg.message_description || msg.message || '').trim();
+
+      if (!nameVal || !emailVal || !messageVal) {
+        console.warn('[API POST CONTACT MESSAGE REJECTED - INCOMPLETE DATA]', { nameVal, emailVal, messageValLength: messageVal.length });
+        return res.status(400).json({ 
+          error: 'Incomplete contact message data. Required fields: name, email, and message.' 
+        });
       }
+
+      console.log('[API POST CONTACT MESSAGE RECEIVING]', { name: nameVal, email: emailVal });
+
       const savedMsg = dbActions.createContactMessage(msg);
-      res.status(201).json(savedMsg);
+
+      // Supabase Database Sync
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        console.log('[SUPABASE CONTACT MESSAGE SYNCING] Inserting message record into public.contact_messages table...', savedMsg.id);
+        const { data: sbData, error: sbErr } = await supabase.from('contact_messages').upsert({
+          id: savedMsg.id,
+          full_name: savedMsg.full_name,
+          email: savedMsg.email,
+          phone: savedMsg.phone,
+          topic_category: savedMsg.topic_category,
+          message_description: savedMsg.message_description,
+          submission_date: savedMsg.submission_date,
+          submission_time: savedMsg.submission_time,
+          created_at: savedMsg.created_at,
+          ip_address: savedMsg.ip_address,
+          status: savedMsg.status,
+          status_history: typeof savedMsg.status_history === 'string' ? JSON.parse(savedMsg.status_history) : savedMsg.status_history
+        });
+
+        if (sbErr) {
+          console.error('[SUPABASE CONTACT MESSAGE INSERT FAILED]', sbErr);
+          return res.status(500).json({ 
+            error: `Failed to insert contact message into Supabase database: ${sbErr.message || JSON.stringify(sbErr)}`,
+            details: sbErr
+          });
+        }
+        console.log('[SUPABASE CONTACT MESSAGE SYNCED SUCCESSFULLY]', savedMsg.id);
+      }
+
+      res.status(201).json({ success: true, message: savedMsg });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error('[API POST CONTACT MESSAGE FATAL ERROR]', err);
+      res.status(500).json({ error: err.message || 'Internal Server Error saving contact message' });
     }
   });
 
-  app.put('/api/contact-messages/:id', requireAdmin, (req, res) => {
+  app.put('/api/contact-messages/:id', requireAdmin, async (req: any, res: any) => {
     try {
       const updated = dbActions.updateContactMessage(req.params.id, req.body);
       if (!updated) {
         return res.status(404).json({ error: 'Message not found' });
       }
+
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          await supabase.from('contact_messages').upsert({
+            id: updated.id,
+            full_name: updated.full_name,
+            email: updated.email,
+            phone: updated.phone,
+            topic_category: updated.topic_category,
+            message_description: updated.message_description,
+            submission_date: updated.submission_date,
+            submission_time: updated.submission_time,
+            created_at: updated.created_at,
+            ip_address: updated.ip_address,
+            status: updated.status,
+            status_history: typeof updated.status_history === 'string' ? JSON.parse(updated.status_history) : updated.status_history
+          });
+          console.log('[SUPABASE CONTACT MESSAGE UPDATED]', updated.id);
+        } catch (sbErr) {
+          console.error('[SUPABASE CONTACT MESSAGE UPDATE ERROR]', sbErr);
+        }
+      }
+
       res.json(updated);
     } catch (err: any) {
+      console.error('[API PUT CONTACT MESSAGE ERROR]', err);
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.delete('/api/contact-messages/:id', requireAdmin, (req, res) => {
+  app.delete('/api/contact-messages/:id', requireAdmin, async (req: any, res: any) => {
     try {
-      dbActions.deleteContactMessage(req.params.id);
+      const targetId = req.params.id;
+      dbActions.deleteContactMessage(targetId);
+
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          await supabase.from('contact_messages').delete().eq('id', targetId);
+          console.log('[SUPABASE CONTACT MESSAGE DELETED]', targetId);
+        } catch (sbErr) {
+          console.error('[SUPABASE CONTACT MESSAGE DELETE ERROR]', sbErr);
+        }
+      }
+
       res.json({ success: true });
     } catch (err: any) {
+      console.error('[API DELETE CONTACT MESSAGE ERROR]', err);
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.post('/api/contact-messages/bulk-delete', requireAdmin, (req, res) => {
+  app.post('/api/contact-messages/bulk-delete', requireAdmin, async (req: any, res: any) => {
     try {
       const { ids } = req.body;
       if (!ids || !Array.isArray(ids)) {
         return res.status(400).json({ error: 'Array of ids required' });
       }
       dbActions.bulkDeleteContactMessages(ids);
+
+      const supabase = getSupabaseClient();
+      if (supabase && ids.length > 0) {
+        try {
+          await supabase.from('contact_messages').delete().in('id', ids);
+          console.log(`[SUPABASE CONTACT MESSAGES BULK DELETED] ${ids.length} records.`);
+        } catch (sbErr) {
+          console.error('[SUPABASE CONTACT MESSAGES BULK DELETE ERROR]', sbErr);
+        }
+      }
+
       res.json({ success: true });
     } catch (err: any) {
+      console.error('[API BULK DELETE CONTACT MESSAGES ERROR]', err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -3426,6 +3540,13 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
     // Robust, bulletproof static file path resolution
     let distPath = path.join(PROJECT_ROOT, 'dist');
     const currentDir = typeof __dirname !== 'undefined' ? __dirname : PROJECT_ROOT;
+    
+    // Log static path resolution during production server initialization
+    try {
+      const initLogPath = path.join(PROJECT_ROOT, 'server_boot.log');
+      fs.appendFileSync(initLogPath, `[${new Date().toISOString()}] [ROUTING-INIT] isProd=true. PROJECT_ROOT=${PROJECT_ROOT}, __dirname=${typeof __dirname !== 'undefined' ? __dirname : 'undefined'}. Initial distPath=${distPath}\n`);
+    } catch (e) {}
+
     if (!fs.existsSync(path.join(distPath, 'index.html'))) {
       if (fs.existsSync(path.join(currentDir, 'index.html'))) {
         distPath = currentDir;
@@ -3433,23 +3554,50 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         distPath = path.join(path.dirname(currentDir), 'dist');
       }
     }
+
+    try {
+      const initLogPath = path.join(PROJECT_ROOT, 'server_boot.log');
+      fs.appendFileSync(initLogPath, `[${new Date().toISOString()}] [ROUTING-INIT] Resolved final distPath=${distPath}. indexPathExists=${fs.existsSync(path.join(distPath, 'index.html'))}\n`);
+    } catch (e) {}
+
     app.use(express.static(distPath, { index: false }));
     // Serve index.html for React SPA Router fallbacks
     app.get('*', (req, res) => {
       const urlPath = req.path;
+      const debugLogPath = path.join(PROJECT_ROOT, 'server_debug.log');
+      
       try {
         const indexPath = path.join(distPath, 'index.html');
+        const reqLog = `[${new Date().toISOString()}] [REQUEST] ${req.method} ${req.url} | originalUrl=${req.originalUrl} | urlPath=${urlPath} | distPath=${distPath} | indexPathExists=${fs.existsSync(indexPath)}\n`;
+        fs.appendFileSync(debugLogPath, reqLog);
+
         if (fs.existsSync(indexPath)) {
           let template = fs.readFileSync(indexPath, 'utf-8');
-          if (isPublicPageRoute(urlPath)) {
+          const isPublic = isPublicPageRoute(urlPath);
+          fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [MATCH] isPublicPageRoute=${isPublic}\n`);
+
+          if (isPublic) {
             const seo = generateSeoPage(urlPath, PROJECT_ROOT);
-            template = injectSeoIntoTemplate(template, seo);
+            if (seo) {
+              fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [SEO-GEN] Generated SEO data: Title="${seo.title}" | Canonical="${seo.canonicalUrl}" | rootHtmlLength=${seo.rootHtml ? seo.rootHtml.length : 0}\n`);
+              
+              const oldTemplateLength = template.length;
+              template = injectSeoIntoTemplate(template, seo);
+              
+              // Verify that the template was modified
+              fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [SEO-INJECT] Template length: ${oldTemplateLength} -> ${template.length} | ContainsTitle=${template.includes(seo.title)} | ContainsRootHtml=${seo.rootHtml ? template.includes(seo.rootHtml.substring(0, 50)) : 'N/A'}\n`);
+            } else {
+              fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [SEO-GEN] No SEO data returned for path: ${urlPath}\n`);
+            }
           }
+          
           res.status(200).set({ 'Content-Type': 'text/html' }).send(template);
         } else {
+          fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [404] index.html not found at: ${indexPath}\n`);
           res.status(404).send('Not Found');
         }
-      } catch (err) {
+      } catch (err: any) {
+        fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [ERROR] Exception caught in * route handler: ${err.message}\nStack: ${err.stack}\n`);
         res.sendFile(path.join(distPath, 'index.html'));
       }
     });

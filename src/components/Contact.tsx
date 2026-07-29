@@ -115,33 +115,63 @@ export default function Contact({ onAddNotification }: ContactProps) {
         ])
       };
 
-      // 4. Save to Database (and fallback to local storage)
+      // 4. Save to Database
+      let isSaved = false;
+      let saveErrorMessage = '';
+
       try {
-        await fetch('/api/contact-messages', {
+        const apiRes = await fetch('/api/contact-messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(newMessageRecord)
         });
-      } catch (apiErr) {
-        console.warn("Could not save contact message to server API:", apiErr);
-      }
 
-      try {
-        const { error: dbErr } = await supabase.from('contact_messages').insert([newMessageRecord]);
-        if (dbErr) {
-          console.warn("Could not insert directly to Supabase table, storing locally:", dbErr.message);
+        const apiData = await apiRes.json().catch(() => null);
+
+        if (apiRes.ok && apiData) {
+          isSaved = true;
+          console.log('[Contact Form] Message saved successfully via API:', apiData);
+        } else {
+          saveErrorMessage = apiData?.error || `Server responded with status ${apiRes.status}`;
+          console.error('[Contact Form] API submission failed:', saveErrorMessage, apiData);
         }
-      } catch (dbEx) {
-        console.warn("Exception inserting to Supabase table contact_messages:", dbEx);
+      } catch (apiErr: any) {
+        saveErrorMessage = apiErr?.message || 'Network error connecting to API';
+        console.error('[Contact Form] API request exception:', apiErr);
       }
 
-      // 5. Save to local storage
+      // If API route was unavailable or failed, attempt direct Supabase client insert if available
+      if (!isSaved && supabase) {
+        try {
+          console.log('[Contact Form] Attempting direct Supabase insert fallback...');
+          const { data: sbData, error: dbErr } = await supabase.from('contact_messages').insert([newMessageRecord]);
+          if (dbErr) {
+            console.error('[Contact Form] Supabase direct insert failed:', dbErr.message, dbErr);
+            saveErrorMessage = dbErr.message || JSON.stringify(dbErr);
+          } else {
+            isSaved = true;
+            console.log('[Contact Form] Direct Supabase insert succeeded:', sbData);
+          }
+        } catch (dbEx: any) {
+          console.error('[Contact Form] Supabase direct insert exception:', dbEx);
+          saveErrorMessage = dbEx?.message || 'Exception during Supabase insert';
+        }
+      }
+
+      if (!isSaved) {
+        console.error('[Contact Form] Failed to save contact message to database:', saveErrorMessage);
+        onAddNotification(`Failed to send message: ${saveErrorMessage || 'Database insertion failed.'}`, 'error');
+        setLoading(false);
+        return;
+      }
+
+      // 5. Save to local storage for immediate UI cache sync
       const updatedList = [newMessageRecord, ...currentList];
       localStorage.setItem('bsp_contact_messages', JSON.stringify(updatedList));
 
-      // Trigger a structural reload for dashboard widgets
+      // Trigger a structural reload for dashboard widgets and admin listeners
       window.dispatchEvent(new Event('bsp_new_contact_message'));
 
       // Log successful GA4 conversion event

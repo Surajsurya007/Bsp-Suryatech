@@ -231,6 +231,22 @@ CREATE TABLE IF NOT EXISTS public.solutions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 18. Contact Messages Table
+CREATE TABLE IF NOT EXISTS public.contact_messages (
+    id VARCHAR(255) PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(255) NULL,
+    topic_category VARCHAR(255) NULL,
+    message_description TEXT NOT NULL,
+    submission_date VARCHAR(50) NULL,
+    submission_time VARCHAR(50) NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(255) NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'New',
+    status_history JSONB NOT NULL DEFAULT '[]'::jsonb
+);
+
 
 -- =========================================================================
 --                     ROW LEVEL SECURITY (RLS) RULES
@@ -305,6 +321,14 @@ DROP POLICY IF EXISTS "Public select solutions" ON public.solutions;
 CREATE POLICY "Public select solutions" ON public.solutions FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Admin manage solutions" ON public.solutions;
 CREATE POLICY "Admin manage solutions" ON public.solutions FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select contact_messages" ON public.contact_messages;
+CREATE POLICY "Public select contact_messages" ON public.contact_messages FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public insert contact_messages" ON public.contact_messages;
+CREATE POLICY "Public insert contact_messages" ON public.contact_messages FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Admin manage contact_messages" ON public.contact_messages;
+CREATE POLICY "Admin manage contact_messages" ON public.contact_messages FOR ALL USING (true) WITH CHECK (true);
 
 
 -- 2. Customer Profiles RLS Policies

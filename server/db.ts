@@ -2090,22 +2090,43 @@ export const dbActions = {
     return true;
   },
   
-  getContactMessages: () => db.contactMessages || [],
+  getContactMessages: () => {
+    if (!db.contactMessages) db.contactMessages = [];
+    return db.contactMessages.map(normalizeContactMessage);
+  },
   createContactMessage: (msg: any) => {
     if (!db.contactMessages) db.contactMessages = [];
-    // Ensure uniqueness
-    const exists = db.contactMessages.some(m => m.id === msg.id);
-    if (!exists) {
-      db.contactMessages.unshift(msg);
-      saveDB();
+    const normalized = normalizeContactMessage(msg);
+    if (!normalized) return null;
+    const existingIdx = db.contactMessages.findIndex(m => m.id === normalized.id);
+    if (existingIdx !== -1) {
+      db.contactMessages[existingIdx] = { ...db.contactMessages[existingIdx], ...normalized };
+    } else {
+      db.contactMessages.unshift(normalized);
     }
-    return msg;
+    saveDB();
+    return normalized;
+  },
+  upsertContactMessageFromSupabase: (msg: any) => {
+    if (!db.contactMessages) db.contactMessages = [];
+    const normalized = normalizeContactMessage(msg);
+    if (!normalized) return null;
+    const existingIdx = db.contactMessages.findIndex(m => m.id === normalized.id);
+    if (existingIdx !== -1) {
+      db.contactMessages[existingIdx] = { ...db.contactMessages[existingIdx], ...normalized };
+    } else {
+      db.contactMessages.unshift(normalized);
+    }
+    saveDB();
+    return normalized;
   },
   updateContactMessage: (id: string, updates: any) => {
     if (!db.contactMessages) db.contactMessages = [];
     const idx = db.contactMessages.findIndex(m => m.id === id);
     if (idx !== -1) {
-      db.contactMessages[idx] = { ...db.contactMessages[idx], ...updates };
+      const merged = { ...db.contactMessages[idx], ...updates };
+      const normalized = normalizeContactMessage(merged);
+      db.contactMessages[idx] = normalized;
       saveDB();
       return db.contactMessages[idx];
     }
@@ -2125,6 +2146,68 @@ export const dbActions = {
     return true;
   }
 };
+
+function normalizeContactMessage(msg: any) {
+  if (!msg) return null;
+  const fullName = (msg.full_name || msg.name || 'Anonymous User').trim();
+  const email = (msg.email || '').trim();
+  const phone = (msg.phone || '').trim();
+  const topic = (msg.topic_category || msg.subject || 'General Inquiry').trim();
+  const desc = (msg.message_description || msg.message || '').trim();
+  const createdAt = msg.created_at || msg.createdAt || new Date().toISOString();
+  
+  let subDate = msg.submission_date;
+  let subTime = msg.submission_time;
+  if (!subDate) {
+    try {
+      subDate = new Date(createdAt).toLocaleDateString('en-CA');
+    } catch {
+      subDate = new Date().toLocaleDateString('en-CA');
+    }
+  }
+  if (!subTime) {
+    try {
+      subTime = new Date(createdAt).toLocaleTimeString('en-US', { hour12: false });
+    } catch {
+      subTime = new Date().toLocaleTimeString('en-US', { hour12: false });
+    }
+  }
+
+  let rawStatus = (msg.status || 'New').toString().trim();
+  let status = 'New';
+  if (/^new$/i.test(rawStatus)) status = 'New';
+  else if (/^read$/i.test(rawStatus)) status = 'Read';
+  else if (/^replied$/i.test(rawStatus)) status = 'Replied';
+  else if (/^closed$/i.test(rawStatus)) status = 'Closed';
+  else status = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+
+  let statusHistory = msg.status_history;
+  if (typeof statusHistory !== 'string') {
+    statusHistory = JSON.stringify(Array.isArray(statusHistory) ? statusHistory : [
+      { status: 'New', timestamp: createdAt, note: 'Inquiry received' }
+    ]);
+  }
+
+  return {
+    id: msg.id || `BSP-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900000) + 100000)}`,
+    full_name: fullName,
+    name: fullName,
+    email: email,
+    phone: phone,
+    topic_category: topic,
+    subject: topic,
+    message_description: desc,
+    message: desc,
+    submission_date: subDate,
+    submission_time: subTime,
+    created_at: createdAt,
+    createdAt: createdAt,
+    ip_address: msg.ip_address || '',
+    status: status,
+    read: msg.read !== undefined ? Boolean(msg.read) : (status === 'Read' || status === 'Replied' || status === 'Closed'),
+    status_history: statusHistory
+  };
+}
 
 // Auto-run DB init on import
 initDB();

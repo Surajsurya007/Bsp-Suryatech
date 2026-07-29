@@ -942,10 +942,8 @@ export function injectSeoIntoTemplate(template: string, seo: any): string {
   // Place inside <head>
   html = html.replace('</head>', `${newTags}\n</head>`);
   
-  // Inject into root div
-  const rootDivStr = '<div id="root"></div>';
-  const targetRootDiv = `<div id="root">\n${seo.rootHtml}\n</div>`;
-  html = html.replace(rootDivStr, targetRootDiv);
+  // Inject into root div using a bulletproof regular expression supporting whitespace and single/double quotes
+  html = html.replace(/<div\s+id=["']root["']>\s*<\/div>/i, `<div id="root">\n${seo.rootHtml}\n</div>`);
   
   return html;
 }

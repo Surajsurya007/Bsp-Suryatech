@@ -341,12 +341,30 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [isAdminMode]);
 
   useEffect(() => {
-    const handleNewContactMessage = () => {
+    const handleNewContactMessage = async () => {
       try {
         const cached = localStorage.getItem('bsp_contact_messages');
         if (cached) {
           const list = JSON.parse(cached);
           setAdminContactMessages(list);
+        }
+        
+        // Re-fetch fresh messages from backend API / Supabase
+        try {
+          const res = await fetch('/api/contact-messages', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          if (res.ok) {
+            const fresh = await res.json();
+            if (Array.isArray(fresh)) {
+              setAdminContactMessages(fresh);
+              localStorage.setItem('bsp_contact_messages', JSON.stringify(fresh));
+            }
+          }
+        } catch (fetchErr) {
+          console.warn("Could not re-fetch contact messages on event trigger:", fetchErr);
         }
       } catch (e) {
         console.warn("Error reading contact messages from localStorage inside AdminContext:", e);
