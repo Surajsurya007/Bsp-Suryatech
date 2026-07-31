@@ -188,11 +188,12 @@ export default function AdminContactMessages() {
         
         // 1. Backend API Sync
         try {
+          const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
           await fetch(`/api/contact-messages/${msgId}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(payload)
           });
@@ -240,10 +241,11 @@ export default function AdminContactMessages() {
 
     // 1. Delete from Backend API
     try {
+      const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
       await fetch(`/api/contact-messages/${msgId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
     } catch (apiErr) {
@@ -304,11 +306,12 @@ export default function AdminContactMessages() {
         
         // 1. Backend API Sync
         try {
+          const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
           await fetch(`/api/contact-messages/${msgId}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(payload)
           });
@@ -341,11 +344,12 @@ export default function AdminContactMessages() {
 
     // 1. Delete from Backend API
     try {
+      const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
       await fetch('/api/contact-messages/bulk-delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ ids: selectedIds })
       });

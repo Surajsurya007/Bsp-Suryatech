@@ -202,7 +202,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
       return;
     }
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -247,7 +247,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
   const handleDeleteBlog = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this blog article?')) return;
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
     try {
       const res = await fetch(`/api/admin/blogs/${id}`, {
         method: 'DELETE',

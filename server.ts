@@ -1455,6 +1455,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
               } else {
                 // If opened directly (not in standard popup), save token to storage and redirect home
                 localStorage.setItem('bsp_token', '${token}');
+                localStorage.setItem('token', '${token}');
                 window.location.href = '/portal';
               }
             </script>

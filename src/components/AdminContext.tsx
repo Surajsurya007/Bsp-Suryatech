@@ -242,9 +242,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         let apiContacts: any[] = [];
         try {
+          const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
           const res = await fetch('/api/contact-messages', {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${token}`
             }
           });
           if (res.ok) {
@@ -351,9 +352,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         
         // Re-fetch fresh messages from backend API / Supabase
         try {
+          const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
           const res = await fetch('/api/contact-messages', {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${token}`
             }
           });
           if (res.ok) {
