@@ -1395,8 +1395,8 @@ function seedDB() {
     emailAddress: 'test@gmail.com',
     contactNumber: '9988776655',
     amount: 999,
-    gstAmount: 152,
-    netAmount: 847,
+    gstAmount: 0,
+    netAmount: 999,
     productName: 'BSP Suryatech Retail Billing Pro',
     licenseKey: 'BSPS-RETL-PRO-K93F-92JD-L03A-84Y7',
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()

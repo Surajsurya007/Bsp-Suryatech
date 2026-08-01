@@ -4453,19 +4453,19 @@ export default function CustomerPortal({
               </div>
             )}
 
-            {/* View 4: INVOICES & GST RECEIPTS */}
+            {/* View 4: INVOICES & RECEIPTS */}
             {activePortalView === 'invoices' && (
               <div className="space-y-8 animate-fade-in" id="customer-invoices-logs">
                 <div className="border-b border-slate-200 pb-4">
-                  <h2 className="text-2xl font-black text-slate-900 leading-none">Invoices & GST Receipts</h2>
-                  <p className="text-xs text-slate-400 mt-1.5 font-medium">Download compliance tax receipts, calculations logs, and software activation keys declarations.</p>
+                  <h2 className="text-2xl font-black text-slate-900 leading-none">Invoices & Receipts</h2>
+                  <p className="text-xs text-slate-400 mt-1.5 font-medium">Download purchase receipts, invoice records, and software activation keys declarations.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {invoices.length === 0 ? (
                     <div className="bg-white border p-12 rounded-3xl text-center text-slate-450 md:col-span-2 shadow-sm">
                       <Inbox className="w-10 h-10 text-slate-250 mx-auto mb-3" />
-                      <span>No available tax invoices found.</span>
+                      <span>No available purchase invoices found.</span>
                     </div>
                   ) : (
                     invoices.map((inv) => (
@@ -4477,7 +4477,7 @@ export default function CustomerPortal({
                               <h4 className="font-black text-slate-800 text-sm mt-0.5 font-mono">{inv.invoiceNumber}</h4>
                             </div>
                             <span className="px-2 py-0.5 bg-blue-50 text-blue-600 font-mono text-[9px] font-bold uppercase rounded border border-blue-100">
-                              GST COMPLIANT
+                              OFFICIAL INVOICE
                             </span>
                           </div>
 
@@ -4496,13 +4496,25 @@ export default function CustomerPortal({
                             <span className="font-bold text-slate-900 font-mono text-sm leading-none">₹{inv.amount}</span>
                           </div>
 
-                          <button
-                            onClick={() => setSelectedInvoice(inv)}
-                            className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold font-mono tracking-wide uppercase flex items-center gap-1.5"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            View Invoice
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSelectedInvoice(inv)}
+                              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold font-mono tracking-wide uppercase flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              View Invoice
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedInvoice(inv);
+                                setTimeout(() => window.print(), 150);
+                              }}
+                              className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold font-mono tracking-wide uppercase flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Download Invoice
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -5376,7 +5388,7 @@ export default function CustomerPortal({
         )}
       </div>
 
-      {/* --- PREMIUM GST TAX INVOICE PRINT MODAL --- */}
+      {/* --- OFFICIAL PURCHASE INVOICE PRINT MODAL --- */}
       {selectedInvoice && (() => {
         const matchingPayment = payments.find(p => p.invoiceNumber === selectedInvoice.invoiceNumber);
         const razorpayPaymentId = matchingPayment?.transactionId || 'pay_Oa7Q2HjK5u9Lpw';
@@ -5394,18 +5406,6 @@ export default function CustomerPortal({
         }
 
         const totalAmount = selectedInvoice.amount || 0;
-        const taxableValue = selectedInvoice.netAmount || parseFloat((totalAmount / 1.18).toFixed(2));
-        const gstAmount = selectedInvoice.gstAmount || parseFloat((totalAmount - taxableValue).toFixed(2));
-
-        const isChhattisgarh = (selectedInvoice.state || '').toLowerCase().includes('chhattisgarh') || 
-                               (selectedInvoice.businessAddress || '').toLowerCase().includes('chhattisgarh') ||
-                               (selectedInvoice.businessAddress || '').toLowerCase().includes('raipur') ||
-                               true; // Raipur base default
-
-        const cgstAmount = isChhattisgarh ? parseFloat((gstAmount / 2).toFixed(2)) : 0;
-        const sgstAmount = isChhattisgarh ? parseFloat((gstAmount - cgstAmount).toFixed(2)) : 0;
-        const igstAmount = isChhattisgarh ? 0 : gstAmount;
-
         const originalProductPrice = 3000;
         const isDemoPrice = totalAmount < 100;
         const listPrice = isDemoPrice ? totalAmount : originalProductPrice;
@@ -5416,9 +5416,21 @@ export default function CustomerPortal({
 
         return (
           <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-xs overflow-y-auto">
-            {/* Modal overrides */}
+            {/* Modal overrides & strict single-page print stylesheet */}
             <style>{`
+              @page {
+                size: portrait;
+                margin: 8mm;
+              }
               @media print {
+                html, body {
+                  height: 100% !important;
+                  max-height: 100vh !important;
+                  overflow: hidden !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  background: white !important;
+                }
                 body * {
                   visibility: hidden !important;
                 }
@@ -5426,16 +5438,24 @@ export default function CustomerPortal({
                   visibility: visible !important;
                 }
                 #invoices-tax-receipt-printout-wrapper {
-                  position: absolute !important;
+                  position: fixed !important;
                   left: 0 !important;
                   top: 0 !important;
+                  right: 0 !important;
                   width: 100% !important;
                   max-width: 100% !important;
+                  height: auto !important;
+                  max-height: 100vh !important;
                   border: none !important;
                   box-shadow: none !important;
-                  padding: 0 !important;
+                  padding: 16px !important;
                   margin: 0 !important;
                   background: white !important;
+                  overflow: hidden !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  page-break-after: avoid !important;
+                  break-after: avoid !important;
                 }
                 .no-print {
                   display: none !important;
@@ -5479,7 +5499,7 @@ export default function CustomerPortal({
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 no-print">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs uppercase font-extrabold text-emerald-600 font-mono tracking-wider">GST Compliant Invoice Logged</span>
+                  <span className="text-xs uppercase font-extrabold text-emerald-600 font-mono tracking-wider">Official Purchase Invoice Logged</span>
                 </div>
                 <div className="flex gap-2.5">
                   <button
@@ -5487,7 +5507,7 @@ export default function CustomerPortal({
                     className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold font-sans flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
                   >
                     <Printer className="w-4 h-4" />
-                    Print / Save PDF
+                    Download Invoice / Save PDF
                   </button>
                   <button
                     onClick={() => setSelectedInvoice(null)}
@@ -5498,7 +5518,7 @@ export default function CustomerPortal({
                 </div>
               </div>
 
-              {/* Header Company Information (Screenshot Style) */}
+              {/* Header Company Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end z-10 pt-2">
                 <div className="flex flex-col">
                   <span className="font-sans font-black text-2xl tracking-tight text-[#C00030] leading-none">
@@ -5522,16 +5542,11 @@ export default function CustomerPortal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1 z-10 w-full">
                 
                 {/* Left Column: Client Billing details */}
-                <div className="space-y-1.5 font-sans text-xs">
+                <div className="space-y-1 font-sans text-xs">
                   <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">INVOICED TO</span>
                   <h3 className="text-base font-black text-slate-900 leading-tight">{selectedInvoice.clientName || 'Suraj Suryavanshi'}</h3>
                   <p className="text-slate-500 font-medium leading-none">{selectedInvoice.businessName || 'bsp surya'}</p>
                   <p className="text-slate-400 font-mono leading-none">{selectedInvoice.emailAddress || 'surajsurya200@gmail.com'}</p>
-                  <div className="pt-1.5">
-                    <span className="inline-block px-2.5 py-0.5 bg-red-50 border border-red-100 rounded text-[9px] font-mono font-bold text-[#C00030] uppercase tracking-wide">
-                      GSTIN: {selectedInvoice.gstNumber || 'B2C UNREGISTERED'}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Right Column: Invoice Attributes */}
@@ -5549,10 +5564,6 @@ export default function CustomerPortal({
                     <span className="text-slate-450">Order ID:</span>{' '}
                     <strong className="font-mono text-slate-800 font-bold">{selectedInvoice.orderId || 'BSP-ORD-SL0T'}</strong>
                   </p>
-                  <p className="font-medium leading-normal">
-                    <span className="text-slate-450">Place of Supply:</span>{' '}
-                    <strong className="text-slate-800 font-bold">{isChhattisgarh ? 'CG (Code 22)' : 'Inter-State'}</strong>
-                  </p>
                 </div>
 
               </div>
@@ -5560,21 +5571,20 @@ export default function CustomerPortal({
               {/* Second Horizontal Separator */}
               <div className="border-t border-slate-300 my-1 z-10 w-full" />
 
-              {/* Taxable Service Components Table Grid Container */}
+              {/* Purchased Products & Services Table Grid Container */}
               <div className="flex flex-col z-10 w-full">
                 <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-3 block">
-                  TAXABLE SERVICE COMPONENTS
+                  PURCHASED PRODUCTS & SERVICES
                 </span>
                 
-                {/* Bordered grid structure matching the screenshot precisely */}
+                {/* Bordered grid structure */}
                 <div className="border border-slate-600 rounded-2xl overflow-hidden bg-white">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-600 text-[10px] font-bold text-slate-500 uppercase">
                         <th className="p-4 font-bold text-left tracking-wider">Item Description</th>
-                        <th className="p-4 font-bold text-center tracking-wider w-24">HSN</th>
-                        <th className="p-4 font-bold text-right tracking-wider w-36">Base Rate</th>
-                        <th className="p-4 font-bold text-center tracking-wider w-24">GST</th>
+                        <th className="p-4 font-bold text-center tracking-wider w-24">Qty</th>
+                        <th className="p-4 font-bold text-right tracking-wider w-36">Price / Amount</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -5582,14 +5592,11 @@ export default function CustomerPortal({
                         <td className="p-4 text-left font-bold text-slate-800 text-xs sm:text-[13px] leading-snug">
                           {selectedInvoice.productName || 'ERP Management Software'}
                         </td>
-                        <td className="p-4 text-center font-mono text-slate-500 text-xs">
-                          997331
+                        <td className="p-4 text-center font-mono text-slate-700 text-xs font-bold">
+                          1
                         </td>
-                        <td className="p-4 text-right font-mono text-slate-800 text-xs font-semibold">
-                          ₹{taxableValue}
-                        </td>
-                        <td className="p-4 text-center font-mono text-[#C00030] text-xs font-extrabold">
-                          18%
+                        <td className="p-4 text-right font-mono text-slate-900 text-xs font-extrabold">
+                          ₹{totalAmount}
                         </td>
                       </tr>
                     </tbody>
@@ -5597,10 +5604,10 @@ export default function CustomerPortal({
                 </div>
               </div>
 
-              {/* Summary Calculations (Right-Aligned) & Scan/Security Area */}
+              {/* Summary Calculations (Right-Aligned) & Security Area */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-2 z-10 w-full">
                 
-                {/* Left: Interactive elements (hidden on print for clean look) */}
+                {/* Left: Verification elements */}
                 <div className="md:col-span-6 space-y-3.5 no-print">
                   <div className="flex gap-4 items-center bg-slate-50 p-4 border border-slate-150 rounded-2xl">
                     <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-xs shrink-0 select-none">
@@ -5631,8 +5638,8 @@ export default function CustomerPortal({
                       </svg>
                     </div>
                     <div className="space-y-0.5">
-                      <span className="text-[9px] font-black text-slate-400 font-mono block uppercase tracking-widest leading-none">E-INVOICE QR CODE</span>
-                      <span className="text-xs font-bold text-slate-800 block">Digitally Certified Receipt</span>
+                      <span className="text-[9px] font-black text-slate-400 font-mono block uppercase tracking-widest leading-none">INVOICE VERIFICATION QR</span>
+                      <span className="text-xs font-bold text-slate-800 block">Digitally Verified Receipt</span>
                       <p className="text-[10px] text-slate-500 leading-normal">
                         Certified transaction clearance logs for secure digital record auditing.
                       </p>
@@ -5651,7 +5658,7 @@ export default function CustomerPortal({
                   </div>
                 </div>
 
-                {/* Right: Calculations List (Screenshot format with underlining) */}
+                {/* Right: Summary Box */}
                 <div className="md:col-span-6 flex flex-col items-end w-full space-y-3">
                   <div className="w-full max-w-sm space-y-2 text-xs font-medium text-slate-500 font-sans">
                     
@@ -5661,27 +5668,12 @@ export default function CustomerPortal({
                         <span>- ₹{discountAmount}</span>
                       </div>
                     )}
-
-                    <div className="flex justify-between font-mono text-slate-800 font-bold border-b border-slate-300 pb-1.5 px-1">
-                      <span>Taxable Val (Base):</span>
-                      <span className="text-slate-900 font-extrabold">₹{taxableValue}</span>
-                    </div>
-                    
-                    <div className="flex justify-between font-mono px-1">
-                      <span>CGST (9.0%):</span>
-                      <span className="text-slate-800 font-semibold">₹{cgstAmount}</span>
-                    </div>
-                    
-                    <div className="flex justify-between font-mono border-b border-slate-300 pb-1.5 px-1">
-                      <span>SGST (9.0%):</span>
-                      <span className="text-slate-800 font-semibold">₹{sgstAmount}</span>
-                    </div>
                   </div>
 
-                  {/* Solid pill-shaped banner highlight for Gross Bill Total */}
+                  {/* Solid pill-shaped banner highlight for Grand Total */}
                   <div className="w-full max-w-sm bg-rose-50/70 border border-rose-100 rounded-2xl px-5 py-3.5 flex justify-between items-center shadow-xs">
                     <span className="text-xs font-bold text-[#C00030] tracking-wide uppercase">
-                      Gross Bill Total:
+                      Grand Total:
                     </span>
                     <span className="text-xl font-black font-mono text-[#C00030]">
                       ₹{totalAmount}
@@ -5707,7 +5699,7 @@ export default function CustomerPortal({
               {/* Invoicing Footer Jurisdictional Guidance */}
               <div className="border-t border-slate-200 pt-4 text-center text-[10px] text-slate-400 invoice-text-light leading-normal max-w-xl mx-auto z-10">
                 <span className="font-extrabold block text-slate-500 invoice-text-soft mb-0.5">Subject to Raipur Court Jurisdiction</span>
-                <p>This is a certified digital tax invoice generated dynamically on secure payment clearings. No physical seal or active signatures are required to endorse validity. BSP Suryatech software products are sold under official license activations agreements.</p>
+                <p>This is an official digital purchase invoice generated dynamically on secure payment clearings. No physical seal or active signatures are required to endorse validity. BSP Suryatech software products are sold under official license activation agreements.</p>
               </div>
 
             </div>

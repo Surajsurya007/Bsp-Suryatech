@@ -87,9 +87,9 @@ export async function savePaymentToDatabase(orderData: {
       console.error('[PAYMENT SERVICE] Payments table write error:', payErr.message);
     }
 
-    // 4. Generate invoice
-    const gstAmount = parseFloat((orderData.amount * 0.18).toFixed(2));
-    const netAmount = parseFloat((orderData.amount - gstAmount).toFixed(2));
+    // 4. Generate purchase invoice
+    const gstAmount = 0;
+    const netAmount = orderData.amount;
     const invoiceRecord = {
       id: 'inv_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
       invoice_number: invoiceNumber,

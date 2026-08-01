@@ -2612,8 +2612,8 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
               email_address: order.userEmail,
               contact_number: profile?.contactNumber || '9999999999',
               amount: order.amount,
-              gst_amount: Math.ceil(order.amount * 0.18),
-              net_amount: Math.ceil(order.amount - (order.amount * 0.18)),
+              gst_amount: 0,
+              net_amount: order.amount,
               product_name: order.productName,
               license_key: license.licenseKey,
               created_at: new Date().toISOString()

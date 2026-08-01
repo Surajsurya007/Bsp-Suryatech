@@ -276,20 +276,15 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      onAddNotification('Popup blocked! Please allow popups to print tax invoices.', 'error');
+      onAddNotification('Popup blocked! Please allow popups to print invoices.', 'error');
       return;
     }
-    const net = Math.round(inv.net_amount || inv.netAmount || (inv.amount / 1.18));
-    const tax = Math.round(inv.gst_amount || inv.gstAmount || (inv.amount - net));
-    const cgst = Math.round(tax / 2);
-    const sgst = Math.round(tax / 2);
     
     const clientName = matchedCust?.client_name || inv.clientName || inv.client_name || 'Suryatech User';
     const businessName = matchedCust?.business_name || inv.businessName || inv.business_name || 'BSP Corporate Client';
     const email = matchedCust?.email_address || inv.emailAddress || inv.email_address || 'client@bspsuryatech.in';
     const contact = matchedCust?.contact_number || inv.contactNumber || inv.contact_number || '+91 95169 16415';
     const address = matchedCust?.city ? `${matchedCust.city}, ${matchedCust.state}` : 'Corporate Address Register';
-    const gstin = matchedCust?.gst_number || inv.gst_number || inv.gstNumber || 'B2C (Unregistered)';
     const licKey = inv.licenseKey || inv.license_key || 'BSPS-RETL-PRO-K93F-92JD-L03A-84Y7';
 
     const amountInWords = (num: number) => {
@@ -345,7 +340,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
             </div>
           </div>
 
-          <div class="inv-title">TAX INVOICE - ORIGINAL FOR RECIPIENT</div>
+          <div class="inv-title">INVOICE - ORIGINAL FOR RECIPIENT</div>
 
           <div class="meta-grid">
             <div class="meta-box">
@@ -355,14 +350,12 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
               <p><strong>E-mail ID:</strong> ${email}</p>
               <p><strong>Contact No:</strong> ${contact}</p>
               <p><strong>Address:</strong> ${address}</p>
-              <p><strong>GSTIN:</strong> ${gstin}</p>
             </div>
             <div class="meta-box">
               <h4>Invoice & Supply Details</h4>
               <p><strong>Invoice Number:</strong> <span style="color: #dc2626; font-weight: bold;">${inv.invoice_number || inv.invoiceNumber || 'INV-2026-N0'}</span></p>
               <p><strong>Date of Invoice:</strong> ${invoiceDate}</p>
               <p><strong>Order ID:</strong> ${inv.orderId || inv.order_id || 'BSP-ORD-92A3'}</p>
-              <p><strong>Place of Supply:</strong> Chhattisgarh (Code 22)</p>
               <p><strong>License Serial Key:</strong> ${licKey}</p>
             </div>
           </div>
@@ -371,10 +364,9 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
             <thead>
               <tr>
                 <th style="width: 5%;">#</th>
-                <th style="width: 45%;">PRODUCT DESCRIPTION / SERVICE COMPONENT</th>
-                <th style="width: 15%; text-align: center;">HSN DETAILS</th>
-                <th style="width: 15%; text-align: right;">BASE RATE (NET)</th>
-                <th style="width: 20%; text-align: right;">TAXABLE TAX RATE</th>
+                <th style="width: 65%;">PRODUCT DESCRIPTION / SERVICE COMPONENT</th>
+                <th style="width: 10%; text-align: center;">QTY</th>
+                <th style="width: 20%; text-align: right;">TOTAL PRICE</th>
               </tr>
             </thead>
             <tbody>
@@ -384,29 +376,16 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                   <strong>${inv.product_name || inv.productName || 'BSP Suryatech Retail Billing Suite'}</strong><br/>
                   <span style="font-size: 10px; color: #64748b;">Enterprise Standalone Offline Workstation Node (Single Activation Key)</span>
                 </td>
-                <td style="text-align: center; color: #475569;">997331</td>
-                <td style="text-align: right;">₹${net.toLocaleString('en-IN')}</td>
-                <td style="text-align: right;">Integrated CGST+SGST @ 18%</td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: right;">₹${(inv.amount || 3000).toLocaleString('en-IN')}</td>
               </tr>
             </tbody>
           </table>
 
           <div class="totals">
             <table class="totals-table">
-              <tr>
-                <td>Taxable Value (Base)</td>
-                <td style="text-align: right;">₹${net.toLocaleString('en-IN')}</td>
-              </tr>
-              <tr>
-                <td>Central Tax (CGST 9.0%)</td>
-                <td style="text-align: right;">₹${cgst.toLocaleString('en-IN')}</td>
-              </tr>
-              <tr>
-                <td>State Tax (SGST 9.0%)</td>
-                <td style="text-align: right;">₹${sgst.toLocaleString('en-IN')}</td>
-              </tr>
               <tr class="grand-total">
-                <td><strong>Invoice Total (Gross)</strong></td>
+                <td><strong>Grand Total</strong></td>
                 <td style="text-align: right; color: #b91c1c;"><strong>₹${(inv.amount || 3000).toLocaleString('en-IN')}</strong></td>
               </tr>
             </table>
@@ -3854,11 +3833,6 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
 
             {/* Profile Invoice Modal with Print Capability */}
             {showInvoiceDetailsModal && selectedInvoice && (() => {
-              const net = Math.round(selectedInvoice.net_amount || selectedInvoice.netAmount || (selectedInvoice.amount / 1.18));
-              const tax = Math.round(selectedInvoice.gst_amount || selectedInvoice.gstAmount || (selectedInvoice.amount - net));
-              const cgst = Math.round(tax / 2);
-              const sgst = Math.round(tax / 2);
-
               const matchedCustomer = adminCustomers.find((c: any) => 
                 (c.id && selectedInvoice.userId && String(c.id) === String(selectedInvoice.userId)) ||
                 (c.email_address && selectedInvoice.emailAddress && String(c.email_address).toLowerCase() === String(selectedInvoice.emailAddress).toLowerCase()) ||
@@ -3873,7 +3847,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                     <div className="p-5 px-6 border-b flex items-center justify-between bg-slate-900 text-white rounded-t-3xl">
                       <div>
                         <h4 className="font-extrabold text-sm sm:text-base tracking-tight leading-none">
-                          Tax Invoice & Profile Registry View
+                          Purchase Invoice & Profile Registry View
                         </h4>
                         <p className="text-[10px] text-slate-350 font-mono mt-1">
                           Invoice ID: {selectedInvoice.invoice_number || selectedInvoice.invoiceNumber}
@@ -3930,9 +3904,6 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                               <strong className="text-slate-800 text-xs block mt-0.5">{selectedInvoice.client_name || selectedInvoice.clientName}</strong>
                               <span className="text-slate-600 block">{selectedInvoice.businessName || selectedInvoice.business_name || (matchedCustomer && matchedCustomer.business_name) || "Individual POS Client"}</span>
                               <span className="text-slate-500 block truncate">{selectedInvoice.emailAddress || selectedInvoice.email_address || (matchedCustomer && matchedCustomer.email_address) || "client@suryatech.in"}</span>
-                              <span className="text-[10px] text-rose-800 font-bold bg-rose-50 px-1 border border-rose-200 rounded mt-1 inline-block">
-                                GSTIN: {selectedInvoice.gst_number || selectedInvoice.gstNumber || (matchedCustomer && matchedCustomer.gst_number) || "B2C UNREGISTERED"}
-                              </span>
                             </div>
                             <div>
                               <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">INVOICE METADATA</span>
@@ -3940,22 +3911,20 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                                 <div><strong className="text-slate-700">Invoice No:</strong> <span className="font-mono text-rose-700 font-bold">{selectedInvoice.invoice_number || selectedInvoice.invoiceNumber}</span></div>
                                 <div><strong className="text-slate-700">Dated:</strong> {new Date(selectedInvoice.created_at || selectedInvoice.createdAt).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'})}</div>
                                 <div><strong className="text-slate-700">Order ID:</strong> <span className="font-mono text-xs">{selectedInvoice.orderId || "BSP-ORD-SLOT"}</span></div>
-                                <div><strong className="text-slate-700">Place of Supply:</strong> CG (Code 22)</div>
                               </div>
                             </div>
                           </div>
 
                           {/* Line items table */}
                           <div className="space-y-2">
-                            <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">TAXABLE SERVICE COMPONENTS</span>
+                            <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">PURCHASED PRODUCTS & SERVICES</span>
                             <div className="border rounded-xl overflow-hidden">
                               <table className="w-full text-left text-[11px] font-mono">
                                 <thead className="bg-slate-50 border-b">
                                   <tr className="text-slate-500">
                                     <th className="p-2 pl-3">ITEM DESCRIPTION</th>
-                                    <th className="p-2 text-center">HSN</th>
-                                    <th className="p-2 text-right">BASE RATE</th>
-                                    <th className="p-2 pr-3 text-right">GST</th>
+                                    <th className="p-2 text-center">QTY</th>
+                                    <th className="p-2 pr-3 text-right">TOTAL PRICE</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -3963,32 +3932,19 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                                     <td className="p-2.5 pl-3 font-semibold text-slate-800">
                                       {selectedInvoice.product_name || selectedInvoice.productName || 'BSP Retail POS License'}
                                     </td>
-                                    <td className="p-2.5 text-center text-slate-500">997331</td>
-                                    <td className="p-2.5 text-right text-slate-650">₹{Math.round(net).toLocaleString('en-IN')}</td>
-                                    <td className="p-2.5 pr-3 text-right text-rose-700 font-bold">18%</td>
+                                    <td className="p-2.5 text-center text-slate-500">1</td>
+                                    <td className="p-2.5 pr-3 text-right text-slate-900 font-bold">₹{(selectedInvoice.amount || 3000).toLocaleString('en-IN')}</td>
                                   </tr>
                                 </tbody>
                               </table>
                             </div>
                           </div>
 
-                          {/* CGST, SGST Summary */}
+                          {/* Grand Total Summary */}
                           <div className="flex justify-end pt-2">
                             <div className="w-64 space-y-1.5 font-mono text-[11px] text-slate-600">
-                              <div className="flex justify-between border-b pb-1">
-                                <span>Taxable Val (Base):</span>
-                                <span className="text-slate-800 font-medium">₹{Math.round(net).toLocaleString('en-IN')}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>CGST (9.0%):</span>
-                                <span>₹{cgst.toLocaleString('en-IN')}</span>
-                              </div>
-                              <div className="flex justify-between border-b pb-1.5">
-                                <span>SGST (9.0%):</span>
-                                <span>₹{sgst.toLocaleString('en-IN')}</span>
-                              </div>
-                              <div className="flex justify-between text-xs font-black text-rose-800 bg-rose-50/50 p-1 px-2 rounded-lg border border-rose-100">
-                                <span>Gross Bill Total:</span>
+                              <div className="flex justify-between text-xs font-black text-rose-800 bg-rose-50/50 p-2 rounded-lg border border-rose-100">
+                                <span>Grand Total:</span>
                                 <span className="text-sm">₹{(selectedInvoice.amount || 3000).toLocaleString('en-IN')}</span>
                               </div>
                             </div>

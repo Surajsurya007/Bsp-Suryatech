@@ -1390,9 +1390,9 @@ export default function App() {
           console.error("Direct payment write returned error:", payErr.message);
         }
 
-        // 4. Generate detail GST Compliant Client Invoice
-        const gstAmount = parseFloat((amount * 0.18).toFixed(2)); // 18% GST calculation
-        const netAmount = parseFloat((amount - gstAmount).toFixed(2));
+        // 4. Generate Client Purchase Invoice
+        const gstAmount = 0;
+        const netAmount = amount;
         const invoiceRecord = {
           id: 'inv_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
           invoice_number: invoiceNumber,
