@@ -917,26 +917,24 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
   // 2. Handle both callback styles (with or without trailing slash)
   app.get(['/auth/callback', '/auth/callback/'], async (req, res) => {
-    const { code, state, provider } = req.query;
+    const config = dbActions.getSupabaseConfig ? dbActions.getSupabaseConfig() : { url: '', anonKey: '', enabled: false };
+    const supabaseUrl = config.url || "https://wabhgsdzmptgxrggjjgm.supabase.co";
+    const supabaseKey = config.anonKey || "sb_publishable_gI4ZjOm-5A5_DVQylKcuWA_QLcDyT0d";
 
-    if (provider === 'supabase') {
-      const config = dbActions.getSupabaseConfig ? dbActions.getSupabaseConfig() : { url: '', anonKey: '', enabled: false };
-      const supabaseUrl = config.url || "https://wabhgsdzmptgxrggjjgm.supabase.co";
-      const supabaseKey = config.anonKey || "sb_publishable_gI4ZjOm-5A5_DVQylKcuWA_QLcDyT0d";
-
-      return res.send(`
+    return res.send(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Supabase Google Authentication</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Google Authentication | BSP Suryatech</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px;">
-  <div style="text-align: center; max-width: 400px; padding: 40px; border-radius: 12px; background-color: #1e293b; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-    <div style="font-size: 24px; font-weight: bold; margin-bottom: 16px;">Authenticating...</div>
-    <div style="color: #94a3b8; font-size: 14px; margin-bottom: 24px;">Please wait while we sync your Google profile with Suryatech systems.</div>
-    <div style="width: 40px; height: 40px; border: 4px solid #38bdf8; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 24px;"></div>
+  <div style="text-align: center; max-width: 420px; padding: 40px; border-radius: 16px; background-color: #1e293b; border: 1px solid #334155; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
+    <div style="width: 44px; height: 44px; border: 4px solid #38bdf8; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+    <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Authenticating Account</div>
+    <div id="status-text" style="color: #94a3b8; font-size: 14px; line-height: 1.5;">Completing Google OAuth authentication with BSP Suryatech...</div>
   </div>
 
   <style>
@@ -972,7 +970,7 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         }
         
         if (!user) {
-          throw new Error("Could not find a valid authenticated Google user session.");
+          throw new Error("Could not retrieve user details from Google authentication.");
         }
         
         const syncRes = await fetch('/api/auth/supabase-sync', {
@@ -986,11 +984,14 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
         
         if (!syncRes.ok) {
           const syncErrText = await syncRes.text();
-          throw new Error(syncErrText || "SSO session synchronization on main system failed.");
+          throw new Error(syncErrText || "Failed to synchronize user session.");
         }
         
         const { token, user: localUser } = await syncRes.json();
         
+        localStorage.setItem('bsp_token', token);
+        localStorage.setItem('token', token);
+
         if (window.opener) {
           window.opener.postMessage({
             type: 'OAUTH_AUTH_SUCCESS',
@@ -999,11 +1000,16 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           }, '*');
           window.close();
         } else {
-          localStorage.setItem('bsp_token', token);
-          window.location.href = '/portal';
+          if (localUser.role === 'admin' || localUser.role === 'super_admin' || (localUser.email && localUser.email.toLowerCase() === 'surajsurya.koo7@gmail.com')) {
+            window.location.href = '/portal?view=admin';
+          } else {
+            window.location.href = '/portal';
+          }
         }
       } catch (err) {
         console.error("Supabase SSO exchange error:", err);
+        const statusEl = document.getElementById('status-text');
+        if (statusEl) statusEl.innerText = err.message || 'Authentication failed. Redirecting...';
         if (window.opener) {
           window.opener.postMessage({
             type: 'OAUTH_AUTH_FAILURE',
@@ -1011,7 +1017,9 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
           }, '*');
           window.close();
         } else {
-          window.location.href = '/portal?error=' + encodeURIComponent(err.message || 'auth_failed');
+          setTimeout(() => {
+            window.location.href = '/portal?error=' + encodeURIComponent(err.message || 'auth_failed');
+          }, 1500);
         }
       }
     }
@@ -1020,472 +1028,8 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
   </script>
 </body>
 </html>
-      `);
-    }
-
-    if (!code) {
-      return res.status(400).send(`
-        <html>
-          <body>
-            <script>
-              if (window.opener) {
-                window.opener.postMessage({ type: 'OAUTH_AUTH_FAILURE', error: 'Authentication code is missing from provider redirect.' }, '*');
-                window.close();
-              } else {
-                window.location.href = '/portal';
-              }
-            </script>
-            <p>Authentication failed. Missing authorization code.</p>
-          </body>
-        </html>
-      `);
-    }
-
-    try {
-      let token: string;
-      let targetUser: any;
-
-      const isGoogle = (state?.toString().includes('google') || code?.toString().includes('google'));
-
-      if (isGoogle) {
-        // --- GOOGLE OAUTH FLOW ---
-        const isClientValid = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID.includes('.apps.googleusercontent.com');
-        if (code === 'sim_google_auth_code_123' || state === 'google_simulated' || !isClientValid || !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-          const chosenEmail = req.query.email ? String(req.query.email).trim() : null;
-          const chosenName = req.query.name ? String(req.query.name).trim() : null;
-
-          if (!chosenEmail) {
-            // Render gorgeous, responsive Account Chooser page!
-            const users = dbActions.getUsers().filter(u => u.email && u.email.includes('@'));
-            
-            // Build default simulated lists from common developer profiles
-            const list = [
-              { name: 'Suraj surya', email: 'surajsurya.koo7@gmail.com', role: 'admin' },
-              { name: 'Suraj surya', email: 'surajsurya200@gmail.com', role: 'customer' },
-              ...users
-            ];
-            
-            // Unique-fy list by email
-            const uniqueUsers = [];
-            const seenEmails = new Set();
-            for (const u of list) {
-              const emailLower = u.email.toLowerCase();
-              if (!seenEmails.has(emailLower)) {
-                seenEmails.add(emailLower);
-                uniqueUsers.push(u);
-              }
-            }
-
-            const userItemsHTML = uniqueUsers.map(u => {
-              const initial = (u.name || u.email || 'G').charAt(0).toUpperCase();
-              const badge = u.role === 'admin' ? '<span class="px-1.5 py-0.5 text-[9px] font-mono font-extrabold bg-amber-100 text-amber-800 rounded uppercase tracking-wider">Installer Admin</span>' : '';
-              return `
-                <button onclick="selectAccount('${encodeURIComponent(u.email)}', '${encodeURIComponent(u.name || '')}')" class="w-full p-3.5 flex items-center gap-3.5 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/20 active:scale-[0.985] transition-all cursor-pointer text-left">
-                  <span class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
-                    ${initial}
-                  </span>
-                  <div class="flex-grow min-w-0">
-                    <div class="text-sm font-bold text-gray-800 flex items-center gap-2">${u.name || 'Google User'} ${badge}</div>
-                    <div class="text-xs text-gray-500 font-medium truncate">${u.email}</div>
-                  </div>
-                </button>
-              `;
-            }).join('\n');
-
-            return res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Google Account Chooser (Mock Simulation)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Roboto', sans-serif; }
-  </style>
-</head>
-<body class="bg-slate-50 flex items-center justify-center min-h-screen p-4">
-  <div class="bg-white p-8 rounded-3xl border border-gray-200/80 shadow-lg max-w-sm w-full text-center">
-    <!-- Google Logo -->
-    <div class="flex justify-center mb-5">
-      <svg class="h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-      </svg>
-    </div>
-
-    <h1 class="text-xl font-bold text-gray-900 tracking-tight">Choose an account</h1>
-    <p class="text-xs text-gray-500 mt-1 mb-6">to continue to <span class="text-blue-600 font-extrabold uppercase font-mono text-[11px] tracking-wider">BSP Suryatech</span></p>
-
-    <!-- Account List -->
-    <div class="space-y-2 mb-4 text-left max-h-56 overflow-y-auto pr-1">
-      ${userItemsHTML}
-    </div>
-
-    <!-- Use Another Account Button -->
-    <div class="mb-5">
-      <button onclick="toggleCustom()" class="w-full p-3.5 flex items-center gap-3.5 rounded-xl border border-dashed border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 active:scale-[0.985] transition-all cursor-pointer text-left">
-        <span class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-        </span>
-        <div class="min-w-0">
-          <div class="text-xs font-bold text-gray-700">Use another account</div>
-          <p class="text-[9.5px] text-gray-400 font-medium truncate">Simulate custom Google address logs</p>
-        </div>
-      </button>
-    </div>
-
-    <!-- Custom Account Input Form -->
-    <form id="customForm" action="/auth/callback" method="GET" class="hidden text-left space-y-4 mb-5 border-t pt-4 border-gray-100">
-      <input type="hidden" name="code" value="sim_google_auth_code_123">
-      <input type="hidden" name="state" value="google_simulated">
-      
-      <div>
-        <label class="block text-[9.5px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Google Email Address</label>
-        <input type="email" name="email" required placeholder="surajsurya.koo7@gmail.com" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-      </div>
-      <div>
-        <label class="block text-[9.5px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Profile Display Name</label>
-        <input type="text" name="name" required placeholder="Suraj surya" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-      </div>
-      <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow active:scale-[0.98]">
-        Sign In Custom Account
-      </button>
-    </form>
-
-    <div class="text-[10px] text-gray-400 leading-relaxed border-t pt-4 border-gray-100 text-left">
-      To integrate live production Google credentials, please configure the <code class="bg-gray-100 px-1 py-0.5 rounded text-[9.5px] font-mono text-blue-600">GOOGLE_CLIENT_ID</code> inside workspace settings. This simulator enables seamless testing.
-    </div>
-  </div>
-
-  <script>
-    function selectAccount(email, name) {
-      const url = new URL(window.location.origin + window.location.pathname);
-      url.searchParams.set('code', 'sim_google_auth_code_123');
-      url.searchParams.set('state', 'google_simulated');
-      url.searchParams.set('email', decodeURIComponent(email));
-      url.searchParams.set('name', decodeURIComponent(name));
-      window.location.href = url.toString();
-    }
-    function toggleCustom() {
-      const form = document.getElementById('customForm');
-      form.classList.toggle('hidden');
-    }
-  </script>
-</body>
-</html>
-            `);
-          }
-
-          // Email provided -> Register or retrieve user
-          let user = dbActions.getUserByEmail(chosenEmail);
-          
-          if (!user) {
-            user = dbActions.createUser({
-              name: chosenName || 'Google User',
-              email: chosenEmail,
-              role: chosenEmail.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer'
-            }, 'googleSimPassword123!');
-
-            // Seed default profile params
-            dbActions.saveCustomerProfile({
-              userId: user.id,
-              clientName: user.name,
-              businessName: 'Google Connected Business',
-              contactNumber: '9111111111',
-              emailAddress: user.email,
-              businessAddress: 'Sector 62, Raipur, C.G.',
-              city: 'Raipur',
-              state: 'Chhattisgarh',
-              pincode: '201301',
-              gstNumber: ''
-            });
-
-            // Seed warm notification
-            dbActions.createNotification({
-              userId: user.id,
-              title: 'Welcome via Google!',
-              message: 'Your account has been successfully created and linked with your simulated Google profile.',
-              type: 'security'
-            });
-          }
-
-          token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
-          targetUser = user;
-        } else {
-          // REAL Google OAuth Code Exchange Flow
-          const host = req.get('host') || 'localhost:3000';
-          const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-          const origin = `${protocol}://${host}`;
-          const redirectUri = `${process.env.APP_URL || origin}/auth/callback`;
-
-          const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-              client_id: process.env.GOOGLE_CLIENT_ID!,
-              client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-              code: code as string,
-              redirect_uri: redirectUri,
-              grant_type: 'authorization_code'
-            }).toString()
-          });
-
-          if (!tokenRes.ok) {
-            throw new Error('Failed to exchange code for Google token');
-          }
-
-          const tokenData = await tokenRes.json() as any;
-          const accessToken = tokenData.access_token;
-
-          if (!accessToken) {
-            throw new Error(tokenData.error_description || tokenData.error || 'Access token could not be fetched from Google.');
-          }
-
-          // Fetch Google User Profile
-          const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            }
-          });
-
-          if (!userRes.ok) {
-            throw new Error('Failed to retrieve Google user profile.');
-          }
-
-          const googleProfile = await userRes.json() as any;
-          const userEmail = googleProfile.email;
-          const userDisplay = googleProfile.name || googleProfile.given_name || 'Google User';
-
-          if (!userEmail) {
-            throw new Error('Google email address is required to proceed.');
-          }
-
-          let user = dbActions.getUserByEmail(userEmail);
-          if (!user) {
-            const generatedPass = crypto.randomBytes(16).toString('hex');
-            user = dbActions.createUser({
-              name: userDisplay,
-              email: userEmail,
-              role: 'customer'
-            }, generatedPass);
-
-            dbActions.saveCustomerProfile({
-              userId: user.id,
-              clientName: userDisplay,
-              businessName: 'Google Connected Business',
-              contactNumber: '',
-              emailAddress: userEmail,
-              businessAddress: '',
-              city: '',
-              state: '',
-              pincode: ''
-            });
-
-            dbActions.createNotification({
-              userId: user.id,
-              title: 'Welcome via Google!',
-              message: 'Your account has been successfully created and secured with your verified Google credentials.',
-              type: 'security'
-            });
-          }
-
-          token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
-          targetUser = user;
-        }
-      } else {
-        // --- GITHUB OAUTH FLOW ---
-        // Handle Simulated/Mock single sign-on trigger
-        if (code === 'sim_github_auth_code_123' || state === 'simulated' || !process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
-        const dummyEmail = 'github-test@gmail.com';
-        let user = dbActions.getUserByEmail(dummyEmail);
-        
-        if (!user) {
-          user = dbActions.createUser({
-            name: 'GitHub Dev User',
-            email: dummyEmail,
-            role: 'customer'
-          }, 'githubSimPassword123!');
-
-          // Seed default profile params
-          dbActions.saveCustomerProfile({
-            userId: user.id,
-            clientName: 'GitHub Dev User',
-            businessName: 'GitHub Dev Portfolio POS',
-            contactNumber: '9111111111',
-            emailAddress: dummyEmail,
-            businessAddress: 'Sector 62, Raipur, C.G.',
-            city: 'Raipur',
-            state: 'Chhattisgarh',
-            pincode: '201301',
-            gstNumber: '09AAACS1234A1Z5'
-          });
-
-          // Seed warm notification
-          dbActions.createNotification({
-            userId: user.id,
-            title: 'Welcome via GitHub!',
-            message: 'Your account has been successfully created and linked with your simulated GitHub profile.',
-            type: 'security'
-          });
-        }
-
-        token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
-        targetUser = user;
-      } else {
-        // REAL GitHub OAuth Code Exchange Flow
-        const host = req.get('host') || 'localhost:3000';
-        const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-        const origin = `${protocol}://${host}`;
-        const redirectUri = `${process.env.APP_URL || origin}/auth/callback`;
-
-        const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            client_id: process.env.GITHUB_CLIENT_ID,
-            client_secret: process.env.GITHUB_CLIENT_SECRET,
-            code,
-            redirect_uri: redirectUri
-          })
-        });
-
-        if (!tokenRes.ok) {
-          throw new Error('Failed to exchange code for GitHub token');
-        }
-
-        const tokenData = await tokenRes.json() as any;
-        const accessToken = tokenData.access_token;
-
-        if (!accessToken) {
-          throw new Error(tokenData.error_description || tokenData.error || 'Access token could not be fetched from GitHub.');
-        }
-
-        // Fetch User Profile attributes
-        const userRes = await fetch('https://api.github.com/user', {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'User-Agent': 'BSP-Suryatech-OAuth-Client'
-          }
-        });
-
-        if (!userRes.ok) {
-          throw new Error('Failed to retrieve GitHub user profile.');
-        }
-
-        const ghProfile = await userRes.json() as any;
-
-        // Fetch user emails to get the primary address if needed
-        let userEmail = ghProfile.email;
-        if (!userEmail) {
-          const emailRes = await fetch('https://api.github.com/user/emails', {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'User-Agent': 'BSP-Suryatech-OAuth-Client'
-            }
-          });
-          if (emailRes.ok) {
-            const emailsList = await emailRes.json() as any[];
-            const primaryEmail = emailsList.find(e => e.primary && e.verified) || emailsList.find(e => e.primary) || emailsList[0];
-            userEmail = primaryEmail ? primaryEmail.email : null;
-          }
-        }
-
-        if (!userEmail) {
-          userEmail = `github_${ghProfile.id}@bspsuryatech.in`;
-        }
-
-        const ghName = ghProfile.name || ghProfile.login || 'GitHub User';
-
-        let user = dbActions.getUserByEmail(userEmail);
-        if (!user) {
-          const generatedPass = crypto.randomBytes(16).toString('hex');
-          user = dbActions.createUser({
-            name: ghName,
-            email: userEmail,
-            role: 'customer'
-          }, generatedPass);
-
-          // Seed default profile params
-          dbActions.saveCustomerProfile({
-            userId: user.id,
-            clientName: ghName,
-            businessName: 'GitHub Connected Business',
-            contactNumber: '',
-            emailAddress: userEmail,
-            businessAddress: '',
-            city: '',
-            state: '',
-            pincode: ''
-          });
-
-          // Seed notification
-          dbActions.createNotification({
-            userId: user.id,
-            title: 'Welcome via GitHub!',
-            message: 'Your account has been successfully created and secured with your verified GitHub credentials.',
-            type: 'security'
-          });
-        }
-
-        token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
-        targetUser = user;
-      }
-    }
-
-      // Successful verification! Dispatch to parent window
-      res.send(`
-        <html>
-          <body>
-            <script>
-              if (window.opener) {
-                window.opener.postMessage({
-                  type: 'OAUTH_AUTH_SUCCESS',
-                  token: '${token}',
-                  user: ${JSON.stringify(targetUser)}
-                }, '*');
-                window.close();
-              } else {
-                // If opened directly (not in standard popup), save token to storage and redirect home
-                localStorage.setItem('bsp_token', '${token}');
-                localStorage.setItem('token', '${token}');
-                window.location.href = '/portal';
-              }
-            </script>
-            <p>Authentication Completed successfully. Closing window...</p>
-          </body>
-        </html>
-      `);
-    } catch (err: any) {
-      console.error('GitHub authentication catch block error:', err);
-      res.send(`
-        <html>
-          <body>
-            <script>
-              if (window.opener) {
-                window.opener.postMessage({
-                  type: 'OAUTH_AUTH_FAILURE',
-                  error: ${JSON.stringify(err.message || 'Verification Error')}
-                }, '*');
-                window.close();
-              } else {
-                window.location.href = '/portal';
-              }
-            </script>
-            <p>Verification Failed: ${err.message || 'Unknown verification issues.'}</p>
-          </body>
-        </html>
-      `);
-    }
+    `);
   });
-
   // Get current user profile
   app.get('/api/auth/me', authenticateToken, (req: any, res: any) => {
     const user = dbActions.getUserById(req.user.id);

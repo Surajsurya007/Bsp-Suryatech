@@ -160,6 +160,9 @@ export function isPublicPageRoute(urlPath: string): boolean {
   if (PUBLIC_ROUTES.includes(p)) {
     return true;
   }
+  if (p === '/portal' || p === '/auth/callback' || p.startsWith('/auth/callback')) {
+    return true;
+  }
   if (p.startsWith('/blog/')) {
     return true;
   }

@@ -1060,21 +1060,31 @@ export default function CustomerPortal({
     setAuthLoading(true);
     setSupabaseErrorMsg('');
     try {
-      console.log("CustomerPortal: Fetching Google OAuth URL...");
-      const res = await fetch('/api/auth/google/url');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
-          return;
+      console.log("CustomerPortal: Initializing Supabase Google OAuth...");
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account'
+          }
         }
+      });
+
+      if (error) {
+        throw error;
       }
 
-      // Fallback redirect if backend endpoint is unavailable
-      window.location.href = `${window.location.origin}/auth/callback?code=sim_google_auth_code_123&state=google_simulated`;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
     } catch (err: any) {
-      console.warn("CustomerPortal: Google OAuth initialization issue, redirecting to callback simulator:", err);
-      window.location.href = `${window.location.origin}/auth/callback?code=sim_google_auth_code_123&state=google_simulated`;
+      console.error("CustomerPortal: Google OAuth error:", err);
+      const errMsg = err.message || 'Failed to initialize Google login';
+      setSupabaseErrorMsg(errMsg);
+      onAddNotification(errMsg, 'error');
     } finally {
       setAuthLoading(false);
     }
@@ -1795,26 +1805,6 @@ export default function CustomerPortal({
                  >
                    {authLoading ? 'Signing In Workspace...' : 'Secure Sign In'}
                  </button>
-
-                 {loginEmail?.trim().toLowerCase() === 'surajsurya.koo7@gmail.com' && (
-                   <button
-                     type="button"
-                     onClick={() => {
-                       const demoUser = {
-                         id: 'demo-admin-id',
-                         email: 'surajsurya.koo7@gmail.com',
-                         name: 'Suraj Suryavanshi',
-                         role: 'super_admin'
-                       };
-                       onLoginSuccess('bsp_auth_token_simulated', demoUser);
-                       onAddNotification('Bypassed credentials. Signed in as Admin (surajsurya.koo7@gmail.com)!', 'success');
-                     }}
-                     className="w-full py-3 mt-4 bg-gradient-to-r from-red-600 to-red-550 hover:from-red-700 hover:to-red-650 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl transition-all duration-200 cursor-pointer block shadow-md border border-red-500/10 active:scale-[0.99] focus:outline-none"
-                     id="demo-admin-bypass-btn"
-                   >
-                     🔐 Local Admin Quick-Bypass Login
-                   </button>
-                 )}
 
                  <div className="relative flex py-2 items-center">
                    <div className="flex-grow border-t border-slate-200"></div>

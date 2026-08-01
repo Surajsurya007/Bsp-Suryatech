@@ -52,7 +52,7 @@ import SEOSchema from './components/SEOSchema';
 let isInitialAuthCheckDone = false;
 
 export default function App() {
-  const { isAdminMode } = useAdmin();
+  const { isAdminMode, setIsAdminMode } = useAdmin();
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [successPaymentState, setSuccessPaymentState] = useState<{
     orderId: string;
@@ -347,7 +347,11 @@ export default function App() {
               .then(({ token, user: localUser }) => {
                 console.log('App: Local server SSO sync completed successfully!');
                 localStorage.setItem('bsp_token', token);
+                localStorage.setItem('token', token);
                 
+                const userRole = localUser.role || (localUser.email?.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer');
+                const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
                 // Fetch the customer profile details from Supabase if they exist
                 supabase.from('customer_profiles').select('*').eq('user_id', data.user!.id).single()
                   .then(({ data: profile }) => {
@@ -355,10 +359,11 @@ export default function App() {
                       id: localUser.id,
                       email: localUser.email,
                       name: localUser.name,
-                      role: localUser.role || 'customer',
+                      role: userRole,
                       profile: profile || null
                     };
                     setUser(u);
+                    setIsAdminMode(isAdmin);
                     addNotification('Successfully logged in with Google SSO!', 'success');
                     handleNavigatePage('portal');
                   })
@@ -368,10 +373,11 @@ export default function App() {
                       id: localUser.id,
                       email: localUser.email,
                       name: localUser.name,
-                      role: localUser.role || 'customer',
+                      role: userRole,
                       profile: null
                     };
                     setUser(u);
+                    setIsAdminMode(isAdmin);
                     addNotification('Successfully logged in with Google SSO!', 'success');
                     handleNavigatePage('portal');
                   });
@@ -427,14 +433,46 @@ export default function App() {
             }
           }
 
+          let userRole = session.user.email?.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer';
+          let syncUserId = session.user.id;
+          let syncName = profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0];
+
+          try {
+            const syncRes = await fetch('/api/auth/supabase-sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: session.user.email, name: syncName })
+            });
+            if (syncRes.ok) {
+              const { token, user: localUser } = await syncRes.json();
+              if (localUser) {
+                userRole = localUser.role || userRole;
+                syncUserId = localUser.id || syncUserId;
+                syncName = localUser.name || syncName;
+              }
+              localStorage.setItem('bsp_token', token);
+              localStorage.setItem('token', token);
+            }
+          } catch (syncErr) {
+            console.warn("App: Sync error on checkSupabaseSession:", syncErr);
+          }
+
+          const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
           const u = {
-            id: session.user.id,
+            id: syncUserId,
             email: session.user.email,
-            name: profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
-            role: 'customer',
+            name: syncName,
+            role: userRole,
             profile: profile || null
           };
           setUser(u);
+          const viewParam = new URLSearchParams(window.location.search).get('view');
+          if (viewParam === 'admin' || isAdmin) {
+            setIsAdminMode(true);
+          } else {
+            setIsAdminMode(false);
+          }
           localStorage.setItem('bsp_token', session.access_token);
         } else {
           // Backward compatible token fallback
