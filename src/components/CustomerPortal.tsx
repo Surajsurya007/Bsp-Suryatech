@@ -5458,6 +5458,12 @@ export default function CustomerPortal({
                   page-break-after: avoid !important;
                   break-after: avoid !important;
                 }
+                #invoices-tax-receipt-printout-wrapper .print-two-col {
+                  display: grid !important;
+                  grid-template-columns: 1fr 1fr !important;
+                  width: 100% !important;
+                  gap: 1.5rem !important;
+                }
                 .no-print {
                   display: none !important;
                 }
@@ -5520,7 +5526,7 @@ export default function CustomerPortal({
               </div>
 
               {/* Header Company Information */}
-              <div className="grid grid-cols-2 gap-4 items-end z-10 pt-2">
+              <div className="grid grid-cols-2 gap-4 print-two-col items-end z-10 pt-2 w-full">
                 <div className="flex flex-col">
                   <span className="font-sans font-black text-2xl tracking-tight text-[#C00030] leading-none">
                     BSP SURYATECH
@@ -5539,8 +5545,8 @@ export default function CustomerPortal({
               {/* First Horizontal Separator */}
               <div className="border-t border-slate-300 my-1 z-10 w-full" />
 
-              {/* Invoiced To & Invoice Metadata Dual-Column Layout (Unconditional 2-Column for PDF Print & Preview) */}
-              <div className="grid grid-cols-2 gap-6 pt-1 z-10 w-full items-start">
+              {/* Invoiced To & Invoice Metadata Dual-Column Layout */}
+              <div className="grid grid-cols-2 gap-6 print-two-col pt-1 z-10 w-full items-start">
                 
                 {/* Left Column: Client Billing details */}
                 <div className="space-y-1 font-sans text-xs">

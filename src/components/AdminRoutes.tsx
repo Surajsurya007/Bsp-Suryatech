@@ -3898,7 +3898,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                             </div>
                           </div>
 
-                          <div className="border-b pb-4 grid grid-cols-2 gap-4 text-[11px] leading-relaxed">
+                          <div className="border-b pb-4 grid grid-cols-2 gap-4 text-[11px] leading-relaxed w-full items-start">
                             <div>
                               <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">INVOICED TO</span>
                               <strong className="text-slate-800 text-xs block mt-0.5">{selectedInvoice.client_name || selectedInvoice.clientName}</strong>
