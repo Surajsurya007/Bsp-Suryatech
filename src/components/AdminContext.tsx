@@ -240,14 +240,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       // Contact Messages sync directly from Supabase
       try {
+        console.log('[Admin Fetch Query] Executing SELECT * FROM contact_messages...');
         let supabaseContacts: any[] = [];
         try {
           const { data, error } = await supabase.from('contact_messages').select('*');
+          console.log('[Admin Fetch Query Result]', {
+            query: 'SELECT * FROM contact_messages',
+            number_of_records_returned: data ? data.length : 0,
+            error: error ? error.message : null,
+            records: data
+          });
           if (!error && data) {
             supabaseContacts = data;
           }
         } catch (sbEx) {
-          console.warn("Supabase contact message select error:", sbEx);
+          console.warn("[Admin Fetch Query Exception]:", sbEx);
         }
 
         // Merge Supabase + LocalStorage cached contacts
@@ -323,30 +330,47 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const handleNewContactMessage = async () => {
+      console.log('[Admin Sync Trigger] bsp_new_contact_message event caught.');
       try {
         const cached = localStorage.getItem('bsp_contact_messages');
+        let localList: any[] = [];
         if (cached) {
-          const list = JSON.parse(cached);
-          setAdminContactMessages(list);
+          try {
+            localList = JSON.parse(cached);
+            if (Array.isArray(localList)) {
+              setAdminContactMessages(localList);
+            }
+          } catch (e) {
+            console.warn('Failed to parse cached contact messages:', e);
+          }
         }
         
         // Re-fetch fresh messages directly from Supabase
         try {
+          console.log('[Admin Fetch Query] Re-fetching contact_messages on new message event...');
           const { data, error } = await supabase.from('contact_messages').select('*');
-          if (!error && data && Array.isArray(data)) {
-            setAdminContactMessages(prev => {
-              const mergedMap = new Map<string, any>();
+          console.log('[Admin Fetch Query Result]', {
+            query: 'SELECT * FROM contact_messages (Refetch)',
+            number_of_records_returned: data ? data.length : 0,
+            error: error ? error.message : null
+          });
+
+          setAdminContactMessages(prev => {
+            const mergedMap = new Map<string, any>();
+            if (data && Array.isArray(data)) {
               data.forEach((c: any) => { if (c && c.id) mergedMap.set(c.id, c); });
-              prev.forEach((c: any) => { if (c && c.id && !mergedMap.has(c.id)) mergedMap.set(c.id, c); });
-              const list = Array.from(mergedMap.values()).sort((a: any, b: any) => {
-                const dateA = new Date(a.created_at || `${a.submission_date}T${a.submission_time}`).getTime();
-                const dateB = new Date(b.created_at || `${b.submission_date}T${b.submission_time}`).getTime();
-                return dateB - dateA;
-              });
-              localStorage.setItem('bsp_contact_messages', JSON.stringify(list));
-              return list;
+            }
+            localList.forEach((c: any) => { if (c && c.id && !mergedMap.has(c.id)) mergedMap.set(c.id, c); });
+            prev.forEach((c: any) => { if (c && c.id && !mergedMap.has(c.id)) mergedMap.set(c.id, c); });
+
+            const list = Array.from(mergedMap.values()).sort((a: any, b: any) => {
+              const dateA = new Date(a.created_at || `${a.submission_date}T${a.submission_time}`).getTime();
+              const dateB = new Date(b.created_at || `${b.submission_date}T${b.submission_time}`).getTime();
+              return dateB - dateA;
             });
-          }
+            localStorage.setItem('bsp_contact_messages', JSON.stringify(list));
+            return list;
+          });
         } catch (fetchErr) {
           console.warn("Could not re-fetch contact messages on event trigger:", fetchErr);
         }
