@@ -3905,9 +3905,9 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                               <span className="text-slate-600 block">{selectedInvoice.businessName || selectedInvoice.business_name || (matchedCustomer && matchedCustomer.business_name) || "Individual POS Client"}</span>
                               <span className="text-slate-500 block truncate">{selectedInvoice.emailAddress || selectedInvoice.email_address || (matchedCustomer && matchedCustomer.email_address) || "client@suryatech.in"}</span>
                             </div>
-                            <div>
-                              <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block">INVOICE METADATA</span>
-                              <div className="mt-1 space-y-1 text-slate-600">
+                            <div className="text-right">
+                              <span className="text-[9px] text-slate-400 font-black tracking-wider uppercase block text-right">INVOICE METADATA</span>
+                              <div className="mt-1 space-y-1 text-slate-600 text-right">
                                 <div><strong className="text-slate-700">Invoice No:</strong> <span className="font-mono text-rose-700 font-bold">{selectedInvoice.invoice_number || selectedInvoice.invoiceNumber}</span></div>
                                 <div><strong className="text-slate-700">Dated:</strong> {new Date(selectedInvoice.created_at || selectedInvoice.createdAt).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'})}</div>
                                 <div><strong className="text-slate-700">Order ID:</strong> <span className="font-mono text-xs">{selectedInvoice.orderId || "BSP-ORD-SLOT"}</span></div>
@@ -3944,10 +3944,6 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                           {/* Grand Total Summary */}
                           <div className="flex justify-end pt-2">
                             <div className="w-64 space-y-1.5 font-mono text-[11px] text-slate-600">
-                              <div className="flex justify-between px-1">
-                                <span>Taxable Val (Base):</span>
-                                <span className="font-bold">₹{((selectedInvoice.amount || 3000) === 1 ? 0.82 : ((selectedInvoice.amount || 3000) / 1.18)).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                              </div>
                               <div className="flex justify-between text-xs font-black text-rose-800 bg-rose-50/50 p-2 rounded-lg border border-rose-100">
                                 <span>Gross Bill Total:</span>
                                 <span className="text-sm">₹{(selectedInvoice.amount || 3000).toLocaleString('en-IN')}</span>

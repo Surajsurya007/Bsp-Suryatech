@@ -5551,21 +5551,21 @@ export default function CustomerPortal({
                 </div>
 
                 {/* Right Column: Invoice Attributes */}
-                <div className="space-y-1 md:text-right font-sans text-xs text-slate-600">
-                  <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block md:text-right">INVOICE METADATA</span>
-                  <p className="font-medium leading-normal">
+                <div className="space-y-1 font-sans text-xs text-slate-600 text-right">
+                  <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block text-right">INVOICE METADATA</span>
+                  <p className="font-medium leading-normal text-right">
                     <span className="text-slate-450">Invoice No:</span>{' '}
                     <strong className="font-mono text-[#C00030] font-extrabold text-xs sm:text-[13px]">{selectedInvoice.invoiceNumber || 'INV-549951-97'}</strong>
                   </p>
-                  <p className="font-medium leading-normal">
+                  <p className="font-medium leading-normal text-right">
                     <span className="text-slate-450">Dated:</span>{' '}
                     <strong className="text-slate-800 font-bold">{formattedInvoiceDate || '21 Jun 2026'}</strong>
                   </p>
-                  <p className="font-medium leading-normal">
+                  <p className="font-medium leading-normal text-right">
                     <span className="text-slate-450">Order ID:</span>{' '}
                     <strong className="font-mono text-slate-800 font-bold">{selectedInvoice.orderId || 'BSP-ORD-SL0T'}</strong>
                   </p>
-                  <p className="font-medium leading-normal">
+                  <p className="font-medium leading-normal text-right">
                     <span className="text-slate-450">Place of Supply:</span>{' '}
                     <strong className="font-mono text-slate-800 font-bold">CG (Code 22)</strong>
                   </p>
@@ -5665,18 +5665,14 @@ export default function CustomerPortal({
 
                 {/* Right: Summary Box */}
                 <div className="md:col-span-6 flex flex-col items-end w-full space-y-3">
-                  <div className="w-full max-w-sm space-y-2 text-xs font-medium text-slate-500 font-sans border-b border-slate-200 pb-2">
-                    <div className="flex justify-between font-mono text-slate-600 px-1">
-                      <span>Taxable Val (Base):</span>
-                      <span className="font-bold text-slate-800">₹{baseRate}</span>
-                    </div>
-                    {discountAmount > 0 && (
+                  {discountAmount > 0 && (
+                    <div className="w-full max-w-sm space-y-2 text-xs font-medium text-slate-500 font-sans border-b border-slate-200 pb-2">
                       <div className="flex justify-between font-mono text-emerald-600 font-semibold px-1">
                         <span>Applied Coupon Discount:</span>
                         <span>- ₹{discountAmount}</span>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Solid pill-shaped banner highlight for Gross Bill Total */}
                   <div className="w-full max-w-sm bg-rose-50/70 border border-rose-100 rounded-2xl px-5 py-3.5 flex justify-between items-center shadow-xs">
