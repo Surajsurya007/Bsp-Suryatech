@@ -3925,7 +3925,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                                   <tr className="text-slate-500">
                                     <th className="p-2 pl-3">SOFTWARE DESCRIPTION</th>
                                     <th className="p-2 text-center">HSN</th>
-                                    <th className="p-2 pr-3 text-right">BASE RATE</th>
+                                    <th className="p-2 pr-3 text-right">RATE</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -3934,7 +3934,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                                       {selectedInvoice.product_name || selectedInvoice.productName || 'BSP Retail POS License'}
                                     </td>
                                     <td className="p-2.5 text-center text-slate-500">997331</td>
-                                    <td className="p-2.5 pr-3 text-right text-slate-900 font-bold">₹{((selectedInvoice.amount || 3000) === 1 ? 0.82 : ((selectedInvoice.amount || 3000) / 1.18)).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                    <td className="p-2.5 pr-3 text-right text-slate-900 font-bold">₹{(selectedInvoice.amount || 3000).toLocaleString('en-IN')}</td>
                                   </tr>
                                 </tbody>
                               </table>
@@ -3945,7 +3945,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                           <div className="flex justify-end pt-2">
                             <div className="w-64 space-y-1.5 font-mono text-[11px] text-slate-600">
                               <div className="flex justify-between text-xs font-black text-rose-800 bg-rose-50/50 p-2 rounded-lg border border-rose-100">
-                                <span>Gross Bill Total:</span>
+                                <span>TOTAL AMOUNT:</span>
                                 <span className="text-sm">₹{(selectedInvoice.amount || 3000).toLocaleString('en-IN')}</span>
                               </div>
                             </div>

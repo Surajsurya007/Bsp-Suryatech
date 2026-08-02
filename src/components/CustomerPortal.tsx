@@ -5595,7 +5595,7 @@ export default function CustomerPortal({
                       <tr className="border-b border-slate-600 text-[10px] font-bold text-slate-500 uppercase">
                         <th className="p-4 font-bold text-left tracking-wider">SOFTWARE DESCRIPTION</th>
                         <th className="p-4 font-bold text-center tracking-wider w-28">HSN</th>
-                        <th className="p-4 font-bold text-right tracking-wider w-36">BASE RATE</th>
+                        <th className="p-4 font-bold text-right tracking-wider w-36">RATE</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -5607,7 +5607,7 @@ export default function CustomerPortal({
                           997331
                         </td>
                         <td className="p-4 text-right font-mono text-slate-900 text-xs font-extrabold">
-                          ₹{baseRate}
+                          ₹{totalAmount}
                         </td>
                       </tr>
                     </tbody>
@@ -5680,10 +5680,10 @@ export default function CustomerPortal({
                     </div>
                   )}
 
-                  {/* Solid pill-shaped banner highlight for Gross Bill Total */}
+                  {/* Solid pill-shaped banner highlight for Total Amount */}
                   <div className="w-full max-w-sm bg-rose-50/70 border border-rose-100 rounded-2xl px-5 py-3.5 flex justify-between items-center shadow-xs">
                     <span className="text-xs font-bold text-[#C00030] tracking-wide uppercase">
-                      Gross Bill Total:
+                      TOTAL AMOUNT:
                     </span>
                     <span className="text-xl font-black font-mono text-[#C00030]">
                       ₹{totalAmount}
