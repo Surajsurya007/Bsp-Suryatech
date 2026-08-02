@@ -5520,7 +5520,7 @@ export default function CustomerPortal({
               </div>
 
               {/* Header Company Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end z-10 pt-2">
+              <div className="grid grid-cols-2 gap-4 items-end z-10 pt-2">
                 <div className="flex flex-col">
                   <span className="font-sans font-black text-2xl tracking-tight text-[#C00030] leading-none">
                     BSP SURYATECH
@@ -5529,7 +5529,7 @@ export default function CustomerPortal({
                     SOFTWARE SOLUTIONS
                   </span>
                 </div>
-                <div className="md:text-right font-sans text-xs text-slate-500 leading-normal font-medium">
+                <div className="text-right font-sans text-xs text-slate-500 leading-normal font-medium">
                   <p className="font-extrabold text-slate-800 text-sm leading-snug">BSP SURYATECH PRIVATE LTD</p>
                   <p>Shivanand Nagar, Raipur (CG) 492004</p>
                   <p className="font-mono mt-0.5 text-slate-500 font-semibold text-[11px]"><a href="mailto:Support@bspsuryatech.in" className="hover:underline">Support@bspsuryatech.in</a></p>
@@ -5539,8 +5539,8 @@ export default function CustomerPortal({
               {/* First Horizontal Separator */}
               <div className="border-t border-slate-300 my-1 z-10 w-full" />
 
-              {/* Invoiced To & Invoice Metadata Dual-Column Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1 z-10 w-full items-start">
+              {/* Invoiced To & Invoice Metadata Dual-Column Layout (Unconditional 2-Column for PDF Print & Preview) */}
+              <div className="grid grid-cols-2 gap-6 pt-1 z-10 w-full items-start">
                 
                 {/* Left Column: Client Billing details */}
                 <div className="space-y-1 font-sans text-xs">
