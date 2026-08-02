@@ -5406,6 +5406,7 @@ export default function CustomerPortal({
         }
 
         const totalAmount = selectedInvoice.amount || 0;
+        const baseRate = totalAmount === 1 ? '0.82' : (totalAmount / 1.18).toFixed(2);
         const originalProductPrice = 3000;
         const isDemoPrice = totalAmount < 100;
         const listPrice = isDemoPrice ? totalAmount : originalProductPrice;
@@ -5539,7 +5540,7 @@ export default function CustomerPortal({
               <div className="border-t border-slate-300 my-1 z-10 w-full" />
 
               {/* Invoiced To & Invoice Metadata Dual-Column Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1 z-10 w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1 z-10 w-full items-start">
                 
                 {/* Left Column: Client Billing details */}
                 <div className="space-y-1 font-sans text-xs">
@@ -5564,6 +5565,10 @@ export default function CustomerPortal({
                     <span className="text-slate-450">Order ID:</span>{' '}
                     <strong className="font-mono text-slate-800 font-bold">{selectedInvoice.orderId || 'BSP-ORD-SL0T'}</strong>
                   </p>
+                  <p className="font-medium leading-normal">
+                    <span className="text-slate-450">Place of Supply:</span>{' '}
+                    <strong className="font-mono text-slate-800 font-bold">CG (Code 22)</strong>
+                  </p>
                 </div>
 
               </div>
@@ -5574,7 +5579,7 @@ export default function CustomerPortal({
               {/* Purchased Products & Services Table Grid Container */}
               <div className="flex flex-col z-10 w-full">
                 <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-3 block">
-                  PURCHASED PRODUCTS & SERVICES
+                  TAXABLE SERVICE COMPONENTS
                 </span>
                 
                 {/* Bordered grid structure */}
@@ -5582,9 +5587,9 @@ export default function CustomerPortal({
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-600 text-[10px] font-bold text-slate-500 uppercase">
-                        <th className="p-4 font-bold text-left tracking-wider">Item Description</th>
-                        <th className="p-4 font-bold text-center tracking-wider w-24">Qty</th>
-                        <th className="p-4 font-bold text-right tracking-wider w-36">Price / Amount</th>
+                        <th className="p-4 font-bold text-left tracking-wider">SOFTWARE DESCRIPTION</th>
+                        <th className="p-4 font-bold text-center tracking-wider w-28">HSN</th>
+                        <th className="p-4 font-bold text-right tracking-wider w-36">BASE RATE</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -5593,10 +5598,10 @@ export default function CustomerPortal({
                           {selectedInvoice.productName || 'ERP Management Software'}
                         </td>
                         <td className="p-4 text-center font-mono text-slate-700 text-xs font-bold">
-                          1
+                          997331
                         </td>
                         <td className="p-4 text-right font-mono text-slate-900 text-xs font-extrabold">
-                          ₹{totalAmount}
+                          ₹{baseRate}
                         </td>
                       </tr>
                     </tbody>
@@ -5660,8 +5665,11 @@ export default function CustomerPortal({
 
                 {/* Right: Summary Box */}
                 <div className="md:col-span-6 flex flex-col items-end w-full space-y-3">
-                  <div className="w-full max-w-sm space-y-2 text-xs font-medium text-slate-500 font-sans">
-                    
+                  <div className="w-full max-w-sm space-y-2 text-xs font-medium text-slate-500 font-sans border-b border-slate-200 pb-2">
+                    <div className="flex justify-between font-mono text-slate-600 px-1">
+                      <span>Taxable Val (Base):</span>
+                      <span className="font-bold text-slate-800">₹{baseRate}</span>
+                    </div>
                     {discountAmount > 0 && (
                       <div className="flex justify-between font-mono text-emerald-600 font-semibold px-1">
                         <span>Applied Coupon Discount:</span>
@@ -5670,10 +5678,10 @@ export default function CustomerPortal({
                     )}
                   </div>
 
-                  {/* Solid pill-shaped banner highlight for Grand Total */}
+                  {/* Solid pill-shaped banner highlight for Gross Bill Total */}
                   <div className="w-full max-w-sm bg-rose-50/70 border border-rose-100 rounded-2xl px-5 py-3.5 flex justify-between items-center shadow-xs">
                     <span className="text-xs font-bold text-[#C00030] tracking-wide uppercase">
-                      Grand Total:
+                      Gross Bill Total:
                     </span>
                     <span className="text-xl font-black font-mono text-[#C00030]">
                       ₹{totalAmount}
