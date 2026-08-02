@@ -308,191 +308,139 @@ export default function App() {
     }
   }, [currentPage, selectedSoftwareId]);
 
+  // Helper to fetch customer profile and construct user session object
+  const handleUserSession = async (session: any) => {
+    if (!session || !session.user) return null;
+
+    try {
+      let { data: profile } = await supabase
+        .from('customer_profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single();
+
+      if (!profile) {
+        console.log("App: Profile not found for session, auto-creating/migrating...");
+        const meta = session.user.user_metadata || {};
+        const emailStr = session.user.email || '';
+        const newProfile = {
+          user_id: session.user.id,
+          client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
+          business_name: meta.business_name || null,
+          contact_number: meta.contact_number || null,
+          email_address: emailStr,
+          business_address: meta.business_address || null,
+          city: meta.city || null,
+          state: meta.state || null,
+          pincode: meta.pincode || null,
+          gst_number: meta.gst_number || null,
+          created_at: new Date().toISOString()
+        };
+        const { error: insErr } = await supabase
+          .from('customer_profiles')
+          .upsert(newProfile);
+        if (!insErr) {
+          profile = newProfile as any;
+        }
+      }
+
+      const emailStr = (session.user.email || '').toLowerCase();
+      const profileRole = (profile as any)?.role || session.user.user_metadata?.role;
+      const isSurajAdmin = emailStr === 'surajsurya.koo7@gmail.com';
+      const userRole: 'admin' | 'customer' | 'super_admin' = (profileRole === 'admin' || profileRole === 'super_admin' || isSurajAdmin)
+        ? (profileRole || 'admin')
+        : 'customer';
+      const isAdmin = (userRole as string) === 'admin' || (userRole as string) === 'super_admin';
+      const userName = profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || emailStr.split('@')[0];
+
+      const u = {
+        id: session.user.id,
+        email: session.user.email,
+        name: userName,
+        role: userRole,
+        profile: profile || null
+      };
+
+      setUser(u);
+      const viewParam = new URLSearchParams(window.location.search).get('view');
+      if (viewParam === 'admin' || isAdmin) {
+        setIsAdminMode(true);
+      } else {
+        setIsAdminMode(false);
+      }
+      if (session.access_token) {
+        localStorage.setItem('bsp_token', session.access_token);
+      }
+      return { user: u, isAdmin };
+    } catch (err) {
+      console.warn("App: Exception in handleUserSession:", err);
+      return null;
+    }
+  };
+
   // Load active session from local storage / Supabase on mount
   useEffect(() => {
     console.log("App Component: Initializing direct serverless session load...");
     
-    // 1) First check if there resides a login-redirect OAuth callback exchange code in the address bar
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code) {
-      console.log('App: Found Google SSO authentication redirect code. Exchanging for active session...');
-      supabase.auth.exchangeCodeForSession(code)
-        .then(({ data, error }) => {
+    const initAuth = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const hasHashToken = window.location.hash.includes('access_token');
+      const isCallbackPath = window.location.pathname.includes('/auth/callback');
+
+      // 1) Handle PKCE OAuth exchange code if present
+      if (code) {
+        console.log('App: Found OAuth authorization code in URL params. Exchanging for active session...');
+        try {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
-            console.error('App: Google SSO exchange code error:', error.message);
+            console.error('App: OAuth exchangeCodeForSession error:', error.message);
             addNotification('Google Authentication failed: ' + error.message, 'error');
-          } else {
-            console.log('App: Google SSO session completed successfully!', data);
-            
-            // Clean browser address strings and redirect smoothly to portal
+          } else if (data?.session) {
+            console.log('App: OAuth exchangeCodeForSession completed successfully!');
+            await handleUserSession(data.session);
+            addNotification('Successfully logged in with Google SSO!', 'success');
             window.history.replaceState({}, document.title, '/portal');
-            
-            if (data.user) {
-              const email = data.user.email || '';
-              const name = data.user.user_metadata?.full_name || data.user.user_metadata?.name || email.split('@')[0];
-              const userRole = email.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer';
-              const isAdmin = (userRole as string) === 'admin' || (userRole as string) === 'super_admin';
-
-              if (data.session?.access_token) {
-                localStorage.setItem('bsp_token', data.session.access_token);
-              }
-
-              // Fetch the customer profile details from Supabase directly
-              supabase.from('customer_profiles').select('*').eq('user_id', data.user.id).single()
-                .then(({ data: profile }) => {
-                  const u = {
-                    id: data.user.id,
-                    email: email,
-                    name: profile?.client_name || name,
-                    role: userRole,
-                    profile: profile || null
-                  };
-                  setUser(u);
-                  setIsAdminMode(isAdmin);
-                  addNotification('Successfully logged in with Google SSO!', 'success');
-                  handleNavigatePage('portal');
-                })
-                .catch(() => {
-                  const u = {
-                    id: data.user.id,
-                    email: email,
-                    name: name,
-                    role: userRole,
-                    profile: null
-                  };
-                  setUser(u);
-                  setIsAdminMode(isAdmin);
-                  addNotification('Successfully logged in with Google SSO!', 'success');
-                  handleNavigatePage('portal');
-                });
-            }
+            setCurrentPage('portal');
+            return;
           }
-        })
-        .catch(err => {
-          console.error('App: Exception in Google OAuth callback stream handler:', err);
-        });
-    }
+        } catch (err: any) {
+          console.error('App: Exception in OAuth code exchange:', err);
+        }
+      }
 
-    // 2) Load standard Supabase Session if it is logged active
-    const checkSupabaseSession = async () => {
+      // 2) Load or restore active Supabase Session (handles implicit hash fragment automatically)
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         if (session && session.user) {
-          console.log("App: Restored functional Supabase single sign-on user ID:", session.user.id);
-          
-          // Query customer Profile
-          let { data: profile } = await supabase
-            .from('customer_profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
-
-          if (!profile) {
-            console.log("App: Profile not found for restored session, auto-creating/migrating...");
-            const meta = session.user.user_metadata || {};
-            const emailStr = session.user.email || '';
-            const newProfile = {
-              user_id: session.user.id,
-              client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
-              business_name: meta.business_name || null,
-              contact_number: meta.contact_number || null,
-              email_address: emailStr,
-              business_address: meta.business_address || null,
-              city: meta.city || null,
-              state: meta.state || null,
-              pincode: meta.pincode || null,
-              gst_number: meta.gst_number || null,
-              created_at: new Date().toISOString()
-            };
-            const { error: insErr } = await supabase
-              .from('customer_profiles')
-              .upsert(newProfile);
-            if (!insErr) {
-              profile = newProfile as any;
-            }
-          }
-
-          const userRole = session.user.email?.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer';
-          const isAdmin = (userRole as string) === 'admin' || (userRole as string) === 'super_admin';
-          const userName = profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0];
-
-          const u = {
-            id: session.user.id,
-            email: session.user.email,
-            name: userName,
-            role: userRole,
-            profile: profile || null
-          };
-          setUser(u);
-          const viewParam = new URLSearchParams(window.location.search).get('view');
-          if (viewParam === 'admin' || isAdmin) {
-            setIsAdminMode(true);
-          } else {
-            setIsAdminMode(false);
-          }
-          if (session.access_token) {
-            localStorage.setItem('bsp_token', session.access_token);
+          console.log("App: Restored functional Supabase session for user:", session.user.email);
+          await handleUserSession(session);
+          if (hasHashToken || isCallbackPath) {
+            console.log("App: Cleaned OAuth redirect URL hash or callback route.");
+            window.history.replaceState({}, document.title, '/portal');
+            setCurrentPage('portal');
+            addNotification('Successfully logged in with Google SSO!', 'success');
           }
         }
-        isInitialAuthCheckDone = true;
       } catch (err) {
-        console.warn("App: Exception restoring serverless user session on mount:", err);
+        console.warn("App: Exception restoring user session on mount:", err);
       }
     };
 
-    checkSupabaseSession();
+    initAuth();
 
     // 3) Hook up a single onAuthStateChange listener to keep auth state perfectly reactive
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`App: Supabase Auth state changed event [${event}]`);
       if (session && session.user) {
-        try {
-          let { data: profile } = await supabase
-            .from('customer_profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
-
-          if (!profile) {
-            console.log("App: Profile not found on auth state change, auto-creating/migrating...");
-            const meta = session.user.user_metadata || {};
-            const emailStr = session.user.email || '';
-            const newProfile = {
-              user_id: session.user.id,
-              client_name: meta.full_name || meta.client_name || meta.name || emailStr.split('@')[0] || 'Customer',
-              business_name: meta.business_name || null,
-              contact_number: meta.contact_number || null,
-              email_address: emailStr,
-              business_address: meta.business_address || null,
-              city: meta.city || null,
-              state: meta.state || null,
-              pincode: meta.pincode || null,
-              gst_number: meta.gst_number || null,
-              created_at: new Date().toISOString()
-            };
-            const { error: insErr } = await supabase
-              .from('customer_profiles')
-              .upsert(newProfile);
-            if (!insErr) {
-              profile = newProfile as any;
-            }
-          }
-
-          const u = {
-            id: session.user.id,
-            email: session.user.email,
-            name: profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
-            role: 'customer',
-            profile: profile || null
-          };
-          setUser(u);
-          localStorage.setItem('bsp_token', session.access_token);
-        } catch (e) {
-          console.warn("App: Exception syncing user profile on auth change event:", e);
+        await handleUserSession(session);
+        if (event === 'SIGNED_IN' && (window.location.hash.includes('access_token') || window.location.pathname.includes('/auth/callback'))) {
+          window.history.replaceState({}, document.title, '/portal');
+          setCurrentPage('portal');
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        setIsAdminMode(false);
         localStorage.removeItem('bsp_token');
       }
     });
