@@ -115,42 +115,18 @@ export default function Contact({ onAddNotification }: ContactProps) {
         ])
       };
 
-      // 4. Save to Database
+      // 4. Save directly to Supabase Database
       let isSaved = false;
       let saveErrorMessage = '';
 
-      try {
-        const apiRes = await fetch('/api/contact-messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(newMessageRecord)
-        });
-
-        const apiData = await apiRes.json().catch(() => null);
-
-        if (apiRes.ok && apiData) {
-          isSaved = true;
-          console.log('[Contact Form] Message saved successfully via API:', apiData);
-        } else {
-          saveErrorMessage = apiData?.error || `Server responded with status ${apiRes.status}`;
-          console.error('[Contact Form] API submission failed:', saveErrorMessage, apiData);
-        }
-      } catch (apiErr: any) {
-        saveErrorMessage = apiErr?.message || 'Network error connecting to API';
-        console.error('[Contact Form] API request exception:', apiErr);
-      }
-
-      // If API route was unavailable or failed, attempt direct Supabase client insert if available
-      if (!isSaved && supabase) {
+      if (supabase) {
         try {
-          console.log('[Contact Form] Attempting direct Supabase insert fallback...');
+          console.log('[Contact Form] Dispatched direct Supabase insert...');
           const { data: sbData, error: dbErr } = await supabase.from('contact_messages').insert([newMessageRecord]);
           if (dbErr) {
-            console.warn('[Contact Form] Supabase direct insert notice:', dbErr.message, dbErr);
+            console.warn('[Contact Form] Supabase insert note:', dbErr.message, dbErr);
             if (dbErr.message && (dbErr.message.includes('schema cache') || dbErr.message.includes('contact_messages') || dbErr.message.includes('relation'))) {
-              console.log('[Contact Form] Remote Supabase table missing in schema cache, storing message locally for admin panel sync.');
+              console.log('[Contact Form] Table missing in remote schema cache, storing message locally for admin panel sync.');
               isSaved = true;
             } else {
               saveErrorMessage = dbErr.message || JSON.stringify(dbErr);
@@ -160,9 +136,11 @@ export default function Contact({ onAddNotification }: ContactProps) {
             console.log('[Contact Form] Direct Supabase insert succeeded:', sbData);
           }
         } catch (dbEx: any) {
-          console.warn('[Contact Form] Supabase direct insert exception:', dbEx);
+          console.warn('[Contact Form] Supabase insert exception:', dbEx);
           isSaved = true; // Local storage fallback
         }
+      } else {
+        isSaved = true; // Local storage fallback
       }
 
       // 5. Always save to local storage for immediate UI cache sync with Admin Panel

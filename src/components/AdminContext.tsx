@@ -238,23 +238,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: invoices, error: errI } = await supabase.from('invoices').select('*');
       if (!errI && invoices) setAdminInvoices(invoices);
 
-      // Contact Messages sync from backend API and Supabase
+      // Contact Messages sync directly from Supabase
       try {
-        let apiContacts: any[] = [];
-        try {
-          const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
-          const res = await fetch('/api/contact-messages', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (res.ok) {
-            apiContacts = await res.json();
-          }
-        } catch (apiErr) {
-          console.warn("Could not fetch contact messages from backend API:", apiErr);
-        }
-
         let supabaseContacts: any[] = [];
         try {
           const { data, error } = await supabase.from('contact_messages').select('*');
@@ -265,7 +250,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           console.warn("Supabase contact message select error:", sbEx);
         }
 
-        // Merge all sources: local backend API + Supabase + LocalStorage fallback
+        // Merge Supabase + LocalStorage cached contacts
         let mergedMap = new Map<string, any>();
         
         // 1. Add Supabase contacts
@@ -273,12 +258,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (c && c.id) mergedMap.set(c.id, c);
         });
 
-        // 2. Add API contacts
-        apiContacts.forEach((c: any) => {
-          if (c && c.id) mergedMap.set(c.id, c);
-        });
-
-        // 3. Add LocalStorage cached contacts
+        // 2. Add LocalStorage cached contacts
         try {
           const localCached = localStorage.getItem('bsp_contact_messages');
           if (localCached) {
@@ -350,30 +330,45 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setAdminContactMessages(list);
         }
         
-        // Re-fetch fresh messages from backend API / Supabase
+        // Re-fetch fresh messages directly from Supabase
         try {
-          const token = localStorage.getItem('bsp_token') || localStorage.getItem('token') || '';
-          const res = await fetch('/api/contact-messages', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (res.ok) {
-            const fresh = await res.json();
-            if (Array.isArray(fresh)) {
-              setAdminContactMessages(fresh);
-              localStorage.setItem('bsp_contact_messages', JSON.stringify(fresh));
-            }
+          const { data, error } = await supabase.from('contact_messages').select('*');
+          if (!error && data && Array.isArray(data)) {
+            setAdminContactMessages(prev => {
+              const mergedMap = new Map<string, any>();
+              data.forEach((c: any) => { if (c && c.id) mergedMap.set(c.id, c); });
+              prev.forEach((c: any) => { if (c && c.id && !mergedMap.has(c.id)) mergedMap.set(c.id, c); });
+              const list = Array.from(mergedMap.values()).sort((a: any, b: any) => {
+                const dateA = new Date(a.created_at || `${a.submission_date}T${a.submission_time}`).getTime();
+                const dateB = new Date(b.created_at || `${b.submission_date}T${b.submission_time}`).getTime();
+                return dateB - dateA;
+              });
+              localStorage.setItem('bsp_contact_messages', JSON.stringify(list));
+              return list;
+            });
           }
         } catch (fetchErr) {
           console.warn("Could not re-fetch contact messages on event trigger:", fetchErr);
         }
       } catch (e) {
-        console.warn("Error reading contact messages from localStorage inside AdminContext:", e);
+        console.warn("Error reading contact messages inside AdminContext:", e);
       }
     };
+
     window.addEventListener('bsp_new_contact_message', handleNewContactMessage);
-    return () => window.removeEventListener('bsp_new_contact_message', handleNewContactMessage);
+
+    // Setup Supabase Realtime subscription for contact_messages
+    const channel = supabase
+      .channel('public:contact_messages')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages' }, () => {
+        handleNewContactMessage();
+      })
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('bsp_new_contact_message', handleNewContactMessage);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (

@@ -329,63 +329,43 @@ export default function App() {
             window.history.replaceState({}, document.title, '/portal');
             
             if (data.user) {
-              const email = data.user.email;
-              const name = data.user.user_metadata?.full_name || data.user.user_metadata?.name || email?.split('@')[0];
-              
-              // 1.5) Secure synchronization of Supabase SSO profiles with Hostinger local relational tables
-              fetch('/api/auth/supabase-sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, name })
-              })
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error('Local server SSO synchronization failed.');
-                }
-                return res.json();
-              })
-              .then(({ token, user: localUser }) => {
-                console.log('App: Local server SSO sync completed successfully!');
-                localStorage.setItem('bsp_token', token);
-                localStorage.setItem('token', token);
-                
-                const userRole = localUser.role || (localUser.email?.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer');
-                const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+              const email = data.user.email || '';
+              const name = data.user.user_metadata?.full_name || data.user.user_metadata?.name || email.split('@')[0];
+              const userRole = email.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer';
+              const isAdmin = (userRole as string) === 'admin' || (userRole as string) === 'super_admin';
 
-                // Fetch the customer profile details from Supabase if they exist
-                supabase.from('customer_profiles').select('*').eq('user_id', data.user!.id).single()
-                  .then(({ data: profile }) => {
-                    const u = {
-                      id: localUser.id,
-                      email: localUser.email,
-                      name: localUser.name,
-                      role: userRole,
-                      profile: profile || null
-                    };
-                    setUser(u);
-                    setIsAdminMode(isAdmin);
-                    addNotification('Successfully logged in with Google SSO!', 'success');
-                    handleNavigatePage('portal');
-                  })
-                  .catch((profileErr) => {
-                    console.warn("App: Non-blocking profile lookup error on sync:", profileErr);
-                    const u = {
-                      id: localUser.id,
-                      email: localUser.email,
-                      name: localUser.name,
-                      role: userRole,
-                      profile: null
-                    };
-                    setUser(u);
-                    setIsAdminMode(isAdmin);
-                    addNotification('Successfully logged in with Google SSO!', 'success');
-                    handleNavigatePage('portal');
-                  });
-              })
-              .catch(syncErr => {
-                console.error('App: Error during local server SSO sync:', syncErr);
-                addNotification('SSO Synchronization failed: ' + syncErr.message, 'error');
-              });
+              if (data.session?.access_token) {
+                localStorage.setItem('bsp_token', data.session.access_token);
+              }
+
+              // Fetch the customer profile details from Supabase directly
+              supabase.from('customer_profiles').select('*').eq('user_id', data.user.id).single()
+                .then(({ data: profile }) => {
+                  const u = {
+                    id: data.user.id,
+                    email: email,
+                    name: profile?.client_name || name,
+                    role: userRole,
+                    profile: profile || null
+                  };
+                  setUser(u);
+                  setIsAdminMode(isAdmin);
+                  addNotification('Successfully logged in with Google SSO!', 'success');
+                  handleNavigatePage('portal');
+                })
+                .catch(() => {
+                  const u = {
+                    id: data.user.id,
+                    email: email,
+                    name: name,
+                    role: userRole,
+                    profile: null
+                  };
+                  setUser(u);
+                  setIsAdminMode(isAdmin);
+                  addNotification('Successfully logged in with Google SSO!', 'success');
+                  handleNavigatePage('portal');
+                });
             }
           }
         })
@@ -433,36 +413,14 @@ export default function App() {
             }
           }
 
-          let userRole = session.user.email?.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer';
-          let syncUserId = session.user.id;
-          let syncName = profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0];
-
-          try {
-            const syncRes = await fetch('/api/auth/supabase-sync', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: session.user.email, name: syncName })
-            });
-            if (syncRes.ok) {
-              const { token, user: localUser } = await syncRes.json();
-              if (localUser) {
-                userRole = localUser.role || userRole;
-                syncUserId = localUser.id || syncUserId;
-                syncName = localUser.name || syncName;
-              }
-              localStorage.setItem('bsp_token', token);
-              localStorage.setItem('token', token);
-            }
-          } catch (syncErr) {
-            console.warn("App: Sync error on checkSupabaseSession:", syncErr);
-          }
-
-          const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+          const userRole = session.user.email?.toLowerCase() === 'surajsurya.koo7@gmail.com' ? 'admin' : 'customer';
+          const isAdmin = (userRole as string) === 'admin' || (userRole as string) === 'super_admin';
+          const userName = profile?.client_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0];
 
           const u = {
-            id: syncUserId,
+            id: session.user.id,
             email: session.user.email,
-            name: syncName,
+            name: userName,
             role: userRole,
             profile: profile || null
           };
@@ -473,32 +431,8 @@ export default function App() {
           } else {
             setIsAdminMode(false);
           }
-          localStorage.setItem('bsp_token', session.access_token);
-        } else {
-          // Backward compatible token fallback
-          const localToken = localStorage.getItem('bsp_token');
-          if (localToken && !isInitialAuthCheckDone) {
-            console.log("App: Local storage authentication token found, restoring session...");
-            try {
-              const res = await fetch('/api/auth/me', {
-                headers: { 'Authorization': `Bearer ${localToken}` }
-              });
-              if (res.ok) {
-                const meUser = await res.json();
-                if (meUser && meUser.id) {
-                  setUser({
-                    id: meUser.id,
-                    email: meUser.email,
-                    name: meUser.name,
-                    role: meUser.role || 'customer',
-                    profile: meUser.profile || null
-                  });
-                  console.log("App: Successfully restored user session from local token:", meUser.email);
-                }
-              }
-            } catch (err) {
-              console.warn("App: Exception verifying local token on mount:", err);
-            }
+          if (session.access_token) {
+            localStorage.setItem('bsp_token', session.access_token);
           }
         }
         isInitialAuthCheckDone = true;
