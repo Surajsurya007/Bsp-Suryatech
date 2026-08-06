@@ -776,50 +776,51 @@ const seoSoftwareDataMap: Record<string, SEOSoftwareContent> = {
   },
   'sol-jewelry': {
     id: 'sol-jewelry',
-    name: 'Jewelry Shop ERP Software',
-    introduction: 'BSP Suryatech Jewelry Shop ERP Software is a premier management suite for gold, silver, and ornament showrooms. Specifically tailored to Indian jewelry accounting, it tracks gold/silver purity, ornament making charges, hallmark certifications (HUID), and old gold exchange values.',
-    whatIs: 'A specialized jewelry billing application designed to track gold/silver weights (carats, grams), calculate making/wastage charges, manage hallmark certification (HUID), and update daily metal rates.',
-    whoShouldUse: 'Jewelry showrooms, goldsmith workshops, silver ornament dealers, diamond boutiques, and jewelry wholesalers.',
+    name: 'Office Accounts Management System',
+    introduction: 'OAMS is a full-featured desktop and web-ready accounts management solution built for government offices, public sector units, and treasury departments to maintain budget allocations, bill processing, voucher registers, and cash book ledgers with statutory compliance.',
+    whatIs: 'A centralized treasury ledger and financial governance suite designed for government offices, public sector units, and treasury departments to maintain major/minor account heads, budget allocations, statutory deduction bill processing, voucher registers, and automated cash books.',
+    whoShouldUse: 'Government offices, public sector units (PSUs), treasury departments, Drawing & Disbursing Officers (DDOs), accounts officers, and financial compliance auditors.',
     benefits: [
-      'Calculate precise billing with ornament weights, stone values, making charges, and taxes.',
-      'Ensure absolute regulatory compliance with HUID hallmark barcoding and identification logs.',
-      'Manage second-hand old gold trade-ins and exchanges with dedicated balance ledgers.'
+      'Executive Dashboard with real-time financial analytics, active financial year overview, key treasury metrics (Total Sanctioned Budget, Total Gross Expenditure, Net Cash Disbursements, Total Deductions, Pending Bills), and head-wise expenditure progress tracking.',
+      'Master Configuration Management for Financial Years (e.g., FY-2026-27), Head of Accounts (Major/Minor classification codes like 01003-001 PAY, 06001-011 Travelling Expenses), and Nature of Bills (Pay Bills, TA Claims, Contingent Bills, Electricity Bills, Medical Claims).',
+      'Accounts & Treasury Ledger Registers including Budget Register (original, supplementary, re-appropriations), Bill Register with statutory deductions (GPF/CPF, IT, HRA, Water Rent, Festival Advance, HBA, GIS, LIC/PLI, MC Advance, Computer Advance), TV Number & Date assignment, Voucher Register, and Automated Treasury Cash Book Ledger.'
     ],
     advantages: [
-      'Updates daily gold, silver, and platinum rates across all billing terminals.',
-      'Tracks loose diamonds and gems stock values with accurate carat entries.',
-      'Supports high-security barcode label printing for fragile jewelry pieces.'
+      'Official Compliance Reporting & Export Suite providing Budget vs Expenditure reports, Bill Register reports, audit-compliant Cash Book statements, visual cost distribution analytics, and user working hours logs with PDF and Excel (.xlsx) exports.',
+      'Security, Administration & Audit Controls featuring 4-tier Role-Based Access Control (Super Admin, Administrator, Accounts Officer, Read-Only Auditor), live employee working hours timer, DDO office metadata configuration, JSON backups/restores, and atomic factory resets with post-cleanup verification audits.',
+      'Instant duplicate bill detection, head-wise expenditure tracking, and automated balance calculation preventing budget overruns.'
     ],
     disadvantages: [
-      'Requires daily configuration of active gold and silver metal rates.',
-      'Requires structured input parameters for purity configurations.'
+      'Requires initial master configuration for major/minor head classification codes.',
+      'Requires DDO and Office Metadata setup before generating official compliance reports.'
     ],
     modules: [
-      'Dynamic Metal Rate updates manager',
-      'Purity & Karat configuration logs',
-      'Making Charges & Waste calculations matrix',
-      'Hallmarked HUID Barcoding & labeling',
-      'Old Gold Exchange Ledger and trade-ins'
+      '1. 📊 Executive Dashboard & Real-Time Financial Analytics',
+      '2. 📁 Master Configuration Management (FY, Head of Accounts, Nature of Bills)',
+      '3. 💵 Accounts & Treasury Ledger Registers (Budget, Bill, Voucher, Cash Book)',
+      '4. 📈 Official Compliance Reporting & Export Suite (PDF & Excel Exports)',
+      '5. 🔐 Security, Administration & Audit Controls (RBAC, Session Timer, Atomic Reset)'
     ],
     industries: [
-      'Gold & Silver Showrooms',
-      'Diamond boutiques',
-      'Jewelry Wholesalers',
-      'Goldsmith Workshops',
-      'Fashion Ornament Retailers'
+      'Government Offices',
+      'Public Sector Units (PSUs)',
+      'Treasury Departments',
+      'DDO Accounts Branches',
+      'Autonomous Financial Bodies'
     ],
-    howItWorks: 'Set active metal rates, scan HUID barcoded ornaments to auto-fill weights, enter making charges, record old gold exchange values if applicable, and generate comprehensive tax invoices.',
-    comparison: 'Generic retail apps do not support weight-based metal calculations. BSP Suryatech integrates karat, hallmark, stone values, and making charges in a single desktop screen.',
+    howItWorks: 'Configure Financial Year and Account Heads, manage budget allocations in Budget Register, process bills with statutory deductions and assign TV details, auto-generate Cash Book entries, and export audit-ready PDF/Excel statements.',
+    comparison: 'Generic spreadsheets and basic accounting apps lack statutory deduction handling, TV date linkage, DDO metadata integration, and RBAC governance. OAMS delivers a complete, audit-ready government treasury suite.',
     bestPractices: [
-      'Configure the automatic HUID label printer to print secure labels for gold ornaments.',
-      'Keep your daily gold and silver rates updated on the home billing dashboard to prevent margins errors.'
+      'Setup your Office DDO Code, District, and State metadata in Office Settings prior to printing official compliance reports.',
+      'Regularly monitor the Head-Wise Expenditure Progress bars on the Executive Dashboard to prevent over-expenditure against sanctioned grants.'
     ],
-    suitableFor: 'Jewelry showroom owners and goldsmiths seeking precise metal calculations and customer billing.',
+    suitableFor: 'Treasury officers, Drawing & Disbursing Officers (DDOs), and government accounts departments seeking an audit-ready financial governance system.',
     faq: [
-      { q: 'Can I track old gold exchanges?', a: 'Yes, the old gold module records weight, purity, calculates exchange values, and deducts it from sales bills.' },
-      { q: 'Does it print jewelry tags?', a: 'Yes, design and print secure jewelry barcode tags displaying weight, karat, and HUID codes.' }
+      { q: 'Can OAMS handle statutory deductions like GPF, IT, HRA, and GIS?', a: 'Yes, OAMS includes comprehensive statutory deduction fields for GPF/CPF, Income Tax, House Rent, Water Rent, Festival Advance, HBA, GIS, LIC/PLI, MC Advance, and Computer Advance.' },
+      { q: 'Does it auto-generate the official Treasury Cash Book?', a: 'Yes, official Treasury Cash Book entries are automatically generated from paid bills matching TV details with itemized deductions and net amounts.' },
+      { q: 'Can financial statements be exported to PDF and Excel?', a: 'Yes, all compliance reports, cash book logs, voucher registers, and budget reports export seamlessly formatted with official headers into PDF and Excel (.xlsx) formats.' }
     ],
-    conclusion: 'Ensure absolute accuracy, track critical hallmark certifications, and manage jewelry accounting with BSP Suryatech.'
+    conclusion: 'Maintain strict statutory compliance, streamline treasury ledger management, and generate official financial audit reports with Office Accounts Management System (OAMS).'
   }
 };
 

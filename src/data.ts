@@ -368,15 +368,15 @@ export const defaultSolutions = [
   {
     id: 'sol-jewelry',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'Jewelry Shop ERP Software',
-    category: 'Billing Software',
-    subtitle: 'GOLD, SILVER & ORNAMENT ERP',
-    description: 'Advanced jewelry inventory software tracking gold/silver weight (carats, grams), stone weight, making charges, purity (hallmark), and dynamic daily metal rate updates.',
-    price: '₹3,000',
-    features: ['Dynamic Metal Rate updates', 'Purity & Karat configuration', 'Making Charges & Waste calculations', 'Hallmarked HUID Barcoding', 'Old Gold Exchange Ledger'],
-    icon: '💎',
-    badge: 'Billing',
-    badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/Jewelry-Shop-ERP-v3.0.0.zip'
+    title: 'Office Accounts Management System',
+    category: 'Accounts & ERP',
+    subtitle: 'CENTRALIZED TREASURY & FINANCIAL',
+    description: 'Full-featured accounts management solution built for government offices, PSUs, and treasury departments to maintain budget allocations, bill processing, voucher registers, and cash book ledgers with statutory compliance.',
+    price: '₹6,000',
+    features: ['Budget & Head-wise Ledger Registers', 'Statutory Deductions & TV Assignment', 'Automated Treasury Cash Book Ledger', 'Official PDF & Excel Compliance Reports', 'Role-Based Access Control & Working Hours Log'],
+    icon: '🏛️',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/Office-Accounts-Management-System-v3.0.0.zip'
   }
 ];

@@ -95,8 +95,8 @@ export default function App() {
     if (foundSolution) {
       productName = foundSolution.title;
       isSolution = true;
-      price = Number(foundSolution.price?.replace(/[^0-9]/g, '')) || 3000;
-      originalPrice = 6999;
+      price = Number(foundSolution.price?.replace(/[^0-9]/g, '')) || 6000;
+      originalPrice = foundSolution.originalPrice ? Number(foundSolution.originalPrice.replace(/[^0-9]/g, '')) : undefined;
       features = foundSolution.features || [];
       description = foundSolution.description || '';
       icon = foundSolution.icon || '🛍️';
@@ -1107,6 +1107,7 @@ export default function App() {
       else if (cleanId.includes('medical')) fallbackExeName = 'Medical-Store-ERP-v3.0.0';
       else if (cleanId.includes('grocery')) fallbackExeName = 'BSP-Gym-Management-v1.0.0';
       else if (cleanId.includes('supermarket')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
+      else if (cleanId.includes('jewelry') || cleanId.includes('office') || cleanId.includes('accounts') || cleanId.includes('oams')) fallbackExeName = 'Office-Accounts-Management-System-v3.0.0';
       else if (cleanId.includes('billing-pro') || cleanId.includes('retail') || cleanId.includes('pro')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
       else if (cleanId.includes('enterprise') || cleanId.includes('warehouse') || cleanId.includes('inventory') || cleanId.includes('erp')) fallbackExeName = 'Inventory-Management-ERP-v3.0.0';
       

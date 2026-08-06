@@ -82,5 +82,11 @@ export const softwareDownloads = {
     file: "https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.zip",
     version: "1.0.0",
     price: 3000
+  },
+  office_accounts: {
+    name: "Office Accounts Management System",
+    file: "https://bspsuryatech.in/downloads/Office-Accounts-Management-System-v3.0.0.zip",
+    version: "3.0.0",
+    price: 6000
   }
 };

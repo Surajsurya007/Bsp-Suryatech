@@ -72,6 +72,9 @@ import solRepairingScreenshot3 from '../assets/images/sol-repairing_screenshot3.
 import solSupermarketScreenshot1 from '../assets/images/sol-supermarket_screenshot1.png';
 import solSupermarketScreenshot2 from '../assets/images/sol-supermarket_screenshot2.png';
 import solSupermarketScreenshot3 from '../assets/images/sol-supermarket_screenshot3.png';
+import solOsmsScreenshot1 from '../assets/images/sol-osms_screenshot1.jpg';
+import solOsmsScreenshot2 from '../assets/images/sol-osms_screenshot2.jpg';
+import solOsmsScreenshot3 from '../assets/images/sol-osms_screenshot3.jpg';
 
 function getYouTubeEmbedUrl(url: string): string {
   if (!url) return 'https://www.youtube.com/embed/zy7emgkNgzA';
@@ -133,7 +136,7 @@ export default function SoftwareDetails({
           category: foundSolution.category,
           description: foundSolution.description,
           fullDescription: foundSolution.description,
-          price: Number(foundSolution.price.replace(/[^0-9]/g, '')) || 3000,
+          price: Number(foundSolution.price.replace(/[^0-9]/g, '')) || 6000,
           mappedPlanId: foundSolution.mappedPlanId,
           badge: foundSolution.badge,
           icon: foundSolution.icon,
@@ -144,7 +147,7 @@ export default function SoftwareDetails({
           systemRequirements: 'Operating System: Windows 7, 8, 10, or 11\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space',
           version: '1.0.0',
           size: '8.4 MB',
-          originalPrice: 6999
+          originalPrice: foundSolution.originalPrice ? Number(foundSolution.originalPrice.replace(/[^0-9]/g, '')) : undefined
         }
       : products[0];
 
@@ -267,7 +270,7 @@ export default function SoftwareDetails({
     if (titleLower.includes('hotel')) return 'sol-hotel';
     if (titleLower.includes('repairing') || titleLower.includes('electrical')) return 'sol-repairing';
     if (titleLower.includes('resort') || titleLower.includes('spa')) return 'sol-resort';
-    if (titleLower.includes('jewelry') || titleLower.includes('jewellery')) return 'sol-jewelry';
+    if (titleLower.includes('jewelry') || titleLower.includes('jewellery') || titleLower.includes('office accounts') || titleLower.includes('accounts management') || titleLower.includes('oams')) return 'sol-jewelry';
     if (titleLower.includes('gym') || titleLower.includes('fitness')) return 'sol-gym';
 
     return 'sol-retail';
@@ -368,9 +371,9 @@ export default function SoftwareDetails({
         ];
       case 'sol-jewelry':
         return [
-          bspMartTerminal,
-          warehouseErp,
-          retailPos
+          solOsmsScreenshot1,
+          solOsmsScreenshot2,
+          solOsmsScreenshot3
         ];
       default:
         return [
@@ -399,7 +402,7 @@ export default function SoftwareDetails({
 
   const getImageUrl = (idx: number) => {
     const prefix = getSpecificPrefix(product.id || '');
-    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket') {
+    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket' || prefix === 'sol-jewelry') {
       const categoryFallbacks = getCategoryFallbackImages(prefix);
       return categoryFallbacks[idx] || categoryFallbacks[0];
     }
@@ -416,7 +419,7 @@ export default function SoftwareDetails({
 
   const handleImageError = (idx: number) => {
     const prefix = getSpecificPrefix(product.id || '');
-    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket') return; // Bypasses candidates cycling for uploaded screenshots
+    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket' || prefix === 'sol-jewelry') return; // Bypasses candidates cycling for uploaded screenshots
     
     const candidates = getHostingerCandidates(idx);
     const currentTry = hostingerTryIndex[idx] || 0;
@@ -950,33 +953,14 @@ export default function SoftwareDetails({
                     </button>
                   </div>
                 ) : (
-                  <>
-                    <button 
-                      onClick={() => onInitiateSimulatedCheckout(product.id)}
-                      className="w-full py-4.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-xs uppercase shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border-0"
-                      id="checkout-fast-action-button"
-                    >
-                      <CreditCard className="w-4 h-4" />
-                      <span>BUY SECURE LIFETIME LICENSE KEY</span>
-                    </button>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <button 
-                        onClick={() => onTriggerTrialDownload(product.id, false)}
-                        className="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl text-[10.5px] uppercase transition flex items-center justify-center gap-1 cursor-pointer border"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>DOWNLOAD TRIAL</span>
-                      </button>
-                      <button 
-                        onClick={() => onTriggerTrialDownload(product.id, true)}
-                        className="py-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-extrabold rounded-xl text-[10.5px] uppercase transition flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>DOWNLOAD FULL (.EXE)</span>
-                      </button>
-                    </div>
-                  </>
+                  <button 
+                    onClick={() => onInitiateSimulatedCheckout(product.id)}
+                    className="w-full py-4.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-xs uppercase shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border-0"
+                    id="checkout-fast-action-button"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>BUY SECURE LIFETIME LICENSE KEY</span>
+                  </button>
                 )}
               </div>
 
@@ -1051,26 +1035,12 @@ export default function SoftwareDetails({
                     <button 
                       onClick={() => {
                         window.scrollTo(0, 0);
-                        onPageChange('home');
-                        // Quick dynamic page reset
-                        setTimeout(() => {
-                          const el = document.getElementById(`downloader-info-card-${relatedProd.id === 'prod-billing-pro' ? 'dl-1' : 'dl-2'}`);
-                          if (el) el.scrollIntoView({ behavior: 'smooth' });
-                        }, 100);
-                      }}
-                      className="px-3 py-1.5 border border-slate-200 text-slate-500 hover:text-slate-800 font-bold font-mono text-[10.5px] rounded-lg transition"
-                    >
-                      DOWNLOAD COPIES
-                    </button>
-                    <button 
-                      onClick={() => {
-                        window.scrollTo(0, 0);
                         // We will set selectedSoftwareId and re-render SoftwareDetails for this ID!
                         onPageChange(`software-details:${relatedProd.id}`);
                       }}
                       className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 font-bold font-sans text-[10.5px] text-white rounded-lg shadow-sm hover:shadow transition"
                     >
-                      VIEW DETAILS Page
+                      VIEW DETAILS
                     </button>
                   </div>
                 </div>
