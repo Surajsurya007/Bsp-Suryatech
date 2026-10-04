@@ -769,7 +769,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
     connected_plan: '',
     category: 'Billing Software',
     full_description: '',
-    system_requirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
+    system_requirements: 'Operating System: Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
     license_info: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
     demo_video_url: 'https://www.youtube.com/embed/zy7emgkNgzA',
     gallery: '',
@@ -1132,7 +1132,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
       connected_plan: '',
       category: 'Billing Software',
       full_description: '',
-      system_requirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
+      system_requirements: 'Operating System: Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
       license_info: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
       demo_video_url: 'https://www.youtube.com/embed/zy7emgkNgzA',
       gallery: '',
@@ -2898,7 +2898,7 @@ export const AdminRoutes: React.FC<AdminRoutesProps> = ({ onAddNotification }) =
                         <label className="font-bold text-slate-700 block">System Requirements spec</label>
                         <textarea
                           rows={2}
-                          placeholder="OS: Windows 7, 8, 10, 11 (32-bit & 64-bit)&#10;Memory: 2 GB RAM minimum"
+                          placeholder="OS: Windows 10, 11 (32-bit & 64-bit)&#10;Memory: 2 GB RAM minimum"
                           value={productForm.system_requirements}
                           onChange={(e) => setProductForm(p => ({ ...p, system_requirements: e.target.value }))}
                           className="w-full p-2 border bg-white rounded-lg focus:outline-none text-[11px]"

@@ -586,52 +586,52 @@ const seoSoftwareDataMap: Record<string, SEOSoftwareContent> = {
     ],
     conclusion: 'Bring high-level order to school administration, secure pupil profiles, and optimize fee collections with BSP Suryatech.'
   },
-  'sol-erp-warehouse': {
-    id: 'sol-erp-warehouse',
-    name: 'Enterprise ERP Suite',
-    introduction: 'Take absolute control of your supply chain and manufacturing operations with our Enterprise ERP Suite. Designed for industrial manufacturers, wholesalers, and multi-location logistics networks to manage bill of materials, raw materials, and batch lot tracking.',
-    whatIs: 'A comprehensive offline manufacturing and warehouse ERP designed to coordinate multi-warehouse transfers, raw materials receipts, bills of materials tracker, and batch-wise stock forecasting.',
-    whoShouldUse: 'Manufacturers, industrial factories, warehouse networks, wholesale distributors, and heavy supply chain operators.',
+  'sol-court': {
+    id: 'sol-court',
+    name: 'Court Case Management System',
+    introduction: 'A comprehensive offline legal practice and court case management software designed for advocates, law firms, and corporate legal departments to manage case diaries, cause lists, client briefs, and hearing dates with automated reminders.',
+    whatIs: 'A specialized desktop case tracking and legal practice management suite designed for lawyers, law firms, and legal counsels to manage court hearing histories, daily cause lists, case diaries, document archives, and client billing registers.',
+    whoShouldUse: 'Advocates, Senior Counsels, Law Firms, Legal Advisors, Corporate Legal Teams, and Judicial Clerks.',
     benefits: [
-      'Manage multiple warehouses, log internal stock transfers, and check real-time stock balances.',
-      'Track raw material costs and automate product manufacturing with multi-level Bill of Materials (BOM).',
-      'Minimize stockouts with automatic inventory forecasting and low-stock reorder warnings.'
+      'Organize complete case histories with real-time hearing dates, adjournment logs, and case stages.',
+      'Generate automated daily cause lists and client next hearing SMS/WhatsApp alerts.',
+      'Maintain client fee accounts, retainers, case documentation, and court fee ledgers effortlessly.'
     ],
     advantages: [
-      'Supports high-frequency bulk stock transfers with serial and batch-lot tracking.',
-      'Includes purchase order (PO) workflows and sales order (SO) trackers.',
-      'Streamlined interface optimizes administrative performance on standard computers.'
+      '100% offline security keeps sensitive client case files and confidential briefs strictly private on your computer.',
+      'High-speed search across thousands of case numbers, court benches, client names, and opposing counsels.',
+      'Includes advocate invoice generator, fee collection receipts, and expense disbursement trackers.'
     ],
     disadvantages: [
-      'Requires structured catalog configuration for multi-level bills of materials.',
-      'Desktop application requires physical presence in the warehouse network.'
+      'Designed primarily for desktop offline workstations for maximum client confidentiality.',
+      'Requires initial import or entry of active case numbers and court details.'
     ],
     modules: [
-      'Multi-Warehouse Transfer Logs & stock tracking',
-      'Manufacturing Bill of Materials (BOM) & raw material costs',
-      'Advanced Batch/Lot Control and material tracking',
-      'Purchase Order (PO) & Sales Order (SO) ledger',
-      'Reorder Stock Estimations & inventory forecasting'
+      'Case Diary & Daily Cause List Manager',
+      'Hearing History, Orders & Adjournment Logs',
+      'Client Billing, Retainers & Expense Receipts',
+      'Document Vault & Case Briefs Storage',
+      'Next Hearing Notification & Reminder Alerts'
     ],
     industries: [
-      'Manufacturing Factories',
-      'Wholesale Distributors',
-      'Heavy Supply Chain Operators',
-      'FMCG Warehouses',
-      'Construction Material Distributors'
+      'Advocates & Legal Practitioners',
+      'Law Firms & Chambers',
+      'Corporate Legal Departments',
+      'Bar Council Members & Notaries',
+      'Tribunal & Arbitration Practitioners'
     ],
-    howItWorks: 'Record raw material purchases, map product manufacturing steps via Bill of Materials, log internal warehouse stock transfers, and execute sales with batch-wise lot control.',
-    comparison: 'Standard warehouse ERPs are highly complex and expensive. BSP Suryatech Enterprise ERP provides robust manufacturing and warehouse tools without high subscription fees.',
+    howItWorks: 'Enter case details with court and bench numbers, upload case files and briefs, log daily hearing outcomes with next dates, and generate automated cause lists and client fee invoices.',
+    comparison: 'Unlike complex subscription-based legal portals that risk confidential case data in public clouds, BSP Suryatech Court Case Management System offers high-speed offline desktop performance with lifetime ownership.',
     bestPractices: [
-      'Run automatic inventory reconciliations weekly using our built-in stock adjustments module.',
-      'Monitor low-stock forecasting alerts to proactively manage supplier purchases.'
+      'Update case outcomes immediately after court hearings to keep the daily cause list accurate.',
+      'Use the automated backup feature to archive confidential case records regularly.'
     ],
-    suitableFor: 'Warehouse owners and factory managers seeking organized supply chain operations.',
+    suitableFor: 'Advocates, legal practitioners, and law firms looking to streamline case tracking and practice management.',
     faq: [
-      { q: 'Can we track raw material conversions?', a: 'Yes, the system automatically deducts raw materials and builds finished goods using your Bill of Materials.' },
-      { q: 'Does it support multi-user operations?', a: 'Yes, connect multiple terminals over a local network to sync warehouse and billing activities.' }
+      { q: 'Can I track cases across different courts and tribunals?', a: 'Yes, you can organize cases across District Courts, High Courts, Supreme Court, Consumer Forums, and specialized Tribunals.' },
+      { q: 'Is client case data completely confidential?', a: 'Yes, all case records, notes, and documents are stored locally on your PC without third-party cloud exposure.' }
     ],
-    conclusion: 'Optimize warehouse logistics, track raw materials, and scale industrial operations easily with BSP Suryatech Enterprise ERP.'
+    conclusion: 'Streamline your legal practice, eliminate missed court dates, and manage client case records efficiently with BSP Suryatech Court Case Management System.'
   },
   'sol-hotel': {
     id: 'sol-hotel',
@@ -774,8 +774,8 @@ const seoSoftwareDataMap: Record<string, SEOSoftwareContent> = {
     ],
     conclusion: 'Delight resort guests, optimize spa appointments, and simplify property management with BSP Suryatech Resort & Spa PMS.'
   },
-  'sol-jewelry': {
-    id: 'sol-jewelry',
+  'sol-accounts': {
+    id: 'sol-accounts',
     name: 'Office Accounts Management System',
     introduction: 'OAMS is a full-featured desktop and web-ready accounts management solution built for government offices, public sector units, and treasury departments to maintain budget allocations, bill processing, voucher registers, and cash book ledgers with statutory compliance.',
     whatIs: 'A centralized treasury ledger and financial governance suite designed for government offices, public sector units, and treasury departments to maintain major/minor account heads, budget allocations, statutory deduction bill processing, voucher registers, and automated cash books.',
@@ -821,6 +821,108 @@ const seoSoftwareDataMap: Record<string, SEOSoftwareContent> = {
       { q: 'Can financial statements be exported to PDF and Excel?', a: 'Yes, all compliance reports, cash book logs, voucher registers, and budget reports export seamlessly formatted with official headers into PDF and Excel (.xlsx) formats.' }
     ],
     conclusion: 'Maintain strict statutory compliance, streamline treasury ledger management, and generate official financial audit reports with Office Accounts Management System (OAMS).'
+  },
+  'sol-mobile-repair': {
+    id: 'sol-mobile-repair',
+    name: 'Mobile Repairing Manager',
+    introduction: 'BSP Suryatech Mobile Repairing Manager is an industry-grade desktop software engineered exclusively for smartphone repair service centers, technician labs, and gadget workshops across India. It streamlines customer intake with instant job sheet tokens, tracks IMEI & lock patterns, manages spare parts consumption, records technician commissions, and sends automated WhatsApp / SMS delivery alerts.',
+    whatIs: 'A specialized desktop operations and job-card ticketing system built to manage smartphone repair lifecycles, technician performance, spare parts inventory, and warranty billing 100% offline.',
+    whoShouldUse: 'Mobile repairing shops, multi-technician smartphone service centers, gadget refurbishment facilities, and franchise repair centers.',
+    benefits: [
+      'Generate instant professional job-sheet tokens with physical condition notes, pattern locks, and customer signatures.',
+      'Stop revenue leakage with real-time spare parts inventory deduction (screens, batteries, charging flexes, ICs).',
+      'Boost customer confidence with automated WhatsApp/SMS notifications for repair status updates.'
+    ],
+    advantages: [
+      'Comprehensive device intake recording brand, model, dual IMEIs, serial, passwords, and accessories received.',
+      'Stage-by-stage repair tracking (Received, Diagnosing, Waiting for Parts, Repaired, Ready for Delivery, Delivered).',
+      'Automated technician commission calculation based on repair difficulties and completed jobs.',
+      'Thermal receipt printing (58mm/80mm) with custom disclaimer terms and legal dead-phone conditions.'
+    ],
+    disadvantages: [
+      'Natively built for Windows desktop environments.',
+      'Requires entering initial spare parts stock into inventory for automated deduction.'
+    ],
+    modules: [
+      '1. 🎫 Job Sheet & Token Generator (Thermal / A4 with Pattern Lock Visualizer)',
+      '2. 🔬 Diagnostic & Stage Tracker (Received, Inspection, Parts Ordered, Fixed, QC Passed)',
+      '3. 📦 Spare Parts Stock & Barcode Inventory (Display combos, Batteries, Charging ICs)',
+      '4. 👨‍🔧 Technician Task Allocator & Commission Payroll Ledger',
+      '5. 📱 Automated WhatsApp & SMS Repair Status Messaging Gateway',
+      '6. 🧾 GST Tax Invoicing & Replaced Parts Warranty Tracker'
+    ],
+    industries: [
+      'Smartphone Repair Centers',
+      'Tablet & iPad Service Labs',
+      'Laptop & Chip-Level Repair Workshops',
+      'Refurbished Gadget Outlets',
+      'Multi-Brand Mobile Service Centers'
+    ],
+    howItWorks: 'Upon receiving a mobile device, quickly enter customer details, model, IMEI, issue symptoms, pattern lock, and estimated cost. Print the customer copy and technician barcode tag. The technician diagnoses the issue, logs spare parts used from inventory, and updates the stage to "Repaired". A WhatsApp alert notifies the customer for pickup and payment receipt generation.',
+    comparison: 'Standard generic billing apps lack device pattern lock records, IMEI intake logs, technician commission splitting, and stage progression. Mobile Repairing Manager delivers a purpose-built workshop workflow for smartphone repair technicians.',
+    bestPractices: [
+      'Always capture the customer device physical condition and take customer signature on the dead-phone disclaimer.',
+      'Label received devices with the printed job-card barcode sticker to prevent unit mix-ups during multi-device batch repairs.',
+      'Configure technician commission percentages so weekly labor payouts compute automatically.'
+    ],
+    suitableFor: 'Mobile repair technicians and service center owners looking to eliminate paper registers, track technician productivity, and provide top-notch service to customers.',
+    faq: [
+      { q: 'Can it record screen pattern locks and passcodes?', a: 'Yes! It includes an interactive 9-dot pattern grid visualizer and passcode entry field directly printed onto the job sheet.' },
+      { q: 'Does it support spare parts inventory management?', a: 'Yes, full stock ledger for screens, touch digitizers, batteries, camera modules, charging ports, and ICs with low-stock alerts.' },
+      { q: 'Can I send WhatsApp status updates to customers?', a: 'Yes, with one click you can send ready-made WhatsApp and SMS notifications informing customers that their phone is ready for pickup with the final bill amount.' }
+    ],
+    conclusion: 'Streamline your repair workflows, manage spare parts inventory, and delight customers with BSP Suryatech Mobile Repairing Manager.'
+  },
+  'sol-computer-repair': {
+    id: 'sol-computer-repair',
+    name: 'Computer Repairing Shop',
+    introduction: 'BSP Suryatech Computer Repairing Shop software is an all-in-one desktop service management platform developed specifically for computer hardware workshops, laptop chip-level repair labs, and IT service providers across India. Manage customer intake job cards, hardware serial numbering, motherboard diagnostics, spare parts stock, AMC contracts, and GST service invoices effortlessly.',
+    whatIs: 'A specialized desktop operations and job-card ticketing software tailored for computer and laptop hardware repair businesses, IT maintenance technicians, and computer peripherals workshops.',
+    whoShouldUse: 'Computer repair stores, laptop chip-level service centers, IT hardware dealers, AMC service providers, and multi-technician computer repair facilities.',
+    benefits: [
+      'Create professional PC and laptop job-sheets with customer diagnostics, accessory checklists, and estimated delivery dates.',
+      'Control spare parts consumption (motherboards, RAM, NVMe SSDs, laptop keyboards, cooling fans, SMPS) with real-time stock deductions.',
+      'Manage corporate and residential Annual Maintenance Contracts (AMC) with renewal alerts and service history logs.'
+    ],
+    advantages: [
+      'Comprehensive hardware intake logging brand, model, CPU, RAM, disk serial numbers, OS password, and adapter inclusion.',
+      'Visual repair workflow stages: Received, Diagnosis & Testing, Parts Awaited, Chip-level Soldering, Testing/QC, Ready for Delivery.',
+      'Automated technician commission ledger based on service job difficulty and completed repairs.',
+      'Supports thermal and A4/A5 tax billing formats with customized terms and dead-hardware liability disclaimers.'
+    ],
+    disadvantages: [
+      'Designed natively for Windows desktop workstations.',
+      'Requires entering initial hardware and spare parts inventory for automatic stock deductions.'
+    ],
+    modules: [
+      '1. 💻 PC & Laptop Job Sheet Generator (Hardware specs, Serial Number & Accessory Checklist)',
+      '2. 🔬 Chip-Level Diagnostic & Workflow Tracker (Received, Inspection, Rework, QC Passed)',
+      '3. 📦 IT Hardware & Component Inventory (RAM, SSD, Motherboard, SMPS, Screens, Keyboards)',
+      '4. 🤝 Annual Maintenance Contract (AMC) & Warranty Ledger',
+      '5. 👨‍💻 Technician Task Assignment & Labor Commission Calculator',
+      '6. 📱 Automated WhatsApp & SMS Delivery Notifications'
+    ],
+    industries: [
+      'Computer & Laptop Repair Centers',
+      'Laptop Motherboard Chip-Level Labs',
+      'IT Peripherals & Networking Service Providers',
+      'Refurbished Desktop & Workstation Assemblers',
+      'Hardware AMC Maintenance Companies'
+    ],
+    howItWorks: 'Log in customer computers or laptops by capturing model, serial number, OS credentials, issues, and included accessories (power adapter, bag, mouse). Print customer receipt and machine barcode sticker. Technicians inspect the system, log replaced parts from inventory, conduct final QC stress tests, and update stage to "Ready". Notify the customer instantly via WhatsApp to collect the device and settle payment.',
+    comparison: 'Traditional accounting and billing applications lack hardware serial tracking, accessory checklists, AMC scheduling, and technician commission sharing. Computer Repairing Shop is built from the ground up for computer hardware professionals.',
+    bestPractices: [
+      'Always log computer accessories (especially laptop power adapters and dongles) during intake to prevent customer disputes.',
+      'Barcode label all client laptops and internal spare parts for instant retrieval during busy workshop days.',
+      'Track AMC service schedules to proactively offer annual renewals before contracts expire.'
+    ],
+    suitableFor: 'Computer hardware technicians, laptop engineers, and IT service entrepreneurs looking to eliminate disorganized paper receipts and streamline workshop productivity.',
+    faq: [
+      { q: 'Can it track customer power adapters and accessories?', a: 'Yes! The job sheet includes dedicated checkboxes and text fields for adapters, power cords, laptop bags, mouse, and external drives.' },
+      { q: 'Does it manage Annual Maintenance Contracts (AMC)?', a: 'Yes, full AMC management with visit logs, covered devices, contract start/end dates, and automatic renewal reminders.' },
+      { q: 'Can I print barcode labels for incoming laptops?', a: 'Yes, generate and print standard sticky barcode stickers to attach to customer devices for instant scan lookup.' }
+    ],
+    conclusion: 'Organize your computer service workshop, manage hardware inventory, and deliver reliable customer service with BSP Suryatech Computer Repairing Shop.'
   }
 };
 

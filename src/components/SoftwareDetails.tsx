@@ -144,7 +144,7 @@ export default function SoftwareDetails({
           demoVideoUrl: foundSolution.demoVideoUrl,
           gallery: foundSolution.gallery,
           licenseInfo: foundSolution.subtitle || 'Lifetime Single-workstation Software Solution activation.',
-          systemRequirements: 'Operating System: Windows 7, 8, 10, or 11\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space',
+          systemRequirements: 'Operating System: Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space',
           version: '1.0.0',
           size: '8.4 MB',
           originalPrice: foundSolution.originalPrice ? Number(foundSolution.originalPrice.replace(/[^0-9]/g, '')) : undefined
@@ -203,7 +203,7 @@ export default function SoftwareDetails({
   // Set default properties if missing
   const categoryStr = product.category || 'POS Software Utilities';
   const fullDescStr = product.fullDescription || product.description;
-  const sysReqsStr = product.systemRequirements || 'Operating System: Windows 7, 8, 10, or 11\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free database folders space';
+  const sysReqsStr = product.systemRequirements || 'Operating System: Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free database folders space';
   const licenseInfoStr = product.licenseInfo || 'Standard Lifetime Desktop License Key with 1-Year free security patches and updates.';
   const demoUrlStr = getYouTubeEmbedUrl(product.demoVideoUrl || 'https://www.youtube.com/embed/zy7emgkNgzA');
 
@@ -240,21 +240,24 @@ export default function SoftwareDetails({
       return 'sol-diagnostic';
     } else if (id === 'sol-school' || id === 'prod-school-erp') {
       return 'sol-school';
+    } else if (id === 'sol-court' || id === 'sol-court-case' || id === 'prod-court-case') {
+      return 'sol-court';
     } else if (id === 'sol-erp-warehouse') {
       return 'sol-erp-warehouse';
     } else if (id === 'sol-hotel') {
       return 'sol-hotel';
-    } else if (id === 'sol-repairing') {
+    } else if (id === 'sol-repairing' || id === 'sol-mobile-repair' || id === 'sol-computer-repair') {
       return 'sol-repairing';
     } else if (id === 'sol-resort') {
       return 'sol-resort';
-    } else if (id === 'sol-jewelry') {
-      return 'sol-jewelry';
+    } else if (id === 'sol-accounts' || id === 'sol-jewelry') {
+      return 'sol-accounts';
     } else if (id === 'sol-gym') {
       return 'sol-gym';
     }
 
     const titleLower = (product?.name || '').toLowerCase();
+    if (titleLower.includes('mobile repairing') || titleLower.includes('computer repairing') || titleLower.includes('repairing manager') || titleLower.includes('repairing shop')) return 'sol-repairing';
     if (titleLower.includes('retail')) return 'sol-retail';
     if (titleLower.includes('supermarket')) return 'sol-supermarket';
     if (titleLower.includes('grocery')) return 'sol-grocery';
@@ -266,11 +269,12 @@ export default function SoftwareDetails({
     if (titleLower.includes('hospital') || titleLower.includes('clinic')) return 'sol-hospital';
     if (titleLower.includes('diagnostic') || titleLower.includes('lab') || titleLower.includes('pathology')) return 'sol-diagnostic';
     if (titleLower.includes('school')) return 'sol-school';
+    if (titleLower.includes('court') || titleLower.includes('case management') || titleLower.includes('advocate') || titleLower.includes('legal')) return 'sol-court';
     if (titleLower.includes('warehouse') || titleLower.includes('enterprise erp suite')) return 'sol-erp-warehouse';
     if (titleLower.includes('hotel')) return 'sol-hotel';
     if (titleLower.includes('repairing') || titleLower.includes('electrical')) return 'sol-repairing';
     if (titleLower.includes('resort') || titleLower.includes('spa')) return 'sol-resort';
-    if (titleLower.includes('jewelry') || titleLower.includes('jewellery') || titleLower.includes('office accounts') || titleLower.includes('accounts management') || titleLower.includes('oams')) return 'sol-jewelry';
+    if (titleLower.includes('jewelry') || titleLower.includes('jewellery') || titleLower.includes('office accounts') || titleLower.includes('accounts management') || titleLower.includes('oams')) return 'sol-accounts';
     if (titleLower.includes('gym') || titleLower.includes('fitness')) return 'sol-gym';
 
     return 'sol-retail';
@@ -369,6 +373,8 @@ export default function SoftwareDetails({
           solHotelScreenshot2,
           solHotelScreenshot3
         ];
+      case 'sol-accounts':
+      case 'sol-court':
       case 'sol-jewelry':
         return [
           solOsmsScreenshot1,
@@ -402,7 +408,7 @@ export default function SoftwareDetails({
 
   const getImageUrl = (idx: number) => {
     const prefix = getSpecificPrefix(product.id || '');
-    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket' || prefix === 'sol-jewelry') {
+    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket' || prefix === 'sol-jewelry' || prefix === 'sol-accounts' || prefix === 'sol-court') {
       const categoryFallbacks = getCategoryFallbackImages(prefix);
       return categoryFallbacks[idx] || categoryFallbacks[0];
     }
@@ -419,7 +425,7 @@ export default function SoftwareDetails({
 
   const handleImageError = (idx: number) => {
     const prefix = getSpecificPrefix(product.id || '');
-    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket' || prefix === 'sol-jewelry') return; // Bypasses candidates cycling for uploaded screenshots
+    if (prefix === 'sol-retail' || prefix === 'sol-mobile' || prefix === 'sol-restaurant' || prefix === 'sol-gym' || prefix === 'sol-hotel' || prefix === 'sol-resort' || prefix === 'sol-medical' || prefix === 'sol-repairing' || prefix === 'sol-supermarket' || prefix === 'sol-jewelry' || prefix === 'sol-accounts' || prefix === 'sol-court') return; // Bypasses candidates cycling for uploaded screenshots
     
     const candidates = getHostingerCandidates(idx);
     const currentTry = hostingerTryIndex[idx] || 0;

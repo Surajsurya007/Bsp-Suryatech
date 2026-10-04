@@ -2021,7 +2021,7 @@ If you are looking for an affordable, extremely fast, 100% offline-ready solutio
     metaDescription: 'Discover the best Office Accounts Management System (OAMS) in India for government offices, PSUs & treasuries. Automated budget heads, voucher processing & cash book registers.',
     tags: ['Office Accounts Management System', 'OAMS', 'Treasury Accounts Software', 'Government Accounts ERP', 'Budget Head Ledger', 'Voucher Register', 'Cash Book Ledger', 'Suryatech'],
     relatedSlugs: ['best-billing-software-india-pricing-comparison', 'medical-store-billing-software-batch-expiry-management'],
-    relatedProductSlug: 'sol-jewelry',
+    relatedProductSlug: 'sol-accounts',
     content: `
 # Best Office Accounts Management System in India (2026) – Centralized Treasury, Budget Allocation, Voucher Registers & Cash Books
 
@@ -2114,7 +2114,7 @@ BSP Suryatech OAMS was architected specifically to handle institutional accounts
 
 ## Technical Specifications & System Compatibility
 
-* **Operating System:** Windows 7, Windows 8, Windows 10, Windows 11 (32-bit & 64-bit)
+* **Operating System:** Windows 10, or Windows 11 (32-bit & 64-bit)
 * **Processor:** Intel / AMD Dual-Core 2.0 GHz or higher
 * **Memory (RAM):** 2 GB Minimum (4 GB Recommended)
 * **Storage:** 150 MB free disk space for application files

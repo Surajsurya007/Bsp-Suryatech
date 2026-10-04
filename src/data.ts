@@ -24,7 +24,7 @@ export const defaultProducts = [
     connectedPlan: 'prod-billing-pro',
     category: 'Retail & POS Billing',
     fullDescription: "BSP Suryatech Retail Billing Pro is India's leading lightweight, ultra-fast and incredibly reliable offline desktop-first billing and inventory software. It provides out-of-the-box barcode creation, wholesale/retail billing, automated tax calculation, and profit and loss registers. Designed specifically for retail shop owners to streamline billing lanes and keep inventory in perfect synchronization without requiring internet connectivity.",
-    systemRequirements: 'Operating System: Windows 7 SP1, Windows 8, Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
+    systemRequirements: 'Operating System: Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Core i3 or AMD equivalent processor (1.8Ghz minimum)\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space\nDatabase: Microsoft Access or SQLite local files (Fully self-contained, auto-configured)',
     licenseInfo: 'Single-Terminal Lifetime License Key with 1 Year of free security updates and service releases.',
     demoVideoUrl: 'https://www.youtube.com/embed/zy7emgkNgzA',
     gallery: [
@@ -310,18 +310,18 @@ export const defaultSolutions = [
     exeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.zip'
   },
   {
-    id: 'sol-erp-warehouse',
+    id: 'sol-court',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'Enterprise ERP Suite',
-    category: 'ERP Software',
-    subtitle: 'SUPPLY CHAIN SUITE',
-    description: 'Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.',
-    price: '₹3,000',
-    features: ['Multi-Warehouse Transfer Logs', 'Manufacturing Bill of Materials', 'Advanced Batch/Lot Control', 'PO & SO Purchase Orders', 'Reorder Stock Estimations'],
-    icon: '🏭',
-    badge: 'ERP',
+    title: 'Court Case Management System',
+    category: 'Legal & ERP Software',
+    subtitle: 'LEGAL & ADVOCATE CASE TRACKER',
+    description: 'Complete offline legal practice management. Court hearing diary, daily cause lists, case stage history, document vault, advocate billing, and hearing alerts.',
+    price: '₹60',
+    features: ['Case Diary & Daily Cause List', 'Hearing History & Adjournment Logs', 'Client Billing & Fee Receipts', 'Document Storage & Case Briefs', 'Next Hearing SMS/WhatsApp Alerts'],
+    icon: '⚖️',
+    badge: 'Legal',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.zip'
+    exeUrl: 'https://bspsuryatech.in/downloads/Court-Case-Management-System-v3.0.0.zip'
   },
   {
     id: 'sol-hotel',
@@ -366,7 +366,7 @@ export const defaultSolutions = [
     exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.zip'
   },
   {
-    id: 'sol-jewelry',
+    id: 'sol-accounts',
     mappedPlanId: 'prod-billing-enterprise',
     title: 'Office Accounts Management System',
     category: 'Accounts & ERP',
@@ -378,5 +378,47 @@ export const defaultSolutions = [
     badge: 'ERP',
     badgeColor: 'purple',
     exeUrl: 'https://bspsuryatech.in/downloads/Office-Accounts-Management-System-v3.0.0.zip'
+  },
+  {
+    id: 'sol-mobile-repair',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Mobile Repairing Manager',
+    category: 'Billing Software',
+    subtitle: 'MOBILE SERVICE CENTER ERP',
+    description: 'Comprehensive mobile and smartphone service center management software. Streamlines job-sheet token generation, IMEI and pattern lock logging, technician repair assignments, spare parts inventory tracking, repair cost estimation, and instant WhatsApp / SMS delivery alerts.',
+    price: '₹3,000',
+    originalPrice: '₹6,000',
+    features: [
+      'Job Sheet & Service Token Creation',
+      'IMEI, Model & Pattern Lock Logging',
+      'Technician Task & Commission Ledger',
+      'Spare Parts Inventory & Costing',
+      'WhatsApp & SMS Status Notifications'
+    ],
+    icon: '🔧',
+    badge: 'Repair',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/Mobile-Repairing-Manager-v1.0.0.zip'
+  },
+  {
+    id: 'sol-computer-repair',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Computer Repairing Shop',
+    category: 'Billing Software',
+    subtitle: 'PC & LAPTOP SERVICE WORKSHOP',
+    description: 'Comprehensive computer, laptop, and IT hardware service center software. Manages hardware repair job sheets, serial number tagging, motherboard chip-level repair logs, spare parts inventory (RAM, SSD, power supply), AMC contracts, technician commissions, and customer delivery invoices with WhatsApp/SMS notifications.',
+    price: '₹3,000',
+    originalPrice: '₹6,000',
+    features: [
+      'PC & Laptop Repair Job Sheets',
+      'Serial Number & Hardware Tagging',
+      'Spare Parts (RAM, SSD, GPU) Inventory',
+      'Annual Maintenance Contract (AMC) Tracker',
+      'WhatsApp & SMS Delivery Alerts'
+    ],
+    icon: '💻',
+    badge: 'Repair',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/Computer-Repairing-Shop-v1.0.0.zip'
   }
 ];

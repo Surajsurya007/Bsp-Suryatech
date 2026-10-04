@@ -16,7 +16,7 @@
     }
   ],
   "passwordHashes": {
-    "u-admin": "12d1bdf36a7bae442231ecefff87ae56:ea6a4db77842c131cc845c6f0f9fc3b0159f9920a871f914de6a274f02982faa6794da784eb550f03594286abe20430f150bcc2c7fd9b3278eb2bd2a82fef452",
+    "u-admin": "98d97e1c0d788559624dda1835b9f65b:f457b455d420b1f14e3cdc4fed03e4129f17bcd4d12564ad40abb41487737704ccb7a6af65b07a7892b97cdb82103329765410899670f3da173d06b397061907",
     "u-customer": "0c2b31fe71c25a06c0ff91d51b464521:0025080adb9a44588c56db382a20ee7acb46b0820c5bad60f281b28d8aefa3a359d221ce6b692885a09f9f6f61501b51eb93b2208b392b30185ff60d1c63b3d8"
   },
   "customerProfiles": [
@@ -564,6 +564,46 @@
       "per_user_limit": 1,
       "status": "active",
       "created_at": "2026-06-20T11:11:05.511Z"
+    },
+    {
+      "id": "cp-fb50",
+      "coupon_code": "FB50",
+      "coupon_name": "FB50 (50% Off)",
+      "description": "Special 50% discount coupon code for Facebook promotion.",
+      "discount_type": "percentage",
+      "discount_value": 50,
+      "min_order_value": 0,
+      "valid_from": "2026-01-01",
+      "valid_to": "2029-12-31",
+      "usage_limit": 9999,
+      "used_count": 0,
+      "per_user_limit": 999,
+      "status": "active",
+      "created_at": "2026-06-20T12:00:00Z",
+      "code": "FB50",
+      "discountPercent": 50,
+      "active": true,
+      "expiresBy": "2029-12-31"
+    },
+    {
+      "id": "cp-yt30",
+      "coupon_code": "YT30",
+      "coupon_name": "YT30 (30% Off)",
+      "description": "Special 30% discount coupon code for YouTube promotion.",
+      "discount_type": "percentage",
+      "discount_value": 30,
+      "min_order_value": 0,
+      "valid_from": "2026-01-01",
+      "valid_to": "2029-12-31",
+      "usage_limit": 9999,
+      "used_count": 0,
+      "per_user_limit": 999,
+      "status": "active",
+      "created_at": "2026-06-20T12:00:00Z",
+      "code": "YT30",
+      "discountPercent": 30,
+      "active": true,
+      "expiresBy": "2029-12-31"
     }
   ],
   "testimonials": [
@@ -1076,24 +1116,24 @@
       "exeUrl": "https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.Setup.exe"
     },
     {
-      "id": "sol-erp-warehouse",
+      "id": "sol-court",
       "mappedPlanId": "prod-billing-enterprise",
-      "title": "Enterprise ERP Suite",
-      "category": "ERP Software",
-      "subtitle": "SUPPLY CHAIN SUITE",
-      "price": "₹3,000",
-      "icon": "🏭",
-      "badge": "ERP",
+      "title": "Court Case Management System",
+      "category": "Legal & ERP Software",
+      "subtitle": "LEGAL & ADVOCATE CASE TRACKER",
+      "price": "₹60",
+      "icon": "⚖️",
+      "badge": "Legal",
       "badgeColor": "purple",
-      "description": "Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.",
+      "description": "Complete offline legal practice management. Court hearing diary, daily cause lists, case stage history, document vault, advocate billing, and hearing alerts.",
       "features": [
-        "Multi-Warehouse Transfer Logs",
-        "Manufacturing Bill of Materials",
-        "Advanced Batch/Lot Control",
-        "PO & SO Purchase Orders",
-        "Reorder Stock Estimations"
+        "Case Diary & Daily Cause List",
+        "Hearing History & Adjournment Logs",
+        "Client Billing & Fee Receipts",
+        "Document Storage & Case Briefs",
+        "Next Hearing SMS/WhatsApp Alerts"
       ],
-      "exeUrl": "https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.Setup.exe"
+      "exeUrl": "https://bspsuryatech.in/downloads/Court-Case-Management-System-v3.0.0.zip"
     },
     {
       "id": "sol-hotel",
@@ -1113,7 +1153,7 @@
       "icon": "🏨",
       "badge": "ERP",
       "badgeColor": "purple",
-      "exeUrl": "https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.Setup.exe"
+      "exeUrl": "https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.zip"
     },
     {
       "id": "sol-repairing",
@@ -1133,7 +1173,7 @@
       "icon": "🔌",
       "badge": "Billing",
       "badgeColor": "emerald",
-      "exeUrl": "https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.Setup.exe"
+      "exeUrl": "https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.zip"
     },
     {
       "id": "sol-resort",
@@ -1153,27 +1193,69 @@
       "icon": "🌴",
       "badge": "ERP",
       "badgeColor": "purple",
-      "exeUrl": "https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.Setup.exe"
+      "exeUrl": "https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.zip"
     },
     {
-      "id": "sol-jewelry",
+      "id": "sol-accounts",
       "mappedPlanId": "prod-billing-enterprise",
-      "title": "Jewelry Shop ERP Software",
-      "category": "Billing Software",
-      "subtitle": "GOLD, SILVER & ORNAMENT ERP",
-      "description": "Advanced jewelry inventory software tracking gold/silver weight (carats, grams), stone weight, making charges, purity (hallmark), and dynamic daily metal rate updates.",
-      "price": "₹3,000",
+      "title": "Office Accounts Management System",
+      "category": "Accounts & ERP",
+      "subtitle": "CENTRALIZED TREASURY & FINANCIAL",
+      "price": "₹6,000",
+      "icon": "🏛️",
+      "badge": "ERP",
+      "badgeColor": "purple",
+      "description": "Full-featured accounts management solution built for government offices, PSUs, and treasury departments to maintain budget allocations, bill processing, voucher registers, and cash book ledgers with statutory compliance.",
       "features": [
-        "Dynamic Metal Rate updates",
-        "Purity & Karat configuration",
-        "Making Charges & Waste calculations",
-        "Hallmarked HUID Barcoding",
-        "Old Gold Exchange Ledger"
+        "Budget & Head-wise Ledger Registers",
+        "Statutory Deductions & TV Assignment",
+        "Automated Treasury Cash Book Ledger",
+        "Official PDF & Excel Compliance Reports",
+        "Role-Based Access Control & Working Hours Log"
       ],
-      "icon": "💎",
-      "badge": "Billing",
+      "exeUrl": "https://bspsuryatech.in/downloads/Office-Accounts-Management-System-v3.0.0.zip"
+    },
+    {
+      "id": "sol-mobile-repair",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Mobile Repairing Manager",
+      "category": "Billing Software",
+      "subtitle": "MOBILE SERVICE CENTER ERP",
+      "price": "₹3,000",
+      "originalPrice": "₹6,000",
+      "icon": "🔧",
+      "badge": "Repair",
       "badgeColor": "emerald",
-      "exeUrl": "https://bspsuryatech.in/downloads/Jewelry-Shop-ERP-v3.0.0.zip"
+      "description": "Comprehensive mobile and smartphone service center management software. Streamlines job-sheet token generation, IMEI and pattern lock logging, technician repair assignments, spare parts inventory tracking, repair cost estimation, and instant WhatsApp / SMS delivery alerts.",
+      "features": [
+        "Job Sheet & Service Token Creation",
+        "IMEI, Model & Pattern Lock Logging",
+        "Technician Task & Commission Ledger",
+        "Spare Parts Inventory & Costing",
+        "WhatsApp & SMS Status Notifications"
+      ],
+      "exeUrl": "https://bspsuryatech.in/downloads/Mobile-Repairing-Manager-v1.0.0.zip"
+    },
+    {
+      "id": "sol-computer-repair",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Computer Repairing Shop",
+      "category": "Billing Software",
+      "subtitle": "PC & LAPTOP SERVICE WORKSHOP",
+      "price": "₹3,000",
+      "originalPrice": "₹6,000",
+      "icon": "💻",
+      "badge": "Repair",
+      "badgeColor": "emerald",
+      "description": "Comprehensive computer, laptop, and IT hardware service center software. Manages hardware repair job sheets, serial number tagging, motherboard chip-level repair logs, spare parts inventory (RAM, SSD, power supply), AMC contracts, technician commissions, and customer delivery invoices with WhatsApp/SMS notifications.",
+      "features": [
+        "PC & Laptop Repair Job Sheets",
+        "Serial Number & Hardware Tagging",
+        "Spare Parts (RAM, SSD, GPU) Inventory",
+        "Annual Maintenance Contract (AMC) Tracker",
+        "WhatsApp & SMS Delivery Alerts"
+      ],
+      "exeUrl": "https://bspsuryatech.in/downloads/Computer-Repairing-Shop-v1.0.0.zip"
     }
   ],
   "couponRedemptions": [],

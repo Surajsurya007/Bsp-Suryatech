@@ -281,6 +281,7 @@ export interface SoftwareSolution {
   subtitle: string;
   description: string;
   price: string;
+  originalPrice?: string;
   features: string[];
   icon: string;
   badge: string;

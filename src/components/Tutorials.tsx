@@ -199,8 +199,8 @@ export default function Tutorials({ videos }: { videos?: VideoTutorial[] }) {
                       className="p-4 border rounded-2xl cursor-pointer transition-all flex gap-4 text-left items-start border-slate-200 bg-white hover:border-slate-350 hover:bg-slate-50/30 group"
                       id={`video-playlist-item-${vI}`}
                     >
-                      <div className="p-2.5 bg-slate-50 rounded-xl text-red-600 shrink-0 border border-slate-100 transition-colors">
-                        <Youtube className="w-4.5 h-4.5" />
+                      <div className="p-2 bg-slate-50 rounded-xl text-red-600 shrink-0 border border-slate-100 transition-colors flex items-center justify-center">
+                        <Youtube className="w-7 h-7" />
                       </div>
                       <div className="space-y-1">
                         <span className="text-[10px] text-slate-450 font-mono font-bold block">{vid.duration}</span>

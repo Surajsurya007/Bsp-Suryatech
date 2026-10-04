@@ -963,18 +963,18 @@ export const defaultSolutions: SoftwareSolution[] = [
     exeUrl: 'https://bspsuryatech.in/downloads/School-Management-ERP-v3.0.0.Setup.exe'
   },
   {
-    id: 'sol-erp-warehouse',
+    id: 'sol-court',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'Enterprise ERP Suite',
-    category: 'ERP Software',
-    subtitle: 'SUPPLY CHAIN SUITE',
-    description: 'Comprehensive industrial operations platform. Multi-warehouse transfers, raw materials receipts, bills of materials tracker.',
-    price: '₹3,000',
-    features: ['Multi-Warehouse Transfer Logs', 'Manufacturing Bill of Materials', 'Advanced Batch/Lot Control', 'PO & SO Purchase Orders', 'Reorder Stock Estimations'],
-    icon: '🏭',
-    badge: 'ERP',
+    title: 'Court Case Management System',
+    category: 'Legal & ERP Software',
+    subtitle: 'LEGAL & ADVOCATE CASE TRACKER',
+    description: 'Complete offline legal practice management. Court hearing diary, daily cause lists, case stage history, document vault, advocate billing, and hearing alerts.',
+    price: '₹60',
+    features: ['Case Diary & Daily Cause List', 'Hearing History & Adjournment Logs', 'Client Billing & Fee Receipts', 'Document Storage & Case Briefs', 'Next Hearing SMS/WhatsApp Alerts'],
+    icon: '⚖️',
+    badge: 'Legal',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Inventory-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Court-Case-Management-System-v3.0.0.zip'
   },
   {
     id: 'sol-hotel',
@@ -988,7 +988,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🏨',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Hotel-Management-ERP-v3.0.0.zip'
   },
   {
     id: 'sol-repairing',
@@ -1002,7 +1002,7 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🔌',
     badge: 'Billing',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/BSP-SuryaTech-Flow-ERP-v1.0.0.zip'
   },
   {
     id: 'sol-resort',
@@ -1016,21 +1016,63 @@ export const defaultSolutions: SoftwareSolution[] = [
     icon: '🌴',
     badge: 'ERP',
     badgeColor: 'purple',
-    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.Setup.exe'
+    exeUrl: 'https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.zip'
   },
   {
-    id: 'sol-jewelry',
+    id: 'sol-accounts',
     mappedPlanId: 'prod-billing-enterprise',
-    title: 'Jewelry Shop ERP Software',
+    title: 'Office Accounts Management System',
+    category: 'Accounts & ERP',
+    subtitle: 'CENTRALIZED TREASURY & FINANCIAL',
+    description: 'Full-featured accounts management solution built for government offices, PSUs, and treasury departments to maintain budget allocations, bill processing, voucher registers, and cash book ledgers with statutory compliance.',
+    price: '₹6,000',
+    features: ['Budget & Head-wise Ledger Registers', 'Statutory Deductions & TV Assignment', 'Automated Treasury Cash Book Ledger', 'Official PDF & Excel Compliance Reports', 'Role-Based Access Control & Working Hours Log'],
+    icon: '🏛️',
+    badge: 'ERP',
+    badgeColor: 'purple',
+    exeUrl: 'https://bspsuryatech.in/downloads/Office-Accounts-Management-System-v3.0.0.zip'
+  },
+  {
+    id: 'sol-mobile-repair',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Mobile Repairing Manager',
     category: 'Billing Software',
-    subtitle: 'GOLD, SILVER & ORNAMENT ERP',
-    description: 'Advanced jewelry inventory software tracking gold/silver weight (carats, grams), stone weight, making charges, purity (hallmark), and dynamic daily metal rate updates.',
+    subtitle: 'MOBILE SERVICE CENTER ERP',
+    description: 'Comprehensive mobile and smartphone service center management software. Streamlines job-sheet token generation, IMEI and pattern lock logging, technician repair assignments, spare parts inventory tracking, repair cost estimation, and instant WhatsApp / SMS delivery alerts.',
     price: '₹3,000',
-    features: ['Dynamic Metal Rate updates', 'Purity & Karat configuration', 'Making Charges & Waste calculations', 'Hallmarked HUID Barcoding', 'Old Gold Exchange Ledger'],
-    icon: '💎',
-    badge: 'Billing',
+    originalPrice: '₹6,000',
+    features: [
+      'Job Sheet & Service Token Creation',
+      'IMEI, Model & Pattern Lock Logging',
+      'Technician Task & Commission Ledger',
+      'Spare Parts Inventory & Costing',
+      'WhatsApp & SMS Status Notifications'
+    ],
+    icon: '🔧',
+    badge: 'Repair',
     badgeColor: 'emerald',
-    exeUrl: 'https://bspsuryatech.in/downloads/Jewelry-Shop-ERP-v3.0.0.zip'
+    exeUrl: 'https://bspsuryatech.in/downloads/Mobile-Repairing-Manager-v1.0.0.zip'
+  },
+  {
+    id: 'sol-computer-repair',
+    mappedPlanId: 'prod-billing-pro',
+    title: 'Computer Repairing Shop',
+    category: 'Billing Software',
+    subtitle: 'PC & LAPTOP SERVICE WORKSHOP',
+    description: 'Comprehensive computer, laptop, and IT hardware service center software. Manages hardware repair job sheets, serial number tagging, motherboard chip-level repair logs, spare parts inventory (RAM, SSD, power supply), AMC contracts, technician commissions, and customer delivery invoices with WhatsApp/SMS notifications.',
+    price: '₹3,000',
+    originalPrice: '₹6,000',
+    features: [
+      'PC & Laptop Repair Job Sheets',
+      'Serial Number & Hardware Tagging',
+      'Spare Parts (RAM, SSD, GPU) Inventory',
+      'Annual Maintenance Contract (AMC) Tracker',
+      'WhatsApp & SMS Delivery Alerts'
+    ],
+    icon: '💻',
+    badge: 'Repair',
+    badgeColor: 'emerald',
+    exeUrl: 'https://bspsuryatech.in/downloads/Computer-Repairing-Shop-v1.0.0.zip'
   }
 ];
 

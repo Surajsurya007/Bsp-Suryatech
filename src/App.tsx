@@ -871,6 +871,7 @@ export default function App() {
             subtitle: item.subtitle || (item.is_featured ? 'FEATURED PRODUCT' : categoryVal.toUpperCase()),
             description: item.description || '',
             price: priceVal,
+            originalPrice: item.originalPrice || (item.original_price ? (typeof item.original_price === 'number' ? '₹' + item.original_price.toLocaleString() : (item.original_price.toString().startsWith('₹') ? item.original_price : '₹' + item.original_price.toString())) : undefined),
             features: featuresArr.length > 0 ? featuresArr : ['GST Invoicing', 'Barcode Scanner Support', 'Thermal Printer Setup', 'Offline Database State'],
             icon: item.icon || item.logo_url || '🛍️',
             badge: item.badge || (item.is_featured ? 'Featured' : (item.is_new_arrival ? 'New' : (item.is_bestseller ? 'Bestseller' : 'Active'))),
@@ -1108,6 +1109,7 @@ export default function App() {
       else if (cleanId.includes('grocery')) fallbackExeName = 'BSP-Gym-Management-v1.0.0';
       else if (cleanId.includes('supermarket')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
       else if (cleanId.includes('jewelry') || cleanId.includes('office') || cleanId.includes('accounts') || cleanId.includes('oams')) fallbackExeName = 'Office-Accounts-Management-System-v3.0.0';
+      else if (cleanId.includes('court') || cleanId.includes('case') || cleanId.includes('legal') || cleanId.includes('advocate')) fallbackExeName = 'Court-Case-Management-System-v3.0.0';
       else if (cleanId.includes('billing-pro') || cleanId.includes('retail') || cleanId.includes('pro')) fallbackExeName = 'BSP-Mart-POS-v1.0.0';
       else if (cleanId.includes('enterprise') || cleanId.includes('warehouse') || cleanId.includes('inventory') || cleanId.includes('erp')) fallbackExeName = 'Inventory-Management-ERP-v3.0.0';
       
