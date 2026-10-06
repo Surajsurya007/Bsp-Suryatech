@@ -307,7 +307,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'MOBILE SERVICE CENTER ERP',
     description: 'Comprehensive mobile and smartphone service center management software. Streamlines job-sheet token generation, IMEI and pattern lock logging, technician repair assignments, spare parts inventory tracking, repair cost estimation, and instant WhatsApp / SMS delivery alerts.',
-    price: '₹3,000',
+    price: '₹2,000',
     originalPrice: '₹6,000',
     features: [
       'Job Sheet & Service Token Creation',

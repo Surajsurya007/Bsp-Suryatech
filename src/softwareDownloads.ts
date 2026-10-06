@@ -93,7 +93,7 @@ export const softwareDownloads = {
     name: "Mobile Repairing Manager",
     file: "https://bspsuryatech.in/downloads/Mobile-Repairing-Manager-v1.0.0.zip",
     version: "1.0.0",
-    price: 3000
+    price: 2000
   },
   computer_repair_shop: {
     name: "Computer Repairing Shop",
