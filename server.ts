@@ -362,6 +362,19 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
     express.static(path.join(PROJECT_ROOT, 'downloads'))(req, res, next);
   });
 
+  // Support direct root downloads like /Mobile-Repairing-Manager-v1.0.0.zip
+  app.get('/:filename(*\\.zip)', (req, res, next) => {
+    const filename = req.params.filename;
+    const directPath = path.join(PROJECT_ROOT, 'downloads', filename);
+    const softwarePath = path.join(PROJECT_ROOT, 'downloads', 'software', filename);
+    if (fs.existsSync(directPath)) {
+      return res.sendFile(directPath);
+    } else if (fs.existsSync(softwarePath)) {
+      return res.sendFile(softwarePath);
+    }
+    return res.redirect(301, `/downloads/${filename}`);
+  });
+
   // Serve IndexNow Verification key dynamically
   app.get('/:key.txt', (req, res, next) => {
     const activeKey = getActiveIndexNowKey();

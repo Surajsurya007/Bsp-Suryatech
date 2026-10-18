@@ -1097,12 +1097,16 @@ export default function App() {
       // Construct standard fallback if no solution found
       let fallbackExeName = prodId;
       if (cleanId.includes('restaurant')) fallbackExeName = 'BSP-Restaurant-POS-KOT-v1.0.0';
+      else if (cleanId.includes('mobile-repair') || cleanId.includes('repair manager') || cleanId.includes('repairing manager')) fallbackExeName = 'Mobile-Repairing-Manager-v1.0.0';
+      else if (cleanId.includes('computer-repair') || cleanId.includes('computer repair')) fallbackExeName = 'Computer-Repairing-Shop-v1.0.0';
       else if (cleanId.includes('mobile')) fallbackExeName = 'Mobile-Shop-Billing-v1.0.0';
       else if (cleanId.includes('electronics')) fallbackExeName = 'Electronics-Shop-Billing-v1.0.0';
       else if (cleanId.includes('transport') || cleanId.includes('safewheels')) fallbackExeName = 'SafeWheels-ERP-v1.0.0';
       else if (cleanId.includes('hospital') || cleanId.includes('clinic')) fallbackExeName = 'Hospital-Management-ERP-v3.0.0';
       else if (cleanId.includes('diagnostic') || cleanId.includes('lab') || cleanId.includes('laboratory')) fallbackExeName = 'Laboratory-Management-ERP-v3.0.0';
       else if (cleanId.includes('school')) fallbackExeName = 'School-Management-ERP-v3.0.0';
+      else if (cleanId.includes('skill')) fallbackExeName = 'Skill-Management-Software-v1.0.0';
+      else if (cleanId.includes('garment') || cleanId.includes('clothing') || cleanId.includes('boutique')) fallbackExeName = 'Garment-Shop-ERP-POS-v1.0.0';
       else if (cleanId.includes('hotel')) fallbackExeName = 'Hotel-Management-ERP-v3.0.0';
       else if (cleanId.includes('repairing') || cleanId.includes('electrical')) fallbackExeName = 'BSP-SuryaTech-Flow-ERP-v1.0.0';
       else if (cleanId.includes('medical')) fallbackExeName = 'Medical-Store-ERP-v3.0.0';

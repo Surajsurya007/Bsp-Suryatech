@@ -147,6 +147,7 @@ export default function SoftwareDetails({
           systemRequirements: 'Operating System: Windows 10, or Windows 11 (32-bit & 64-bit)\nCPU: Intel Dual-Core 2.0 Ghz or equivalent\nMemory: 2 GB RAM minimum\nStorage: 100 MB free space',
           version: '1.0.0',
           size: '8.4 MB',
+          exeUrl: foundSolution.exeUrl,
           originalPrice: foundSolution.originalPrice ? Number(foundSolution.originalPrice.replace(/[^0-9]/g, '')) : undefined
         }
       : products[0];
@@ -254,6 +255,10 @@ export default function SoftwareDetails({
       return 'sol-accounts';
     } else if (id === 'sol-gym') {
       return 'sol-gym';
+    } else if (id === 'sol-skill-management') {
+      return 'sol-school';
+    } else if (id === 'sol-garment') {
+      return 'sol-retail';
     }
 
     const titleLower = (product?.name || '').toLowerCase();

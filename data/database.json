@@ -16,7 +16,7 @@
     }
   ],
   "passwordHashes": {
-    "u-admin": "64f6fdf95d3b8735fd7443643be0d280:b6f455f3175657a6003cd7dab2439d54d9b53d51010dc6116789b5d1e53135a999c14c93a53990fcffbd488c727ffbbff8710d44bacb34fe1dd06a32b7c72156",
+    "u-admin": "2fdda0d86f822dff612224820acd06b6:dd9c94842c867b4c9c4b2230855aa683f0a832f53d4fa38859ecc04d49d2586e394503b190aa2e15da454fa927d29d0bcef251dda48b6d2c4bb080c6863ce331",
     "u-customer": "0c2b31fe71c25a06c0ff91d51b464521:0025080adb9a44588c56db382a20ee7acb46b0820c5bad60f281b28d8aefa3a359d221ce6b692885a09f9f6f61501b51eb93b2208b392b30185ff60d1c63b3d8"
   },
   "customerProfiles": [
@@ -1121,7 +1121,7 @@
       "title": "Court Case Management System",
       "category": "Legal & ERP Software",
       "subtitle": "LEGAL & ADVOCATE CASE TRACKER",
-      "price": "₹60",
+      "price": "₹6,000",
       "icon": "⚖️",
       "badge": "Legal",
       "badgeColor": "purple",
@@ -1221,7 +1221,7 @@
       "title": "Mobile Repairing Manager",
       "category": "Billing Software",
       "subtitle": "MOBILE SERVICE CENTER ERP",
-      "price": "₹1,000",
+      "price": "₹3,000",
       "originalPrice": "₹6,000",
       "icon": "🔧",
       "badge": "Repair",
@@ -1256,6 +1256,46 @@
         "WhatsApp & SMS Delivery Alerts"
       ],
       "exeUrl": "https://bspsuryatech.in/downloads/Computer-Repairing-Shop-v1.0.0.zip"
+    },
+    {
+      "id": "sol-skill-management",
+      "mappedPlanId": "prod-billing-enterprise",
+      "title": "Skill Management Software",
+      "category": "School Software",
+      "subtitle": "PLAY SCHOOL, SPORTS & ACTIVITY ACADEMY",
+      "price": "₹6,000",
+      "icon": "🎯",
+      "badge": "Academy",
+      "badgeColor": "indigo",
+      "description": "A complete management solution for play schools, sports academies, and multi-activity training centres. Manage student records, multiple sports/activities, custom plans with daily pricing, multiple same-day plan enrollments, fee collections, biometric fingerprint attendance, coach rosters, and detailed performance & collection reports.",
+      "features": [
+        "Play School & Student Records Management",
+        "Multi-Sport, Activity & Daily Pricing Plans",
+        "Same-Day Multiple Plan Enrollments",
+        "Biometric Fingerprint Attendance Tracking",
+        "Coach, Batch & Fee Collection Reports"
+      ],
+      "exeUrl": "https://bspsuryatech.in/downloads/Skill-Management-Software-v1.0.0.zip"
+    },
+    {
+      "id": "sol-garment",
+      "mappedPlanId": "prod-billing-pro",
+      "title": "Garment Shop ERP & POS Billing",
+      "category": "Billing Software",
+      "subtitle": "CLOTHING STORES, BOUTIQUES & APPAREL",
+      "price": "₹3,000",
+      "icon": "👕",
+      "badge": "Apparel",
+      "badgeColor": "emerald",
+      "description": "A Windows-based solution for clothing stores, boutiques, readymade garment shops and fashion retailers. Features size & colour matrix (S/M/L/XL/XXL), barcode scanning, thermal printing, exchange & return workflows, supplier purchase ledgers, and offline local data storage.",
+      "features": [
+        "Size & Colour Matrix (S, M, L, XL, XXL)",
+        "High-Speed Barcode POS & Thermal Billing",
+        "Garment Returns, Exchanges & Size Replacements",
+        "Supplier Invoices, Purchase Ledgers & Dues",
+        "Customer Loyalty Points & 100% Offline Database"
+      ],
+      "exeUrl": "https://bspsuryatech.in/downloads/Garment-Shop-ERP-POS-v1.0.0.zip"
     }
   ],
   "couponRedemptions": [],

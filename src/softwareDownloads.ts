@@ -69,7 +69,7 @@ export const softwareDownloads = {
     name: "Court Case Management System",
     file: "https://bspsuryatech.in/downloads/Court-Case-Management-System-v3.0.0.zip",
     version: "3.0.0",
-    price: 60
+    price: 6000
   },
   hotel_erp: {
     name: "Hotel Management ERP",
@@ -89,15 +89,33 @@ export const softwareDownloads = {
     version: "3.0.0",
     price: 6000
   },
+  resort_spa: {
+    name: "Resort & Spa PMS",
+    file: "https://bspsuryatech.in/downloads/Resort-Spa-PMS-v3.0.0.zip",
+    version: "3.0.0",
+    price: 3000
+  },
   mobile_repair_manager: {
     name: "Mobile Repairing Manager",
     file: "https://bspsuryatech.in/downloads/Mobile-Repairing-Manager-v1.0.0.zip",
     version: "1.0.0",
-    price: 1000
+    price: 3000
   },
   computer_repair_shop: {
     name: "Computer Repairing Shop",
     file: "https://bspsuryatech.in/downloads/Computer-Repairing-Shop-v1.0.0.zip",
+    version: "1.0.0",
+    price: 3000
+  },
+  skill_management: {
+    name: "Skill Management Software",
+    file: "https://bspsuryatech.in/downloads/Skill-Management-Software-v1.0.0.zip",
+    version: "1.0.0",
+    price: 6000
+  },
+  garment_shop: {
+    name: "Garment Shop ERP & POS Billing",
+    file: "https://bspsuryatech.in/downloads/Garment-Shop-ERP-POS-v1.0.0.zip",
     version: "1.0.0",
     price: 3000
   }

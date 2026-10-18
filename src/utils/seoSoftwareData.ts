@@ -923,6 +923,108 @@ const seoSoftwareDataMap: Record<string, SEOSoftwareContent> = {
       { q: 'Can I print barcode labels for incoming laptops?', a: 'Yes, generate and print standard sticky barcode stickers to attach to customer devices for instant scan lookup.' }
     ],
     conclusion: 'Organize your computer service workshop, manage hardware inventory, and deliver reliable customer service with BSP Suryatech Computer Repairing Shop.'
+  },
+  'sol-skill-management': {
+    id: 'sol-skill-management',
+    name: 'Skill Management Software',
+    introduction: 'BSP Suryatech Skill Management Software is a comprehensive management and administrative platform tailored specifically for play schools, sports training academies, gymnastics and dance studios, martial arts centers, and multi-activity youth institutes. Seamlessly coordinate enrollments, daily plans, coach schedules, and biometric fingerprint attendance.',
+    whatIs: 'An all-in-one desktop ERP and student management system designed for play schools, sports clubs, swimming academies, music institutes, and multi-skill coaching centers.',
+    whoShouldUse: 'Play school directors, sports academy owners, martial arts dojos, dance academies, fitness & athletic centers, and multi-disciplinary activity clubs.',
+    benefits: [
+      'Manage student admissions, parent guardian emergency contacts, age groups, and academic / training dossiers in one centralized ledger.',
+      'Allow single students to purchase and enroll in multiple sports or skill plans on the exact same day with flexible daily or monthly pricing.',
+      'Track student and staff check-ins using integrated biometric fingerprint attendance hardware with automated late/absent notifications.'
+    ],
+    advantages: [
+      'Multi-activity architecture allows running gymnastics, swimming, martial arts, and preschool under one consolidated dashboard.',
+      'Flexible daily pricing plans alongside weekly, monthly, and seasonal coaching packages.',
+      'Automated coach commission and batch scheduling to prevent class timing collisions.',
+      'Integrated fee collection ledger with instant receipt generation, dues reminders, and WhatsApp collection summaries.'
+    ],
+    disadvantages: [
+      'Natively optimized for Windows desktop and laptop systems.',
+      'Biometric fingerprint scanner requires standard USB hardware driver setup.'
+    ],
+    modules: [
+      '1. 🎒 Student Records & Guardian Contact Vault (Batch, Age Category, Medical Notes)',
+      '2. ⚽ Multi-Activity & Sports Program Builder (Swimming, Football, Martial Arts, Arts)',
+      '3. 📅 Daily, Weekly & Seasonal Pricing Plan Configurator',
+      '4. 👆 Biometric USB Fingerprint Attendance & Schedule Tracker',
+      '5. ⏱️ Coach, Instructor & Batch Timetable Planner',
+      '6. 💳 Student Fee Billing, Outstanding Balance & Collection Reports'
+    ],
+    industries: [
+      'Play Schools & Preschool Kindergartens',
+      'Sports & Athletic Coaching Academies',
+      'Martial Arts, Karate & Taekwondo Dojos',
+      'Dance, Music & Creative Arts Institutes',
+      'Swimming, Gymnastics & Skating Clubs'
+    ],
+    howItWorks: 'Register students with their biometric fingerprint and personal details. Create training activities with daily or customized package pricing. Enroll students into one or several sports programs concurrently. Students authenticate via biometric fingerprint upon entering class, and coaches take attendance per batch. Generate instantaneous collection and batch performance reports at the end of every day.',
+    comparison: 'Traditional school software is rigid and unable to handle flexible multi-sport daily enrollments or multi-coach commissions. Skill Management Software provides the exact agility required for modern multi-activity academies.',
+    bestPractices: [
+      'Assign biometric fingerprint enrollment during initial admission to ensure contactless student tracking.',
+      'Configure batch size maximums to maintain optimal coach-to-student ratios.',
+      'Send WhatsApp fee reminder receipts to parents upon invoice generation.'
+    ],
+    suitableFor: 'Play school principals, sports coaches, and academy owners wanting to modernize student enrollment, fee collections, and biometric attendance.',
+    faq: [
+      { q: 'Can a student enroll in multiple sports on the same day?', a: 'Yes! The software allows a single student profile to enroll and purchase multiple activity plans concurrently on any given day.' },
+      { q: 'Does it support biometric fingerprint attendance?', a: 'Yes, it integrates directly with standard USB biometric fingerprint scanners for instant student and coach attendance logging.' },
+      { q: 'Can I configure daily pricing for trial or drop-in sessions?', a: 'Yes, you can create plans with daily pricing, per-session rates, monthly subscriptions, or seasonal packages.' }
+    ],
+    conclusion: 'Empower your academy, automate attendance, and streamline fee collections with BSP Suryatech Skill Management Software.'
+  },
+  'sol-garment': {
+    id: 'sol-garment',
+    name: 'Garment Shop ERP & POS Billing',
+    introduction: 'BSP Suryatech Garment Shop ERP & POS Billing is a complete Windows-based retail point of sale and inventory management software crafted specifically for clothing stores, boutiques, readymade garment shops, apparel showrooms, and fashion retailers. Manage sizes, colours, design variants, barcodes, exchanges, and GST invoices seamlessly.',
+    whatIs: 'A specialized desktop POS and inventory software designed for apparel and fashion retail businesses requiring size-colour matrix mapping, barcode printing, and easy return/exchange handling.',
+    whoShouldUse: 'Clothing stores, fashion boutiques, readymade garment showrooms, saree & ethnic wear shops, kidswear outlets, and apparel retailers.',
+    benefits: [
+      'Accelerate counter billing with barcode scanning, custom discounts, thermal receipt printing, and multiple payment methods.',
+      'Control complex garment stock using a multi-dimensional Size & Colour Matrix (S, M, L, XL, XXL) linked to master SKUs.',
+      'Handle size swaps, refunds, and garment exchanges smoothly with automated inventory balance adjustments.'
+    ],
+    advantages: [
+      'Matrix inventory tracking: Brand, Category, Design/Pattern, Size, and Colour variations.',
+      'Thermal receipt and A4/A5 GST invoice formats with exchange policy disclaimers and store branding.',
+      'Supplier purchase ledger tracking supplier invoices, payment history, and outstanding supplier balances.',
+      'Customer loyalty points, purchase history, and automated WhatsApp/SMS sale bills.'
+    ],
+    disadvantages: [
+      'Designed natively for Windows desktop workstations.',
+      'Requires initial barcode tag generation for brand-new unbranded apparel.'
+    ],
+    modules: [
+      '1. 🧾 High-Speed Barcode POS Checkout & Thermal Receipt Generator',
+      '2. 🎨 Multi-Attribute Garment Matrix (Size, Colour, Brand, SKU & Category)',
+      '3. 📦 Stock Management & Warehouse Transfer (Purchases, Returns, Adjustments)',
+      '4. 🔄 Garment Returns, Customer Exchanges & Size Replacements Desk',
+      '5. 👥 Customer Profiles, Loyalty Points & Credit Khata Ledger',
+      '6. 📊 GST Tax Reports, Sales Profit Estimator & Fast-Moving Style Insights'
+    ],
+    industries: [
+      'Readymade Garment Stores',
+      'Designer & Fashion Boutiques',
+      'Ethnic Wear & Saree Showrooms',
+      'Men\'s & Women\'s Western Apparel Shops',
+      'Kids & Baby Clothing Retailers'
+    ],
+    howItWorks: 'Tag apparel items with customized barcode labels encoding size and colour. Scan tags at the checkout counter for instant line-item addition. Apply customer discounts and accept split payments (Cash, UPI, Card). Hand over the printed thermal slip with exchange policy details. Track supplier purchase shipments and review daily sales and top-selling apparel styles with one click.',
+    comparison: 'Generic grocery POS systems do not accommodate size and colour matrices or apparel exchange policies. Garment Shop ERP & POS Billing provides specialized workflows designed specifically for textile and fashion merchandising.',
+    bestPractices: [
+      'Affix printed barcode price tags to apparel garment tags for rapid cashier scanning.',
+      'Establish a clear return/exchange window (e.g., 7 days) printed clearly on the receipt footer.',
+      'Reorder fast-selling sizes and color variants promptly using real-time low stock alerts.'
+    ],
+    suitableFor: 'Clothing boutique owners, readymade garment shop proprietors, and fashion showroom managers seeking fast counter billing and effortless garment stock control.',
+    faq: [
+      { q: 'Can it track different sizes and colours for the same design?', a: 'Yes! It includes a dedicated Size & Colour matrix where you can configure variants like S, M, L, XL, XXL, and multiple colourways under one master design code.' },
+      { q: 'Does it support garment returns and size exchanges?', a: 'Yes, a streamlined exchange module allows swapping sizes, issuing store credit, or adjusting bill differences in seconds.' },
+      { q: 'Can I print customized barcode stickers for clothes?', a: 'Yes, design and print standard barcode price tags with your shop name, style code, size, colour, MRP, and selling price.' }
+    ],
+    conclusion: 'Streamline your boutique and clothing showroom operations, prevent stock loss, and elevate customer shopping experience with BSP Suryatech Garment Shop ERP & POS Billing.'
   }
 };
 
