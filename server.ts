@@ -1437,6 +1437,23 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
 
     // 6. Applicability checks based on applicability field and keywords inside coupon names/descriptions
     if (coupon.coupon_code !== 'SURYA001' && coupon.code !== 'SURYA001') {
+      const couponCodeUpper = (coupon.coupon_code || coupon.code || '').toUpperCase();
+
+      // Check product-specific restrictions (e.g. BSP-DISC is only for Mobile Repairing Manager)
+      if (couponCodeUpper === 'BSP-DISC' || (coupon.applicable_products && coupon.applicable_products.length > 0)) {
+        if (!productId) {
+          return { valid: false, error: 'Coupon BSP-DISC is only applicable for Mobile Repairing Manager' };
+        }
+        const pIdLower = productId.toLowerCase();
+        const isMobileRepair = pIdLower === 'sol-mobile-repair' || 
+                               pIdLower.includes('mobile-repair') || 
+                               pIdLower.includes('mobile repair') || 
+                               pIdLower.includes('mobile_repair');
+        if (!isMobileRepair) {
+          return { valid: false, error: 'Coupon BSP-DISC is only applicable for Mobile Repairing Manager software' };
+        }
+      }
+
       if (productId) {
         const pIdLower = productId.toLowerCase();
         

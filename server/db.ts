@@ -614,6 +614,28 @@ const defaultCoupons: Coupon[] = [
     expiresBy: '2029-12-31'
   },
   {
+    id: 'cp-bsp-disc',
+    coupon_code: 'BSP-DISC',
+    coupon_name: 'BSP-DISC (Flat ₹2,000 Off)',
+    description: 'Flat ₹2,000 off coupon code applicable strictly on Mobile Repairing Manager software (valid for 2 uses).',
+    discount_type: 'fixed',
+    discount_value: 2000,
+    max_discount: 2000,
+    min_order_value: 1000,
+    valid_from: '2026-01-01',
+    valid_to: '2029-12-31',
+    usage_limit: 2,
+    used_count: 0,
+    per_user_limit: 2,
+    status: 'active',
+    created_at: '2026-10-21T00:00:00Z',
+    code: 'BSP-DISC',
+    discountPercent: 67,
+    active: true,
+    expiresBy: '2029-12-31',
+    applicable_products: ['sol-mobile-repair', 'mobile_repair_manager']
+  },
+  {
     id: 'cp-1',
     coupon_code: 'SURYA20',
     coupon_name: 'Surya Holiday Special',
@@ -1208,13 +1230,43 @@ export function initDB() {
           discountPercent: 30,
           active: true,
           expiresBy: '2029-12-31'
+        },
+        {
+          id: 'cp-bsp-disc',
+          coupon_code: 'BSP-DISC',
+          coupon_name: 'BSP-DISC (Flat ₹2,000 Off)',
+          description: 'Flat ₹2,000 off coupon code applicable strictly on Mobile Repairing Manager software (valid for 2 uses).',
+          discount_type: 'fixed' as const,
+          discount_value: 2000,
+          max_discount: 2000,
+          min_order_value: 1000,
+          valid_from: '2026-01-01',
+          valid_to: '2029-12-31',
+          usage_limit: 2,
+          used_count: 0,
+          per_user_limit: 2,
+          status: 'active' as const,
+          created_at: '2026-10-21T00:00:00Z',
+          code: 'BSP-DISC',
+          discountPercent: 67,
+          active: true,
+          expiresBy: '2029-12-31',
+          applicable_products: ['sol-mobile-repair', 'mobile_repair_manager']
         }
       ];
 
       for (const mand of mandatoryCoupons) {
-        const hasMand = db.coupons.some(c => (c.coupon_code || '').toUpperCase() === mand.coupon_code || (c.code || '').toUpperCase() === mand.coupon_code);
-        if (!hasMand) {
+        const idx = db.coupons.findIndex(c => (c.coupon_code || '').toUpperCase() === mand.coupon_code || (c.code || '').toUpperCase() === mand.coupon_code);
+        if (idx === -1) {
           db.coupons.push(mand);
+        } else {
+          // Sync mandatory values like discount_value
+          db.coupons[idx].discount_value = mand.discount_value;
+          db.coupons[idx].max_discount = mand.max_discount;
+          db.coupons[idx].coupon_name = mand.coupon_name;
+          db.coupons[idx].description = mand.description;
+          db.coupons[idx].discountPercent = mand.discountPercent;
+          db.coupons[idx].applicable_products = mand.applicable_products;
         }
       }
       if (!db.testimonials || db.testimonials.length === 0) db.testimonials = defaultTestimonials;

@@ -16,7 +16,7 @@
     }
   ],
   "passwordHashes": {
-    "u-admin": "2fdda0d86f822dff612224820acd06b6:dd9c94842c867b4c9c4b2230855aa683f0a832f53d4fa38859ecc04d49d2586e394503b190aa2e15da454fa927d29d0bcef251dda48b6d2c4bb080c6863ce331",
+    "u-admin": "0a4728b17c9201928f770658243105bc:48d5c228b638233af947bc8d712c04ee6116cd7509b081b7f2f537b7114e4ae02af26e62e97f79041c7b70a189b7f80d5b55ff5b693964297ccadc52dd301a44",
     "u-customer": "0c2b31fe71c25a06c0ff91d51b464521:0025080adb9a44588c56db382a20ee7acb46b0820c5bad60f281b28d8aefa3a359d221ce6b692885a09f9f6f61501b51eb93b2208b392b30185ff60d1c63b3d8"
   },
   "customerProfiles": [
@@ -501,6 +501,31 @@
       "per_user_limit": 999,
       "status": "active",
       "created_at": "2026-06-20T12:00:00Z"
+    },
+    {
+      "code": "BSP-DISC",
+      "discountPercent": 67,
+      "active": true,
+      "expiresBy": "2029-12-31",
+      "id": "cp-bsp-disc",
+      "coupon_code": "BSP-DISC",
+      "coupon_name": "BSP-DISC (Flat ₹2,000 Off)",
+      "description": "Flat ₹2,000 off coupon code applicable strictly on Mobile Repairing Manager software (valid for 2 uses).",
+      "discount_type": "fixed",
+      "discount_value": 2000,
+      "max_discount": 2000,
+      "min_order_value": 1000,
+      "valid_from": "2026-01-01",
+      "valid_to": "2029-12-31",
+      "usage_limit": 2,
+      "used_count": 0,
+      "per_user_limit": 2,
+      "status": "active",
+      "created_at": "2026-10-21T00:00:00Z",
+      "applicable_products": [
+        "sol-mobile-repair",
+        "mobile_repair_manager"
+      ]
     },
     {
       "code": "SURYA20",

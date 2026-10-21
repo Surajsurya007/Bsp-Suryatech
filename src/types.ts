@@ -214,6 +214,7 @@ export interface Coupon {
   active?: boolean;
   expiresBy?: string;
   applicability?: string;
+  applicable_products?: string[];
 }
 
 export interface CouponRedemption {
