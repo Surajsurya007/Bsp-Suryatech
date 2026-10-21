@@ -16,7 +16,7 @@
     }
   ],
   "passwordHashes": {
-    "u-admin": "0a4728b17c9201928f770658243105bc:48d5c228b638233af947bc8d712c04ee6116cd7509b081b7f2f537b7114e4ae02af26e62e97f79041c7b70a189b7f80d5b55ff5b693964297ccadc52dd301a44",
+    "u-admin": "5e19af92202c0b5d8382bb458a536203:2daa414d5a2c702f26ba56ab01542dca550077161150fe1f7d2e2c27c26e34c09bf3b10e743c847629eedae7fb4c87f37c8d4e9c122b0127fb73a1228950036b",
     "u-customer": "0c2b31fe71c25a06c0ff91d51b464521:0025080adb9a44588c56db382a20ee7acb46b0820c5bad60f281b28d8aefa3a359d221ce6b692885a09f9f6f61501b51eb93b2208b392b30185ff60d1c63b3d8"
   },
   "customerProfiles": [
@@ -1246,7 +1246,7 @@
       "title": "Mobile Repairing Manager",
       "category": "Billing Software",
       "subtitle": "MOBILE SERVICE CENTER ERP",
-      "price": "₹3,000",
+      "price": "₹1,000",
       "originalPrice": "₹6,000",
       "icon": "🔧",
       "badge": "Repair",

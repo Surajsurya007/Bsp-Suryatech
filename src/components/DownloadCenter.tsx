@@ -307,7 +307,7 @@ const solutions: SoftwareSolution[] = [
     category: 'Billing Software',
     subtitle: 'MOBILE SERVICE CENTER ERP',
     description: 'Comprehensive mobile and smartphone service center management software. Streamlines job-sheet token generation, IMEI and pattern lock logging, technician repair assignments, spare parts inventory tracking, repair cost estimation, and instant WhatsApp / SMS delivery alerts.',
-    price: '₹3,000',
+    price: '₹1,000',
     originalPrice: '₹6,000',
     features: [
       'Job Sheet & Service Token Creation',
@@ -627,13 +627,6 @@ export default function DownloadCenter({
                         </span>
                       </div>
                     </div>
-
-                    {sol.id === 'sol-mobile-repair' && (
-                      <div className="mt-2.5 py-1 px-2.5 bg-amber-50/90 border border-amber-200/80 rounded-lg flex items-center justify-between text-[11px] font-sans">
-                        <span className="text-amber-800 font-medium">Use coupon: <code className="bg-white px-1.5 py-0.5 rounded border border-amber-300 font-bold font-mono text-blue-700">BSP-DISC</code></span>
-                        <span className="font-bold text-emerald-700">Flat ₹2,000 Off</span>
-                      </div>
-                    )}
 
                     {/* Premium action/owned buttons matching requested layout */}
                     {isOwned ? (
