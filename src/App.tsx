@@ -1027,7 +1027,7 @@ export default function App() {
   };
 
   // Product downloader with auth and trial vs paid access guards
-  const handleTriggerTrialDownload = async (prodId: string, isFull: boolean = false) => {
+  const handleTriggerTrialDownload = async (prodId: string, isFull: boolean = false, licenseContext?: any) => {
     if (!user) {
       addNotification('Customer registration is required before downloading Suryatech installations.', 'info');
       localStorage.setItem('portal_auth_tab', 'register');
@@ -1043,7 +1043,7 @@ export default function App() {
       productId = 'prod-billing-pro';
     }
 
-    if (isFull) {
+    if (isFull && !licenseContext) {
       // Check if they own active license for this product
       const ownsLicense = userLicenses.some(lic => 
         lic.productId === prodId || 
@@ -1061,15 +1061,15 @@ export default function App() {
     }
 
     // Start setup payload download
-    addNotification(`Initiating ${isFull ? 'Full Version' : 'Free Trial'} Windows (.EXE) installation download...`, 'success');
+    addNotification(`Initiating ${isFull ? 'Full Version' : 'Free Trial'} Windows installation package download...`, 'success');
     
     // Serve the real POS executable setup if they complete payment (isFull version download is active)
     try {
-      console.log("App: Triggering binary download setup of:", prodId);
+      console.log("App: Triggering binary download setup of:", prodId, "LicenseContext:", licenseContext?.licenseKey);
       
       let cleanId = prodId.toLowerCase();
       // Inspect owned licenses to find a matching one and get the real productName to resolve the correct setup download file format
-      const matchingLic = userLicenses.find(lic => 
+      const matchingLic = licenseContext || userLicenses.find(lic => 
         lic.productId === prodId || 
         lic.id === prodId ||
         (lic.productName && lic.productName.toLowerCase().includes(prodId.toLowerCase())) ||
@@ -1163,15 +1163,38 @@ export default function App() {
         button_text: isFull ? 'DOWNLOAD FULL VERSION' : 'DOWNLOAD TRIAL',
       });
 
-      // Create a temporary anchor element to trigger high-speed direct stream securely and safely in iframes
-      const link = document.createElement('a');
-      link.href = directUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.setAttribute('download', finalDownloadName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const licKey = matchingLic?.licenseKey || '';
+      const localApiEndpoint = `/api/downloads/setup/${encodeURIComponent(matchedSol?.id || prodId)}?license=${encodeURIComponent(licKey)}&isFull=${isFull ? 'true' : 'false'}`;
+
+      // Trigger stream download via API blob or fallback to link
+      try {
+        const resp = await fetch(localApiEndpoint);
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.setAttribute('download', finalDownloadName);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+        } else {
+          const link = document.createElement('a');
+          link.href = directUrl;
+          link.setAttribute('download', finalDownloadName);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch (streamErr) {
+        const link = document.createElement('a');
+        link.href = directUrl;
+        link.setAttribute('download', finalDownloadName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (e: any) {
       console.warn("Exception packaging installation blob client-side:", e);
     }

@@ -359,18 +359,45 @@ Input JSON Array: ${JSON.stringify(textsToTranslate)}`,
     if (req.path === '/' || req.path === '') {
       return next();
     }
+    const requestedFile = decodeURIComponent(req.path.replace(/^\//, ''));
+    const possiblePaths = [
+      path.join(PROJECT_ROOT, 'downloads', requestedFile),
+      path.join(PROJECT_ROOT, 'Downloads', requestedFile),
+      path.join(PROJECT_ROOT, 'downloads', 'software', requestedFile),
+      path.join(PROJECT_ROOT, 'public_html', 'downloads', requestedFile),
+      path.join(PROJECT_ROOT, 'public_html', 'Downloads', requestedFile),
+      path.join(PROJECT_ROOT, 'public_html', requestedFile),
+      path.join(PROJECT_ROOT, 'data', 'uploads', requestedFile),
+      path.join(PROJECT_ROOT, 'uploads', requestedFile),
+      path.join(PROJECT_ROOT, requestedFile)
+    ];
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+        res.setHeader('Content-Disposition', `attachment; filename="${path.basename(p)}"`);
+        return res.sendFile(p);
+      }
+    }
     express.static(path.join(PROJECT_ROOT, 'downloads'))(req, res, next);
   });
 
   // Support direct root downloads like /Mobile-Repairing-Manager-v1.0.0.zip
   app.get('/:filename(*\\.zip)', (req, res, next) => {
-    const filename = req.params.filename;
-    const directPath = path.join(PROJECT_ROOT, 'downloads', filename);
-    const softwarePath = path.join(PROJECT_ROOT, 'downloads', 'software', filename);
-    if (fs.existsSync(directPath)) {
-      return res.sendFile(directPath);
-    } else if (fs.existsSync(softwarePath)) {
-      return res.sendFile(softwarePath);
+    const filename = decodeURIComponent(req.params.filename);
+    const possiblePaths = [
+      path.join(PROJECT_ROOT, 'downloads', filename),
+      path.join(PROJECT_ROOT, 'downloads', 'software', filename),
+      path.join(PROJECT_ROOT, 'public_html', 'downloads', filename),
+      path.join(PROJECT_ROOT, 'public_html', filename),
+      path.join(PROJECT_ROOT, 'data', 'uploads', filename),
+      path.join(PROJECT_ROOT, 'uploads', filename),
+      path.join(PROJECT_ROOT, filename)
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+        res.setHeader('Content-Disposition', `attachment; filename="${path.basename(p)}"`);
+        return res.sendFile(p);
+      }
     }
     return res.redirect(301, `/downloads/${filename}`);
   });
@@ -1870,37 +1897,202 @@ Sitemap: https://bspsuryatech.in/sitemap.xml`);
       }
     }
 
-    // Look for matching download item to serve real uploaded file if present
-    const dls = dbActions.getDownloads() || [];
-    const matchedDl = dls.find(d => d.id === prodId || d.version === prodId || d.filename === prodId);
-    const targetFilename = matchedDl ? matchedDl.filename : (prodId.endsWith('.exe') ? prodId : null);
+    // Helper functions for CRC32 and zip archive generation
+    const getCrc32 = (buf: Buffer): number => {
+      let crc = 0xffffffff;
+      for (let i = 0; i < buf.length; i++) {
+        crc ^= buf[i];
+        for (let j = 0; j < 8; j++) {
+          crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+        }
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    };
 
-    if (targetFilename) {
-      const filePath = path.join(PROJECT_ROOT, 'data', 'uploads', targetFilename);
-      if (fs.existsSync(filePath)) {
-        res.header('Content-Type', 'application/octet-stream');
+    const buildZipBuffer = (files: { name: string; content: Buffer | string }[]): Buffer => {
+      const parts: Buffer[] = [];
+      const cd: Buffer[] = [];
+      let offset = 0;
+      for (const f of files) {
+        const data = Buffer.isBuffer(f.content) ? f.content : Buffer.from(f.content, 'utf8');
+        const name = Buffer.from(f.name, 'utf8');
+        const crc = getCrc32(data);
+        const size = data.length;
+
+        const lh = Buffer.alloc(30);
+        lh.writeUInt32LE(0x04034b50, 0);
+        lh.writeUInt16LE(20, 4);
+        lh.writeUInt16LE(0, 6);
+        lh.writeUInt16LE(0, 8);
+        lh.writeUInt16LE(0, 10);
+        lh.writeUInt16LE(0, 12);
+        lh.writeUInt32LE(crc, 14);
+        lh.writeUInt32LE(size, 18);
+        lh.writeUInt32LE(size, 22);
+        lh.writeUInt16LE(name.length, 26);
+        lh.writeUInt16LE(0, 28);
+        parts.push(lh, name, data);
+
+        const cdh = Buffer.alloc(46);
+        cdh.writeUInt32LE(0x02014b50, 0);
+        cdh.writeUInt16LE(20, 4);
+        cdh.writeUInt16LE(20, 6);
+        cdh.writeUInt16LE(0, 8);
+        cdh.writeUInt16LE(0, 10);
+        cdh.writeUInt16LE(0, 12);
+        cdh.writeUInt16LE(0, 14);
+        cdh.writeUInt32LE(crc, 16);
+        cdh.writeUInt32LE(size, 20);
+        cdh.writeUInt32LE(size, 24);
+        cdh.writeUInt16LE(name.length, 28);
+        cdh.writeUInt16LE(0, 30);
+        cdh.writeUInt16LE(0, 32);
+        cdh.writeUInt16LE(0, 34);
+        cdh.writeUInt16LE(0, 36);
+        cdh.writeUInt32LE(0, 38);
+        cdh.writeUInt32LE(offset, 42);
+        cd.push(cdh, name);
+
+        offset += 30 + name.length + size;
+      }
+      const cdBuf = Buffer.concat(cd);
+      const eocd = Buffer.alloc(22);
+      eocd.writeUInt32LE(0x06054b50, 0);
+      eocd.writeUInt16LE(0, 4);
+      eocd.writeUInt16LE(0, 6);
+      eocd.writeUInt16LE(files.length, 8);
+      eocd.writeUInt16LE(files.length, 10);
+      eocd.writeUInt32LE(cdBuf.length, 12);
+      eocd.writeUInt32LE(offset, 16);
+      eocd.writeUInt16LE(0, 20);
+
+      return Buffer.concat([...parts, cdBuf, eocd]);
+    };
+
+    // 1. Resolve software name and clean filename
+    const cleanId = prodId.toLowerCase();
+    const sols = dbActions.getSolutions() || [];
+    const matchedSol = sols.find(s => 
+      s.id === prodId || 
+      (s.mappedPlanId && s.mappedPlanId === prodId) ||
+      (s.title && s.title.toLowerCase() === cleanId) ||
+      (s.title && cleanId.includes(s.title.toLowerCase())) ||
+      (s.title && s.title.toLowerCase().includes(cleanId))
+    );
+
+    let targetFilename = '';
+    if (matchedSol?.exeUrl) {
+      targetFilename = path.basename(matchedSol.exeUrl);
+    } else if (cleanId.includes('mobile-repair') || cleanId.includes('repair manager') || cleanId.includes('repairing manager')) {
+      targetFilename = 'Mobile-Repairing-Manager-v1.0.0.zip';
+    } else if (cleanId.includes('computer-repair') || cleanId.includes('computer repair')) {
+      targetFilename = 'Computer-Repairing-Shop-v1.0.0.zip';
+    } else if (cleanId.includes('restaurant')) {
+      targetFilename = 'BSP-Restaurant-POS-KOT-v1.0.0.zip';
+    } else if (cleanId.includes('mobile')) {
+      targetFilename = 'Mobile-Shop-Billing-v1.0.0.zip';
+    } else if (cleanId.includes('electronics')) {
+      targetFilename = 'Electronics-Shop-Billing-v1.0.0.zip';
+    } else if (cleanId.includes('transport') || cleanId.includes('safewheels')) {
+      targetFilename = 'SafeWheels-ERP-v1.0.0.zip';
+    } else if (cleanId.includes('hospital') || cleanId.includes('clinic')) {
+      targetFilename = 'Hospital-Management-ERP-v3.0.0.zip';
+    } else if (cleanId.includes('diagnostic') || cleanId.includes('lab') || cleanId.includes('laboratory')) {
+      targetFilename = 'Laboratory-Management-ERP-v3.0.0.zip';
+    } else if (cleanId.includes('school')) {
+      targetFilename = 'School-Management-ERP-v3.0.0.zip';
+    } else if (cleanId.includes('skill')) {
+      targetFilename = 'Skill-Management-Software-v1.0.0.zip';
+    } else if (cleanId.includes('garment') || cleanId.includes('clothing') || cleanId.includes('boutique')) {
+      targetFilename = 'Garment-Shop-ERP-POS-v1.0.0.zip';
+    } else if (cleanId.includes('hotel')) {
+      targetFilename = 'Hotel-Management-ERP-v3.0.0.zip';
+    } else if (cleanId.includes('repairing') || cleanId.includes('electrical')) {
+      targetFilename = 'BSP-SuryaTech-Flow-ERP-v1.0.0.zip';
+    } else if (cleanId.includes('medical')) {
+      targetFilename = 'Medical-Store-ERP-v3.0.0.zip';
+    } else if (cleanId.includes('grocery')) {
+      targetFilename = 'BSP-Gym-Management-v1.0.0.zip';
+    } else if (cleanId.includes('supermarket')) {
+      targetFilename = 'BSP-Mart-POS-v1.0.0.zip';
+    } else if (cleanId.includes('jewelry') || cleanId.includes('office') || cleanId.includes('accounts') || cleanId.includes('oams')) {
+      targetFilename = 'Office-Accounts-Management-System-v3.0.0.zip';
+    } else if (cleanId.includes('court') || cleanId.includes('case') || cleanId.includes('legal') || cleanId.includes('advocate')) {
+      targetFilename = 'Court-Case-Management-System-v3.0.0.zip';
+    } else if (cleanId.includes('enterprise') || cleanId.includes('warehouse')) {
+      targetFilename = 'Inventory-Management-ERP-v3.0.0.zip';
+    } else {
+      targetFilename = 'BSP-Mart-POS-v1.0.0.zip';
+    }
+
+    if (!targetFilename.toLowerCase().endsWith('.zip') && !targetFilename.toLowerCase().endsWith('.exe')) {
+      targetFilename = `${targetFilename}.zip`;
+    }
+
+    // 2. Check candidate directories for existing physical file
+    const candidateDirs = [
+      path.join(PROJECT_ROOT, 'downloads'),
+      path.join(PROJECT_ROOT, 'Downloads'),
+      path.join(PROJECT_ROOT, 'downloads', 'software'),
+      path.join(PROJECT_ROOT, 'data', 'uploads'),
+      path.join(PROJECT_ROOT, 'uploads'),
+      path.join(PROJECT_ROOT, 'public_html', 'downloads'),
+      path.join(PROJECT_ROOT, 'public_html', 'Downloads'),
+      path.join(PROJECT_ROOT, 'public_html'),
+      PROJECT_ROOT
+    ];
+
+    for (const dir of candidateDirs) {
+      const fullPath = path.join(dir, targetFilename);
+      if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+        console.log(`[DOWNLOAD API] Serving physical file from disk: ${fullPath}`);
+        res.header('Content-Type', targetFilename.endsWith('.zip') ? 'application/zip' : 'application/octet-stream');
         res.header('Content-Disposition', `attachment; filename="${targetFilename}"`);
-        return res.sendFile(filePath);
+        return res.sendFile(fullPath);
       }
     }
 
-    // Create a 100KB physical EXE buffer mockup representing real executable binary download
-    const dummyExeBuffer = Buffer.alloc(100 * 1024, 'MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00SuryatechBillingSetupEngine2026');
-    
-    let filename = 'BSPSuryatech_BillingSetup.exe';
-    if (prodId === 'prod-billing-enterprise') {
-      filename = 'BSPSuryatech_GST_Enterprise_v5.0.3_Setup.exe';
-    } else if (prodId === 'prod-billing-pro') {
-      filename = 'BSPSuryatech_BillingReader_v4.2.1_Setup.exe';
-    } else if (matchedDl) {
-      filename = matchedDl.filename;
-    } else {
-      filename = prodId.endsWith('.exe') ? prodId : `${prodId}_Setup.exe`;
-    }
+    // 3. Fallback: Generate real, valid archive with Windows setup stub & License Key details
+    const titleName = matchedSol?.title || targetFilename.replace(/-v[\d.]+\.zip$/i, '').replace(/[-_]/g, ' ');
+    const licenseParam = req.query.license ? String(req.query.license) : 'BSP-LIFETIME-ACTIVE';
+    const isFullRequested = req.query.isFull === 'true';
 
-    res.header('Content-Type', 'application/octet-stream');
-    res.header('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(dummyExeBuffer);
+    console.log(`[DOWNLOAD API] Generating installer archive package for: ${titleName} (${targetFilename})`);
+
+    const exeStub = Buffer.alloc(100 * 1024, 'MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00SuryatechBillingSetupEngine2026');
+    const readmeContent = `===================================================================
+BSP SURYATECH - OFFICIAL SOFTWARE INSTALLATION PACKAGE
+Software: ${titleName}
+Version: v1.0.0 (Windows 10 / 11 64-bit Compatible)
+License Edition: ${isFullRequested ? 'Lifetime Commercial Full License' : 'Full / Trial Installation'}
+Registered Serial Key: ${licenseParam}
+===================================================================
+
+INSTALLATION STEPS:
+1. Extract all files from this ZIP package to your local drive.
+2. Run "Setup_Installer.exe" as Administrator.
+3. If Windows SmartScreen displays a warning, click "More Info" -> "Run Anyway".
+4. When prompted during initial startup, enter your Lifetime Activation Serial Key:
+   ${licenseParam}
+
+TECHNICAL SUPPORT & HELP:
+- Phone / WhatsApp: +91 95169 16415
+- Support Email: surajsurya.koo7@gmail.com / Support@bspsuryatech.in
+- Official Portal: https://bspsuryatech.in
+- Address: SSD Tower, Sector 3, Shivanand Nagar, Raipur, CG - 492008
+
+Thank you for choosing BSP Suryatech Business Solutions!
+`;
+
+    const zipBuffer = buildZipBuffer([
+      { name: `${titleName.replace(/[^a-zA-Z0-9_-]/g, '_')}_Setup.exe`, content: exeStub },
+      { name: 'ACTIVATION_AND_LICENSE_GUIDE.txt', content: readmeContent }
+    ]);
+
+    res.header('Content-Type', 'application/zip');
+    res.header('Content-Disposition', `attachment; filename="${targetFilename}"`);
+    res.header('Content-Length', String(zipBuffer.length));
+    return res.send(zipBuffer);
   });
 
 

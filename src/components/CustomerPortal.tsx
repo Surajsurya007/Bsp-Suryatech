@@ -76,7 +76,7 @@ interface CustomerPortalProps {
   onLoginSuccess: (token: string, user: any) => void;
   onAddNotification: (text: string, type: 'success' | 'info' | 'error') => void;
   onPageChange: (page: string) => void;
-  onTriggerTrialDownload: (prodId: string, isFull?: boolean) => void;
+  onTriggerTrialDownload: (prodId: string, isFull?: boolean, licenseItem?: any) => void;
   initialView?: 'dashboard' | 'tickets' | 'new-ticket' | 'profile' | 'payments' | 'invoices' | 'notifications';
 }
 
@@ -4243,8 +4243,9 @@ export default function CustomerPortal({
 
                           {/* Option to download latest installer */}
                           <button
-                            onClick={() => onTriggerTrialDownload(lic.productId || lic.productName || 'erp', true)}
-                            className="w-full py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2"
+                            onClick={() => onTriggerTrialDownload(lic.productId || lic.productName || 'erp', true, lic)}
+                            className="w-full py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow active:scale-98 transition-all"
+                            id={`download-setup-btn-${lic.id}`}
                           >
                             <Download className="w-3.5 h-3.5" />
                             Download Latest Setup Build (.EXE)
