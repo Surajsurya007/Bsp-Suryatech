@@ -137,6 +137,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AdminProvider } from './components/AdminContext';
 import { PermissionProvider } from './components/PermissionProvider';
+import { CurrencyProvider } from './context/CurrencyContext';
 import { initGTM, initGA } from './utils/analytics';
 
 // Initialize GTM and GA4 as early as possible in production
@@ -145,10 +146,12 @@ initGA();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AdminProvider>
-      <PermissionProvider>
-        <App />
-      </PermissionProvider>
-    </AdminProvider>
+    <CurrencyProvider>
+      <AdminProvider>
+        <PermissionProvider>
+          <App />
+        </PermissionProvider>
+      </AdminProvider>
+    </CurrencyProvider>
   </StrictMode>,
 );

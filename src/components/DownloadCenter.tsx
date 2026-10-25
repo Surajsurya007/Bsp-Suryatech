@@ -25,6 +25,7 @@ import {
   ShoppingCart,
   Zap
 } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface DownloadCenterProps {
   downloads: any[];
@@ -413,6 +414,7 @@ export default function DownloadCenter({
   user,
   userLicenses = []
 }: DownloadCenterProps) {
+  const { formatPrice, currency } = useCurrency();
   const [downloadFilter, setDownloadFilter] = useState<'all' | 'stable' | 'manuals'>('all');
   const [selectedSolutionCategory, setSelectedSolutionCategory] = useState<string>('All Solutions');
 
@@ -616,16 +618,21 @@ export default function DownloadCenter({
                   <div className="pt-6 mt-6 border-t border-slate-100">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-400 font-bold font-mono tracking-tight uppercase">Lifetime License</span>
-                      <div className="text-right flex items-baseline justify-end gap-1.5">
-                        {sol.originalPrice && (
-                          <span className="text-xs text-slate-400 line-through font-semibold font-mono">
-                            {sol.originalPrice}
-                          </span>
-                        )}
-                        <span className="text-lg font-black text-slate-900 tracking-tight font-sans">
-                          {sol.price}
-                        </span>
-                      </div>
+                      {(() => {
+                        const originalPriceVal = sol.originalPrice || (sol.price?.includes('3,000') || sol.price === '3000' ? '₹6,000' : (sol.price?.includes('1,000') || sol.price === '1000' ? '₹6,000' : (sol.price?.includes('5,000') || sol.price === '5000' ? '₹10,000' : undefined)));
+                        return (
+                          <div className="text-right flex items-baseline justify-end gap-1.5">
+                            {originalPriceVal && (
+                              <span className="text-xs text-slate-400 line-through font-semibold font-mono">
+                                {formatPrice(originalPriceVal, true)}
+                              </span>
+                            )}
+                            <span className="text-lg font-black text-slate-900 tracking-tight font-sans">
+                              {formatPrice(sol.price, false)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Premium action/owned buttons matching requested layout */}

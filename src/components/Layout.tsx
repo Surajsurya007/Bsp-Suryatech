@@ -28,6 +28,8 @@ import {
   X,
   ShoppingCart
 } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
+import CurrencySelector from './CurrencySelector';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -51,6 +53,7 @@ export default function Layout({
   cartItem
 }: LayoutProps) {
   const { t, currentLanguage, languages, changeLanguage, loading } = useTranslation();
+  const { currency, formatPrice } = useCurrency();
   const { setIsAdminMode } = useAdmin();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -74,7 +77,9 @@ export default function Layout({
     loadHelpline();
   }, []);
 
-  const announcementMsg = '🇮🇳 Special Offer: Desktop GST Billing Lifetime License now only ₹3000 / Free Trial Enabled';
+  const announcementMsg = currency === 'INR'
+    ? '🇮🇳 Special Offer: Desktop GST Billing Lifetime License now only ₹3000 / Free Trial Enabled'
+    : `🌎 Special Offer: Desktop GST Billing Lifetime License now only ${formatPrice(3000)} / Free Trial Enabled`;
 
   const navItems = [
     { id: 'home', label: 'Home' },
@@ -200,6 +205,8 @@ export default function Layout({
 
             {/* Account / Portal Area */}
             <div className="hidden lg:flex items-center gap-3">
+              <CurrencySelector />
+
               <button
                 onClick={() => handleNavClick('pricing')}
                 className="flex items-center gap-2 px-3 py-1.5 bg-[#1E293B]/80 hover:bg-[#1E293B] hover:text-white text-slate-300 border border-slate-800 hover:border-blue-600/40 rounded-sm text-xs font-bold transition-all duration-200 cursor-pointer active:scale-97 group/cart shrink-0"
@@ -257,6 +264,8 @@ export default function Layout({
 
             {/* Mobile Menu Action */}
             <div className="flex lg:hidden items-center gap-2">
+              <CurrencySelector compact={true} />
+
               <button
                 onClick={() => handleNavClick('pricing')}
                 className="p-1 px-2 border border-slate-850 rounded-sm text-blue-400 bg-[#1E293B] hover:text-white flex items-center gap-1 shrink-0"

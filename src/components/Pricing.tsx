@@ -21,6 +21,7 @@ import {
   Sparkles,
   Download
 } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface CartItem {
   id: string;
@@ -60,6 +61,7 @@ export default function Pricing({
   cartItem,
   setCartItem
 }: PricingProps) {
+  const { currency, currencyInfo, formatPrice, getNumericPrice, formatAmount } = useCurrency();
   const [coupon, setCoupon] = useState('');
   const [validatedDiscount, setValidatedDiscount] = useState<number | null>(null);
   const [couponObject, setCouponObject] = useState<any | null>(null);
@@ -134,11 +136,15 @@ export default function Pricing({
 
   const rawPrice = cartItem?.price !== undefined 
     ? cartItem.price 
-    : (matchedProduct?.price !== undefined ? matchedProduct.price : 999);
+    : (matchedProduct?.price !== undefined ? matchedProduct.price : 3000);
 
   const rawOriginalPrice = cartItem?.originalPrice !== undefined
     ? cartItem.originalPrice
-    : (matchedProduct?.originalPrice !== undefined ? matchedProduct.originalPrice : 2499);
+    : (matchedProduct?.originalPrice !== undefined ? matchedProduct.originalPrice : (rawPrice === 1000 ? 6000 : 6000));
+
+  // Numerical active values in the current currency
+  const activePrice = currency === 'INR' ? rawPrice : getNumericPrice(rawPrice, false);
+  const activeOriginalPrice = currency === 'INR' ? rawOriginalPrice : getNumericPrice(rawOriginalPrice, true);
 
   const resolvedFeatures = cartItem?.features || matchedProduct?.features || [];
   const resolvedDescription = cartItem?.description || matchedProduct?.description || '';
@@ -149,31 +155,33 @@ export default function Pricing({
   const isSuryaOverride = (appliedCoupon || '').toUpperCase() === 'SURYA001' || (couponObject && ((couponObject.coupon_code || '').toUpperCase() === 'SURYA001' || (couponObject.code || '').toUpperCase() === 'SURYA001'));
 
   if (isSuryaOverride) {
-    discountAmount = Math.max(0, rawPrice - 1);
+    discountAmount = Math.max(0, activePrice - 1);
   } else if (couponObject) {
     if (couponObject.discount_type === 'percentage') {
-      discountAmount = Math.ceil((rawPrice * Number(couponObject.discount_value)) / 100);
-      if (couponObject.max_discount && discountAmount > couponObject.max_discount) {
-        discountAmount = couponObject.max_discount;
+      discountAmount = Math.ceil((activePrice * Number(couponObject.discount_value)) / 100);
+      if (couponObject.max_discount) {
+        const maxDisc = currency === 'INR' ? couponObject.max_discount : getNumericPrice(couponObject.max_discount, false);
+        if (discountAmount > maxDisc) discountAmount = maxDisc;
       }
     } else {
-      discountAmount = Number(couponObject.discount_value);
+      const fixedDisc = Number(couponObject.discount_value);
+      discountAmount = currency === 'INR' ? fixedDisc : getNumericPrice(fixedDisc, false);
     }
   } else if (validatedDiscount) {
-    discountAmount = Math.ceil(rawPrice * (validatedDiscount / 100));
+    discountAmount = Math.ceil(activePrice * (validatedDiscount / 100));
   }
 
-  if (discountAmount > rawPrice) {
-    discountAmount = rawPrice;
+  if (discountAmount > activePrice) {
+    discountAmount = activePrice;
   }
-  const netAmount = isSuryaOverride ? 1 : Math.max(0, rawPrice - discountAmount);
+  const netAmount = isSuryaOverride ? 1 : Math.max(0, activePrice - discountAmount);
   const discountPercent = isSuryaOverride
     ? 100
     : couponObject 
-      ? (couponObject.discount_type === 'percentage' ? couponObject.discount_value : Math.round((discountAmount / rawPrice) * 100))
+      ? (couponObject.discount_type === 'percentage' ? couponObject.discount_value : Math.round((discountAmount / activePrice) * 100))
       : (validatedDiscount || 0);
   
-  // Tax breakdown (18% inclusive GST calculation)
+  // Tax breakdown (18% inclusive GST / local tax calculation)
   const gstInclusiveAmount = Math.ceil(netAmount * 0.18);
   const basePriceExclusive = netAmount - gstInclusiveAmount;
 
@@ -308,9 +316,9 @@ export default function Pricing({
                   
                   <div className="flex items-baseline gap-1.5 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 self-start sm:self-center">
                     <span className="text-[11px] font-mono text-slate-400 font-bold uppercase tracking-wider">Price:</span>
-                    <span className="text-xl font-black text-white">₹{rawPrice}</span>
-                    {rawOriginalPrice > rawPrice && (
-                      <span className="text-[10px] text-slate-500 line-through">₹{rawOriginalPrice}</span>
+                    <span className="text-xl font-black text-white">{formatAmount(activePrice)}</span>
+                    {activeOriginalPrice > activePrice && (
+                      <span className="text-[10px] text-slate-500 line-through">{formatAmount(activeOriginalPrice)}</span>
                     )}
                   </div>
                 </div>
@@ -462,37 +470,37 @@ export default function Pricing({
                 <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-3 font-mono text-xs">
                   <div className="flex justify-between text-slate-400">
                     <span>Selected Plan Original Price:</span>
-                    <span className="line-through text-slate-500">₹{rawOriginalPrice}</span>
+                    <span className="line-through text-slate-500">{formatAmount(activeOriginalPrice)}</span>
                   </div>
                   
                   <div className="flex justify-between text-slate-300">
                     <span>Software Base Price:</span>
-                    <span>₹{rawPrice}</span>
+                    <span>{formatAmount(activePrice)}</span>
                   </div>
 
                   {discountAmount > 0 && (
                     <div className="flex justify-between text-emerald-400 bg-emerald-950/20 px-2 py-1.5 rounded">
                       <span>Promo Coupon Discount ({appliedCoupon}):</span>
-                      <span>-₹{discountAmount}</span>
+                      <span>-{formatAmount(discountAmount)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between text-slate-400 border-t border-slate-800/80 pt-2.5">
                     <span>Tax Exclusive Net Value:</span>
-                    <span>₹{basePriceExclusive}</span>
+                    <span>{formatAmount(basePriceExclusive)}</span>
                   </div>
 
                   <div className="flex justify-between text-slate-500">
-                    <span>18% Inclusive CGST + SGST Rate:</span>
-                    <span>₹{gstInclusiveAmount}</span>
+                    <span>{currency === 'INR' ? '18% Inclusive CGST + SGST Rate:' : 'Applicable Taxes & Duties (Included):'}</span>
+                    <span>{formatAmount(gstInclusiveAmount)}</span>
                   </div>
 
                   <div className="flex justify-between text-white text-base font-black border-t-2 border-dashed border-slate-800 pt-3 font-sans">
                     <span className="text-slate-300">Total Price (Payable):</span>
                     <div className="text-right">
-                      <span className="text-2xl text-blue-400">₹{netAmount}</span>
+                      <span className="text-2xl text-blue-400">{formatAmount(netAmount)}</span>
                       <span className="block text-[9px] text-slate-450 font-normal mt-0.5 tracking-tight font-mono">
-                        // ONE-TIME ONLY PAYMENT, NO RENEWALS
+                        {currency === 'INR' ? '// ONE-TIME ONLY PAYMENT, NO RENEWALS' : `// ONE-TIME PAYMENT IN ${currencyInfo.code}, NO RENEWALS`}
                       </span>
                     </div>
                   </div>

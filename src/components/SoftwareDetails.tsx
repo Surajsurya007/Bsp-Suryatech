@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Product } from '../types';
 import { getSeoSoftwareDetails } from '../utils/seoSoftwareData';
+import { useCurrency } from '../context/CurrencyContext';
 
 import hospitalDashboard from '../assets/images/hospital_dashboard_1782360732649.jpg';
 import hospitalDoctors from '../assets/images/hospital_doctors_1782360746478.jpg';
@@ -123,6 +124,7 @@ export default function SoftwareDetails({
   user,
   userLicenses = []
 }: SoftwareDetailsProps) {
+  const { currency, formatPrice, getNumericPrice } = useCurrency();
   // Find current software product or solution
   const foundProduct = products.find(p => p.id === productId || (p as any).mappedPlanId === productId);
   const foundSolution = !foundProduct && solutions && solutions.find(s => s.id === productId || s.mappedPlanId === productId);
@@ -891,20 +893,22 @@ export default function SoftwareDetails({
               {/* Highlight Pricing */}
               <div className="bg-slate-50 border p-4 rounded-2xl flex items-center justify-between" id="software-pricing-highlights">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 block font-mono">GST COMPLIANT LIFETIME PRICE</span>
+                  <span className="text-[10px] font-bold text-slate-400 block font-mono">
+                    {currency === 'INR' ? 'GST COMPLIANT LIFETIME PRICE' : 'LIFETIME LICENSE PRICE'}
+                  </span>
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl sm:text-3xl font-extrabold text-blue-600 font-mono">
-                      ₹{product.price}
+                      {formatPrice(product.price, false)}
                     </span>
                     {product.originalPrice && (
                       <span className="text-sm text-slate-400 line-through font-mono">
-                        ₹{product.originalPrice}
+                        {formatPrice(product.originalPrice, true)}
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg px-2 py-1 text-[10.5px] font-bold font-mono uppercase shrink-0">
-                  Save {product.originalPrice ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 60}%
+                  Save {product.originalPrice ? Math.round(((getNumericPrice(product.originalPrice, true) - getNumericPrice(product.price, false)) / getNumericPrice(product.originalPrice, true)) * 100) : 50}%
                 </div>
               </div>
 
